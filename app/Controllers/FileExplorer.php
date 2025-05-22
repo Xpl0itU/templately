@@ -2,6 +2,8 @@
 
 namespace App\Controllers;
 
+use App\Models\FilledFilesModel;
+
 class FileExplorer extends BaseController
 {
     public function index(): string
@@ -26,5 +28,41 @@ class FileExplorer extends BaseController
             'templates' => $templates,
         ];
         return view('file_explorer', $data);
+    }
+
+    public function updateFilledFile($id = null)
+    {
+        if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        $json = $this->request->getJSON();
+
+        if (empty($id) || empty($json) || !isset($json->filledData) || !is_object($json->filledData)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received. ID and filledData object are required.']);
+        }
+
+        $filledFilesModel = new FilledFilesModel();
+        $file = $filledFilesModel->find($id);
+
+        if (!$file) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'File not found.']);
+        }
+
+        $dataToUpdate = [
+            'filledData' => json_encode($json->filledData) // Ensure it's a JSON string
+        ];
+
+        try {
+            if ($filledFilesModel->update($id, $dataToUpdate)) {
+                return $this->response->setJSON(['success' => true, 'message' => 'File updated successfully.']);
+            } else {
+                log_message('error', 'Failed to update file ID: ' . $id . ' Errors: ' . print_r($filledFilesModel->errors(), true));
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not update file in database.', 'errors' => $filledFilesModel->errors()]);
+            }
+        } catch (\Exception $e) {
+            log_message('error', '[Controller Exception] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
+        }
     }
 }
