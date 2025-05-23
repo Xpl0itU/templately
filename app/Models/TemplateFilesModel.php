@@ -7,5 +7,5 @@ class TemplateFilesModel extends Model
 {
     protected $table = 'templateFiles';
     protected $primaryKey = 'id';
-    protected $allowedFields = ['name', 'path', 'size', 'type', 'createdAt'];
+    protected $allowedFields = ['name', 'path', 'size', 'type', 'createdAt', 'templateFields'];
 }

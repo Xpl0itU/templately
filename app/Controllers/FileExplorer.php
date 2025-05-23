@@ -11,11 +11,18 @@ class FileExplorer extends BaseController
         $templateModel = model('App\Models\TemplateFilesModel');
         $templates = $templateModel->findAll();
 
-        $filledFilesModel = model('App\Models\FilledFilesModel');
+        $filledFilesModel = model('App\\Models\\FilledFilesModel');
         $filledFiles = $filledFilesModel->findAll();
 
         // Join the filled files with the templates
         foreach ($templates as &$template) {
+            if (!empty($template['templateFields']) && is_string($template['templateFields'])) {
+                $decodedFields = json_decode($template['templateFields'], true);
+                $template['templateFields'] = is_array($decodedFields) ? $decodedFields : [];
+            } elseif (empty($template['templateFields'])) {
+                $template['templateFields'] = [];
+            }
+
             $template['filledFiles'] = [];
             foreach ($filledFiles as $file) {
                 if ($file['templateFileId'] == $template['id']) {
@@ -50,7 +57,7 @@ class FileExplorer extends BaseController
         }
 
         $dataToUpdate = [
-            'filledData' => json_encode($json->filledData) // Ensure it's a JSON string
+            'filledData' => json_encode($json->filledData),
         ];
 
         try {
@@ -85,9 +92,22 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Template not found.']);
         }
 
+        // Ensure templateFields is an array, decoding if it's a JSON string
+        if (!empty($template['templateFields']) && is_string($template['templateFields'])) {
+            $decodedFields = json_decode($template['templateFields'], true);
+            $template['templateFields'] = is_array($decodedFields) ? $decodedFields : [];
+        } elseif (empty($template['templateFields'])) {
+            $template['templateFields'] = []; // Default to empty array
+        }
+
         $filledFilesModel = new FilledFilesModel();
 
-        $newFilledData = new \stdClass();
+        $newFilledData = new \stdClass(); // Start with an empty object
+        if (isset($template['templateFields']) && is_array($template['templateFields'])) {
+            foreach ($template['templateFields'] as $field) {
+                $newFilledData->$field = ''; // Initialize each field with an empty string
+            }
+        }
 
         $dataToInsert = [
             'name' => trim($json->name),
