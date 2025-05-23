@@ -65,4 +65,54 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
         }
     }
+
+    public function createFilledFile()
+    {
+        if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        $json = $this->request->getJSON();
+
+        if (empty($json) || !isset($json->template_id) || !isset($json->name) || empty(trim($json->name))) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received. template_id and name are required.']);
+        }
+
+        $templateModel = model('App\\Models\\TemplateFilesModel');
+        $template = $templateModel->find($json->template_id);
+
+        if (!$template) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Template not found.']);
+        }
+
+        $filledFilesModel = new FilledFilesModel();
+
+        $newFilledData = new \stdClass();
+
+        $dataToInsert = [
+            'name' => trim($json->name),
+            'templateFileId' => $json->template_id,
+            'filledData' => json_encode($newFilledData),
+            'createdAt' => date('Y-m-d H:i:s'),
+        ];
+
+        try {
+            $newFileId = $filledFilesModel->insert($dataToInsert);
+            if ($newFileId === false) {
+                log_message('error', 'Failed to insert new filled file. Errors: ' . print_r($filledFilesModel->errors(), true));
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not create file in database.', 'errors' => $filledFilesModel->errors()]);
+            }
+
+            $newFilledFile = $filledFilesModel->find($newFileId);
+            if ($newFilledFile) {
+                $newFilledFile['filledData'] = json_decode($newFilledFile['filledData'] ?? '{}');
+                return $this->response->setJSON(['success' => true, 'message' => 'File created successfully.', 'newFilledFile' => $newFilledFile]);
+            } else {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'File created but could not be retrieved.']);
+            }
+        } catch (\Exception $e) {
+            log_message('error', '[Controller Exception] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
+        }
+    }
 }

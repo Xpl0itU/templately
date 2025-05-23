@@ -76,6 +76,18 @@
             transform: rotate(90deg);
         }
 
+        .file-hierarchy .file-item.active,
+        .file-hierarchy .folder-item.active > span {
+            background-color: #cce5ff;
+            /* A light blue for active items */
+            font-weight: bold;
+        }
+
+        .file-hierarchy .file-item.active:hover,
+        .file-hierarchy .folder-item.active > span:hover {
+            background-color: #b8daff;
+        }
+
         .main-content {
             flex-grow: 1;
             padding: 20px;
@@ -177,10 +189,10 @@
                         if (foundFile) {
                             if (typeof foundFile.filledData === 'string') {
                                 try {
-                                    foundFile.filledData = JSON.parse(foundFile.filledData);
+                                    foundFile.filledData = JSON.parse(foundFile.filledData || '{}');
                                 } catch (e) {
                                     console.error("Error parsing filledData JSON:", e, foundFile.filledData);
-                                    return { ...foundFile, filledData: {} };
+                                    foundFile.filledData = {};
                                 }
                             } else if (typeof foundFile.filledData !== 'object' || foundFile.filledData === null) {
                                 foundFile.filledData = {};
@@ -190,6 +202,10 @@
                     }
                 }
                 return null;
+            }
+
+            function findTemplateById(templateId) {
+                return templatesData.find(t => t.id.toString() === templateId.toString());
             }
 
             function renderFileDetails(fileData, mode = 'view') {
@@ -206,8 +222,11 @@
                 }
 
                 const ul = document.createElement('ul');
+                ul.style.listStyleType = 'none';
+                ul.style.paddingLeft = '0';
                 for (const [key, value] of Object.entries(fileData.filledData)) {
                     const li = document.createElement('li');
+                    li.style.marginBottom = '5px';
                     if (mode === 'edit') {
                         const label = document.createElement('label');
                         label.textContent = `${key}: `;
@@ -217,6 +236,10 @@
                         input.name = key;
                         input.value = value;
                         input.dataset.originalValue = value; // Store original for cancel
+                        input.style.width = 'calc(100% - 100px)';
+                        input.style.padding = '5px';
+                        input.style.border = '1px solid #ccc';
+                        input.style.borderRadius = '3px';
                         li.appendChild(label);
                         li.appendChild(input);
                     } else {
@@ -237,26 +260,210 @@
                 }
             }
 
+            function renderTemplateOverview(template) {
+                fileNameHeading.textContent = `Template: ${template.name}`;
+                fileDetails.innerHTML = ''; // Clear previous details
+                fileActionsDiv.style.display = 'none'; // Hide file actions
+
+                const heading = document.createElement('h3');
+                heading.textContent = 'Filled Files:';
+                fileDetails.appendChild(heading);
+
+                const ul = document.createElement('ul');
+                ul.style.listStyleType = 'disc';
+                ul.style.paddingLeft = '20px';
+
+                if (template.filledFiles && template.filledFiles.length > 0) {
+                    template.filledFiles.forEach(filledFile => {
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.textContent = filledFile.name;
+                        a.dataset.id = filledFile.id;
+                        a.dataset.templateId = template.id;
+                        a.classList.add('template-overview-file-link');
+                        a.style.textDecoration = 'underline';
+                        a.style.cursor = 'pointer';
+                        li.appendChild(a);
+                        ul.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'No filled files for this template yet.';
+                    ul.appendChild(li);
+                }
+                fileDetails.appendChild(ul);
+
+                const createButton = document.createElement('button');
+                createButton.textContent = 'Create New Filled File from this Template';
+                createButton.classList.add('action-button');
+                createButton.style.backgroundColor = '#17a2b8';
+                createButton.style.color = 'white';
+                createButton.style.marginTop = '20px';
+                createButton.dataset.templateId = template.id;
+                createButton.id = 'createNewFilledFileButton';
+                fileDetails.appendChild(createButton);
+
+                createButton.addEventListener('click', handleCreateNewFilledFile);
+            }
+
+            async function handleCreateNewFilledFile(event) {
+                const templateId = event.target.dataset.templateId;
+                const template = findTemplateById(templateId);
+                if (!template) {
+                    alert('Template not found.');
+                    return;
+                }
+
+                const newFileName = prompt(`Enter name for the new filled file (based on template: ${template.name}):`);
+                if (!newFileName || newFileName.trim() === '') {
+                    if (newFileName !== null) alert('File name cannot be empty.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/file-explorer/create-filled-file`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ template_id: templateId, name: newFileName.trim() })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ message: 'Failed to create file. Server error.' }));
+                        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success && result.newFilledFile) {
+                        const newFilledFile = result.newFilledFile;
+                        if (typeof newFilledFile.filledData === 'string') {
+                            try {
+                                newFilledFile.filledData = JSON.parse(newFilledFile.filledData || '{}');
+                            } catch (e) {
+                                console.error("Error parsing new filledData JSON:", e, newFilledFile.filledData);
+                                newFilledFile.filledData = {};
+                            }
+                        } else if (typeof newFilledFile.filledData !== 'object' || newFilledFile.filledData === null) {
+                            newFilledFile.filledData = {};
+                        }
+                        newFilledFile.template_id = templateId;
+
+                        const targetTemplate = findTemplateById(templateId);
+                        if (targetTemplate) {
+                            if (!targetTemplate.filledFiles || !Array.isArray(targetTemplate.filledFiles)) {
+                                targetTemplate.filledFiles = [];
+                            }
+                            targetTemplate.filledFiles.push(newFilledFile);
+
+                            const templateLi = fileHierarchy.querySelector(`.folder-item[data-template-id='${templateId}']`);
+                            if (templateLi) {
+                                let filesUl = templateLi.querySelector('ul');
+                                if (!filesUl) {
+                                    filesUl = document.createElement('ul');
+                                    templateLi.appendChild(filesUl);
+                                }
+                                const noFilesLi = Array.from(filesUl.children).find(child => child.textContent.includes('No filled files'));
+                                if (noFilesLi) noFilesLi.remove();
+
+                                const newFileLiElement = document.createElement('li');
+                                newFileLiElement.classList.add('file-item');
+                                newFileLiElement.dataset.id = newFilledFile.id;
+                                newFileLiElement.dataset.name = newFilledFile.name;
+                                newFileLiElement.dataset.templateId = templateId;
+                                newFileLiElement.textContent = newFilledFile.name;
+                                filesUl.appendChild(newFileLiElement);
+                            }
+                        }
+
+                        currentSelectedFilledFile = JSON.parse(JSON.stringify(newFilledFile));
+                        originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
+                        renderFileDetails(currentSelectedFilledFile, 'view');
+
+                        document.querySelectorAll('.file-item.active, .folder-item.active').forEach(item => item.classList.remove('active'));
+                        const newSidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${newFilledFile.id}']`);
+                        if (newSidebarFileItem) newSidebarFileItem.classList.add('active');
+                        
+                        alert('New file created successfully: ' + newFilledFile.name);
+                        renderTemplateOverview(targetTemplate); // Re-render template overview to show the new file
+                    } else {
+                        alert('Failed to create file: ' + (result.message || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error creating file:', error);
+                    alert('Error creating file: ' + error.message);
+                }
+            }
+
             fileHierarchy.addEventListener('click', function(event) {
                 const target = event.target;
+                const parentElement = target.parentElement;
 
-                if (target.tagName === 'SPAN' && target.parentElement.classList.contains('folder-item')) {
-                    target.parentElement.classList.toggle('open');
+                document.querySelectorAll('.file-item.active, .folder-item.active').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelectorAll('.folder-item > span.active').forEach(span => {
+                    span.classList.remove('active');
+                    if(span.parentElement) span.parentElement.classList.remove('active');
+                });
+
+
+                if (target.tagName === 'SPAN' && parentElement.classList.contains('folder-item')) {
+                    parentElement.classList.toggle('open');
+                    const templateId = parentElement.dataset.templateId;
+                    const selectedTemplate = findTemplateById(templateId);
+
+                    if (selectedTemplate) {
+                        currentSelectedFilledFile = null;
+                        originalFilledData = null;
+                        renderTemplateOverview(selectedTemplate);
+                        parentElement.classList.add('active');
+                    }
                 } else if (target.classList.contains('file-item')) {
                     const filledFileId = target.dataset.id;
+                    const templateIdForFile = target.dataset.templateId;
                     const selectedFile = findFilledFileById(filledFileId);
 
                     if (selectedFile) {
                         currentSelectedFilledFile = JSON.parse(JSON.stringify(selectedFile));
-                        originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData)); // Store for cancel
+                        currentSelectedFilledFile.template_id = templateIdForFile;
+                        originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
-
-                        document.querySelectorAll('.file-item.active').forEach(item => item.classList.remove('active'));
                         target.classList.add('active');
                     } else {
                         fileNameHeading.textContent = 'File not found';
                         fileDetails.innerHTML = '<p>Details could not be loaded.</p>';
                         fileActionsDiv.style.display = 'none';
+                    }
+                }
+            });
+
+            fileDetails.addEventListener('click', function(event) {
+                if (event.target.classList.contains('template-overview-file-link')) {
+                    event.preventDefault();
+                    const filledFileId = event.target.dataset.id;
+                    const templateId = event.target.dataset.templateId;
+                    const selectedFile = findFilledFileById(filledFileId);
+
+                    if (selectedFile) {
+                        currentSelectedFilledFile = JSON.parse(JSON.stringify(selectedFile));
+                        currentSelectedFilledFile.template_id = templateId;
+                        originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
+                        renderFileDetails(currentSelectedFilledFile, 'view');
+
+                        document.querySelectorAll('.file-item.active, .folder-item.active').forEach(item => item.classList.remove('active'));
+                        const sidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${filledFileId}']`);
+                        if (sidebarFileItem) {
+                            sidebarFileItem.classList.add('active');
+                            const parentFolder = sidebarFileItem.closest('.folder-item');
+                            if (parentFolder && !parentFolder.classList.contains('open')) {
+                                parentFolder.classList.add('open');
+                            }
+                        }
                     }
                 }
             });
@@ -268,8 +475,8 @@
             });
 
             cancelButton.addEventListener('click', () => {
-                if (currentSelectedFilledFile) {
-                    currentSelectedFilledFile.filledData = JSON.parse(JSON.stringify(originalFilledData)); // Restore original
+                if (currentSelectedFilledFile && originalFilledData) {
+                    currentSelectedFilledFile.filledData = JSON.parse(JSON.stringify(originalFilledData));
                     renderFileDetails(currentSelectedFilledFile, 'view');
                 }
             });
@@ -303,13 +510,13 @@
 
                     if (result.success) {
                         currentSelectedFilledFile.filledData = updatedData;
-                        originalFilledData = JSON.parse(JSON.stringify(updatedData)); // Update original data too
+                        originalFilledData = JSON.parse(JSON.stringify(updatedData));
 
-                        const templateIndex = templatesData.findIndex(t => t.id.toString() === currentSelectedFilledFile.templateFileId.toString());
-                        if (templateIndex > -1) {
-                            const fileIndex = templatesData[templateIndex].filledFiles.findIndex(ff => ff.id.toString() === currentSelectedFilledFile.id.toString());
+                        const templateOfSavedFile = findTemplateById(currentSelectedFilledFile.template_id);
+                        if (templateOfSavedFile && templateOfSavedFile.filledFiles) {
+                            const fileIndex = templateOfSavedFile.filledFiles.findIndex(ff => ff.id.toString() === currentSelectedFilledFile.id.toString());
                             if (fileIndex > -1) {
-                                templatesData[templateIndex].filledFiles[fileIndex].filledData = updatedData;
+                                templateOfSavedFile.filledFiles[fileIndex].filledData = updatedData;
                             }
                         }
                         renderFileDetails(currentSelectedFilledFile, 'view');
@@ -322,6 +529,12 @@
                     alert('Error saving file: ' + error.message);
                 }
             });
+
+            if (templatesData.length < 0) {
+                fileNameHeading.textContent = 'No Templates Available';
+                fileDetails.innerHTML = '<p>There are no templates to display.</p>';
+            }
+
         });
     </script>
 </body>
