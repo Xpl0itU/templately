@@ -56,7 +56,6 @@
 
         .file-hierarchy .folder-item>ul {
             display: none;
-            /* Hidden by default */
             padding-left: 20px;
         }
 
@@ -66,7 +65,6 @@
 
         .file-hierarchy .folder-item>span::before {
             content: '\25B6';
-            /* Right-pointing triangle */
             display: inline-block;
             margin-right: 8px;
             transition: transform 0.2s ease-in-out;
@@ -77,14 +75,13 @@
         }
 
         .file-hierarchy .file-item.active,
-        .file-hierarchy .folder-item.active > span {
+        .file-hierarchy .folder-item.active>span {
             background-color: #cce5ff;
-            /* A light blue for active items */
             font-weight: bold;
         }
 
         .file-hierarchy .file-item.active:hover,
-        .file-hierarchy .folder-item.active > span:hover {
+        .file-hierarchy .folder-item.active>span:hover {
             background-color: #b8daff;
         }
 
@@ -120,12 +117,80 @@
             background-color: #dc3545;
             color: white;
         }
+
+        .wizard-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .wizard-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        .wizard-step {
+            display: none;
+        }
+
+        .wizard-step.active {
+            display: block;
+        }
+
+        .wizard-buttons {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .wizard-buttons button {
+            margin-left: 10px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="sidebar">
         <input type="text" id="searchBox" class="search-box" placeholder="Search files...">
+        <div id="templateUploadSection" style="padding: 10px 0; border-bottom: 1px solid #ccc; margin-bottom: 10px;">
+            <h4>Upload New Template</h4>
+            <!-- Remove old form, button will trigger modal -->
+            <button id="openUploadWizardButton" class="action-button"
+                style="background-color: #5cb85c; color: white; width: 100%;">Upload Template Wizard</button>
+            <div id="uploadStatus" style="margin-top: 5px; font-size: 0.9em;"></div>
+        </div>
         <div class="file-hierarchy" id="fileHierarchy">
             <ul>
                 <?php if (!empty($templates)) : ?>
@@ -135,8 +200,7 @@
                             <ul>
                                 <?php if (!empty($template['filledFiles'])) : ?>
                                     <?php foreach ($template['filledFiles'] as $filledFile) : ?>
-                                        <li class="file-item"
-                                            data-id="<?= esc($filledFile['id']) ?>"
+                                        <li class="file-item" data-id="<?= esc($filledFile['id']) ?>"
                                             data-name="<?= esc($filledFile['name']) ?>"
                                             data-template-id="<?= esc($template['id']) ?>">
                                             <?= esc($filledFile['name']) ?>
@@ -166,6 +230,81 @@
         </div>
     </div>
 
+    <!-- Wizard Modal Structure -->
+    <div id="uploadWizardModal" class="wizard-modal">
+        <div class="wizard-content">
+            <span class="close-wizard" style="float:right; cursor:pointer; font-size: 1.5em;">&times;</span>
+            <h2>Template Upload Wizard</h2>
+
+            <!-- Step 1: File Upload -->
+            <div id="wizardStepUploadFile" class="wizard-step active">
+                <h3>Step 1: Upload File</h3>
+                <form id="wizardFileUploadForm">
+                    <p>Select a template file (.docx, .pdf, .txt):</p>
+                    <input type="file" name="templateFileWizard" id="templateFileWizard" accept=".docx,.pdf,.txt"
+                        required style="margin-bottom: 10px; width: 100%;">
+                    <div class="wizard-buttons">
+                        <button type="button" id="cancelStep1" class="action-button"
+                            style="background-color: #6c757d;">Cancel</button>
+                        <button type="submit" id="nextStep1" class="action-button"
+                            style="background-color: #007bff;">Next: Analyze</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Analyzing File -->
+            <div id="wizardStepAnalyzingFile" class="wizard-step">
+                <h3>Step 2: Analyzing File</h3>
+                <p>Please wait while the file is being analyzed...</p>
+                <div class="spinner"></div>
+                <div id="analysisStatus"></div>
+                <div class="wizard-buttons">
+                    <button type="button" id="cancelStep2" class="action-button"
+                        style="background-color: #6c757d;">Cancel Upload</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Name File & Review -->
+            <div id="wizardStepNameReview" class="wizard-step">
+                <h3>Step 3: Name and Review</h3>
+                <form id="wizardNameReviewForm">
+                    <div>
+                        <label for="templateNameWizard">Template Name:</label>
+                        <input type="text" id="templateNameWizard" name="templateNameWizard" required
+                            style="width: calc(100% - 22px); padding: 8px; margin-bottom:10px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <p><strong>Original Filename:</strong> <span id="originalFileNameReview"></span></p>
+                    <p><strong>Detected Fields:</strong></p>
+                    <ul id="detectedFieldsList"
+                        style="list-style-type: disc; padding-left: 20px; max-height: 150px; overflow-y: auto; background: #f9f9f9; border: 1px solid #eee; padding:10px;">
+                        <!-- Fields will be listed here -->
+                    </ul>
+                    <div class="wizard-buttons">
+                        <button type="button" id="backStep3" class="action-button"
+                            style="background-color: #6c757d;">Back</button>
+                        <button type="button" id="cancelStep3" class="action-button"
+                            style="background-color: #dc3545;">Cancel Upload</button>
+                        <button type="submit" id="finishWizard" class="action-button"
+                            style="background-color: #28a745;">Finish & Save Template</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 4: Finalizing Upload -->
+            <div id="wizardStepSavingTemplate" class="wizard-step">
+                <h3>Step 4: Saving Template</h3>
+                <p>Please wait while the template is being saved...</p>
+                <div class="spinner"></div>
+                <div id="finalizingStatus"></div>
+                <div class="wizard-buttons">
+                    <button type="button" id="cancelStep4" class="action-button"
+                        style="background-color: #6c757d;">Cancel Process</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const fileHierarchy = document.getElementById('fileHierarchy');
@@ -176,6 +315,38 @@
             const editButton = document.getElementById('editButton');
             const saveButton = document.getElementById('saveButton');
             const cancelButton = document.getElementById('cancelButton');
+            const uploadTemplateForm = document.getElementById('uploadTemplateForm');
+            const templateFileInput = document.getElementById('templateFile');
+            const uploadStatusDiv = document.getElementById('uploadStatus');
+
+            const openUploadWizardButton = document.getElementById('openUploadWizardButton');
+            const uploadWizardModal = document.getElementById('uploadWizardModal');
+            const closeWizardButton = uploadWizardModal.querySelector('.close-wizard');
+
+            const wizardSteps = {
+                stepUploadFile: document.getElementById('wizardStepUploadFile'),
+                stepAnalyzingFile: document.getElementById('wizardStepAnalyzingFile'),
+                stepNameReview: document.getElementById('wizardStepNameReview'),
+                stepSavingTemplate: document.getElementById('wizardStepSavingTemplate')
+            };
+            const wizardFileUploadForm = document.getElementById('wizardFileUploadForm');
+            const wizardTemplateFileInput = document.getElementById('templateFileWizard');
+            const nextStepUploadFileButton = document.getElementById('nextStep1');
+            const cancelStepUploadFileButton = document.getElementById('cancelStep1');
+
+            const analysisStatusDiv = document.getElementById('analysisStatus');
+            const cancelStepAnalyzingFileButton = document.getElementById('cancelStep2');
+
+            const wizardNameReviewForm = document.getElementById('wizardNameReviewForm');
+            const templateNameWizardInput = document.getElementById('templateNameWizard');
+            const originalFileNameReviewSpan = document.getElementById('originalFileNameReview');
+            const detectedFieldsListUl = document.getElementById('detectedFieldsList');
+            const backStepNameReviewButton = document.getElementById('backStep3');
+            const cancelStepNameReviewButton = document.getElementById('cancelStep3');
+            const finishStepNameReviewButton = document.getElementById('finishWizard');
+
+            const finalizingStatusDiv = document.getElementById('finalizingStatus');
+            const cancelStepSavingTemplateButton = document.getElementById('cancelStep4');
 
             let currentSelectedFilledFile = null;
             let originalFilledData = null;
@@ -206,6 +377,193 @@
 
             function findTemplateById(templateId) {
                 return templatesData.find(t => t.id.toString() === templateId.toString());
+            }
+
+            let wizardState = {
+                currentStep: 'stepUploadFile',
+                uploadedFile: null,
+                tempFilePath: null,
+                originalFileName: null,
+                detectedFields: [],
+                fileMimeType: null,
+                fileSizeKB: null
+            };
+
+            function showWizardStep(stepName) {
+                Object.values(wizardSteps).forEach(step => step.classList.remove('active'));
+                if (wizardSteps[stepName]) {
+                    wizardSteps[stepName].classList.add('active');
+                    wizardState.currentStep = stepName;
+                }
+            }
+
+            function resetWizard() {
+                wizardFileUploadForm.reset();
+                wizardNameReviewForm.reset();
+                wizardState = {
+                    currentStep: 'stepUploadFile',
+                    uploadedFile: null,
+                    tempFilePath: null,
+                    originalFileName: null,
+                    detectedFields: [],
+                    fileMimeType: null,
+                    fileSizeKB: null
+                };
+                detectedFieldsListUl.innerHTML = '';
+                analysisStatusDiv.textContent = '';
+                finalizingStatusDiv.textContent = '';
+                uploadWizardModal.style.display = 'none';
+                showWizardStep('stepUploadFile');
+            }
+
+            openUploadWizardButton.addEventListener('click', () => {
+                uploadWizardModal.style.display = 'block';
+                showWizardStep('stepUploadFile');
+            });
+
+            closeWizardButton.addEventListener('click', resetWizard);
+            cancelStepUploadFileButton.addEventListener('click', resetWizard);
+            cancelStepAnalyzingFileButton.addEventListener('click', () => {
+                alert('Upload cancelled.');
+                resetWizard();
+            });
+            cancelStepNameReviewButton.addEventListener('click', () => {
+                alert('Upload cancelled.');
+                resetWizard();
+            });
+            cancelStepSavingTemplateButton.addEventListener('click', () => {
+                alert('Upload process cancelled.');
+                resetWizard();
+            });
+
+            window.addEventListener('click', (event) => {
+                if (event.target == uploadWizardModal) {
+                    resetWizard();
+                }
+            });
+
+            wizardFileUploadForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!wizardTemplateFileInput.files || wizardTemplateFileInput.files.length === 0) {
+                    alert('Please select a file to upload.');
+                    return;
+                }
+                wizardState.uploadedFile = wizardTemplateFileInput.files[0];
+                wizardState.originalFileName = wizardState.uploadedFile.name;
+                wizardState.fileMimeType = wizardState.uploadedFile.type;
+                wizardState.fileSizeKB = (wizardState.uploadedFile.size / 1024).toFixed(2);
+
+                showWizardStep('stepAnalyzingFile');
+                analysisStatusDiv.textContent = 'Analyzing...';
+
+                const formData = new FormData();
+                formData.append('templateFile', wizardState.uploadedFile);
+                const csrfToken = document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content');
+                formData.append('<?= csrf_token() ?>', csrfToken);
+
+                try {
+                    const response = await fetch('/file-explorer/analyze-template', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        wizardState.tempFilePath = result.tempFilePath;
+                        wizardState.detectedFields = result.templateFields || [];
+
+                        originalFileNameReviewSpan.textContent = wizardState.originalFileName;
+                        templateNameWizardInput.value = wizardState.originalFileName.split('.').slice(0, -1).join('.') || wizardState.originalFileName;
+
+                        detectedFieldsListUl.innerHTML = '';
+                        if (wizardState.detectedFields.length > 0) {
+                            wizardState.detectedFields.forEach(field => {
+                                const li = document.createElement('li');
+                                li.textContent = field;
+                                detectedFieldsListUl.appendChild(li);
+                            });
+                        } else {
+                            const li = document.createElement('li');
+                            li.textContent = 'No fields detected (or using mock data).';
+                            detectedFieldsListUl.appendChild(li);
+                        }
+                        showWizardStep('stepNameReview');
+                    } else {
+                        analysisStatusDiv.textContent = `Analysis failed: ${result.message || 'Unknown error'}`;
+                        analysisStatusDiv.style.color = 'red';
+                        setTimeout(() => showWizardStep('stepUploadFile'), 3000);
+                    }
+                } catch (error) {
+                    console.error('Error analyzing file:', error);
+                    analysisStatusDiv.textContent = `Analysis error: ${error.message}`;
+                    analysisStatusDiv.style.color = 'red';
+                    setTimeout(() => showWizardStep('stepUploadFile'), 3000);
+                }
+            });
+
+            backStepNameReviewButton.addEventListener('click', () => {
+                wizardFileUploadForm.reset();
+                wizardState.uploadedFile = null;
+                wizardState.tempFilePath = null;
+                showWizardStep('stepUploadFile');
+            });
+
+            function refreshSidebar() {
+                const fileHierarchyUl = fileHierarchy.querySelector('ul');
+                fileHierarchyUl.innerHTML = ''; // Clear existing items
+
+                if (templatesData.length === 0) {
+                    const noTemplatesLi = document.createElement('li');
+                    noTemplatesLi.textContent = 'No templates found.';
+                    fileHierarchyUl.appendChild(noTemplatesLi);
+                    return;
+                }
+
+                templatesData.forEach(template => {
+                    const templateLi = document.createElement('li');
+                    templateLi.classList.add('folder-item');
+                    templateLi.dataset.templateId = template.id;
+
+                    const templateSpan = document.createElement('span');
+                    templateSpan.textContent = template.name;
+                    templateLi.appendChild(templateSpan);
+
+                    const filesUl = document.createElement('ul');
+                    if (template.filledFiles && template.filledFiles.length > 0) {
+                        template.filledFiles.forEach(filledFile => {
+                            const fileLi = document.createElement('li');
+                            fileLi.classList.add('file-item');
+                            fileLi.dataset.id = filledFile.id;
+                            fileLi.dataset.name = filledFile.name;
+                            fileLi.dataset.templateId = template.id;
+                            fileLi.textContent = filledFile.name;
+                            filesUl.appendChild(fileLi);
+                        });
+                    } else {
+                        const noFilesLi = document.createElement('li');
+                        noFilesLi.textContent = 'No filled files for this template.';
+                        filesUl.appendChild(noFilesLi);
+                    }
+                    templateLi.appendChild(filesUl);
+                    fileHierarchyUl.appendChild(templateLi);
+                });
+                const activeFile = currentSelectedFilledFile ? fileHierarchy.querySelector(`.file-item[data-id='${currentSelectedFilledFile.id}']`) : null;
+                const activeFolderLi = currentSelectedFilledFile ? null : (fileHierarchy.querySelector('.folder-item.active'));
+
+                document.querySelectorAll('.file-item.active, .folder-item.active').forEach(item => item.classList.remove('active'));
+
+                if (activeFile) {
+                    activeFile.classList.add('active');
+                    const parentFolder = activeFile.closest('.folder-item');
+                    if (parentFolder) parentFolder.classList.add('open');
+                } else if (activeFolderLi) {
+                    const templateId = activeFolderLi.dataset.templateId;
+                    const newActiveFolderLi = fileHierarchy.querySelector(`.folder-item[data-template-id='${templateId}']`);
+                    if (newActiveFolderLi) newActiveFolderLi.classList.add('active', 'open');
+                }
             }
 
             function renderFileDetails(fileData, mode = 'view') {
@@ -389,7 +747,7 @@
                         if (newSidebarFileItem) newSidebarFileItem.classList.add('active');
                         
                         alert('New file created successfully: ' + newFilledFile.name);
-                        renderTemplateOverview(targetTemplate); // Re-render template overview to show the new file
+                        renderTemplateOverview(targetTemplate);
                     } else {
                         alert('Failed to create file: ' + (result.message || 'Unknown error'));
                     }
@@ -398,6 +756,68 @@
                     alert('Error creating file: ' + error.message);
                 }
             }
+
+            wizardNameReviewForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const templateName = templateNameWizardInput.value.trim();
+                if (!templateName) {
+                    alert('Please enter a template name.');
+                    return;
+                }
+
+                showWizardStep('stepSavingTemplate');
+                finalizingStatusDiv.textContent = 'Saving...';
+
+                const payload = {
+                    tempFilePath: wizardState.tempFilePath,
+                    templateName: templateName,
+                    templateFields: wizardState.detectedFields,
+                    originalFileName: wizardState.originalFileName,
+                    fileMimeType: wizardState.fileMimeType,
+                    fileSizeKB: wizardState.fileSizeKB,
+                    '<?= csrf_token() ?>': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                };
+
+                try {
+                    const response = await fetch('/file-explorer/finalize-template-upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (response.ok && result.success && result.newTemplate) {
+                        finalizingStatusDiv.textContent = 'Template saved successfully!';
+                        finalizingStatusDiv.style.color = 'green';
+
+                        if (typeof result.newTemplate.templateFields === 'string') {
+                            result.newTemplate.templateFields = JSON.parse(result.newTemplate.templateFields || '[]');
+                        }
+                        result.newTemplate.filledFiles = result.newTemplate.filledFiles || [];
+                        templatesData.push(result.newTemplate);
+                        refreshSidebar();
+
+                        setTimeout(() => {
+                            resetWizard();
+                            const newTemplateLi = fileHierarchy.querySelector(`.folder-item[data-template-id='${result.newTemplate.id}'] > span`);
+                            if (newTemplateLi) newTemplateLi.click();
+                        }, 1500);
+
+                    } else {
+                        finalizingStatusDiv.textContent = `Save failed: ${result.message || 'Unknown error'}`;
+                        finalizingStatusDiv.style.color = 'red';
+                        cancelStepSavingTemplateButton.textContent = 'Close';
+                    }
+                } catch (error) {
+                    console.error('Error finalizing template:', error);
+                    finalizingStatusDiv.textContent = `Save error: ${error.message}`;
+                    finalizingStatusDiv.style.color = 'red';
+                    cancelStepSavingTemplateButton.textContent = 'Close';
+                }
+            });
 
             fileHierarchy.addEventListener('click', function(event) {
                 const target = event.target;
@@ -408,7 +828,7 @@
                 });
                 document.querySelectorAll('.folder-item > span.active').forEach(span => {
                     span.classList.remove('active');
-                    if(span.parentElement) span.parentElement.classList.remove('active');
+                    if (span.parentElement) span.parentElement.classList.remove('active');
                 });
 
 
@@ -498,11 +918,15 @@
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
                         },
-                        body: JSON.stringify({ filledData: updatedData })
+                        body: JSON.stringify({
+                            filledData: updatedData
+                        })
                     });
 
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ message: 'Failed to save. Server error.' }));
+                        const errorData = await response.json().catch(() => ({
+                            message: 'Failed to save. Server error.'
+                        }));
                         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
                     }
 
@@ -534,7 +958,6 @@
                 fileNameHeading.textContent = 'No Templates Available';
                 fileDetails.innerHTML = '<p>There are no templates to display.</p>';
             }
-
         });
     </script>
 </body>

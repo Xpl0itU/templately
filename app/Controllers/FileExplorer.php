@@ -135,4 +135,167 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
         }
     }
+
+    // TODO: Implement
+    private function extractTemplateFieldsFromFile(string $filePath): array
+    {
+        sleep(2);
+        log_message('info', 'Mock extracting fields from: ' . $filePath);
+        return ['firstName', 'lastName', 'date', 'productName'];
+    }
+
+    public function analyzeTemplateFile()
+    {
+        if ($this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        $validationRule = [
+            'templateFile' => [
+                'label' => 'Template File',
+                'rules' => [
+                    'uploaded[templateFile]',
+                    'mime_in[templateFile,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain]',
+                    'max_size[templateFile,20480]', // Max 20MB
+                ],
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Validation failed', 'errors' => $this->validator->getErrors()]);
+        }
+
+        $file = $this->request->getFile('templateFile');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'File error: ' . $file->getErrorString() . ' (' . $file->getError() . ')']);
+        }
+
+        $tempUploadPath = WRITEPATH . 'uploads/temp_templates';
+        if (!is_dir($tempUploadPath)) {
+            mkdir($tempUploadPath, 0777, true);
+        }
+
+        $newName = $file->getRandomName();
+        $file->move($tempUploadPath, $newName);
+        $tempFilePath = $tempUploadPath . '/' . $newName;
+
+        $templateFields = $this->extractTemplateFieldsFromFile($tempFilePath);
+
+        return $this->response->setJSON([
+            'success' => true,
+            'message' => 'File analyzed successfully.',
+            'tempFilePath' => $tempFilePath,
+            'originalFileName' => $file->getClientName(),
+            'templateFields' => $templateFields
+        ]);
+    }
+
+    public function finalizeTemplateUpload()
+    {
+        if ($this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        $json = $this->request->getJSON();
+        log_message('debug', 'Finalize Template Upload JSON payload: ' . print_r($json, true));
+
+        if (empty($json) || !isset($json->tempFilePath) || !isset($json->templateName) || !isset($json->templateFields) || !isset($json->originalFileName) || !isset($json->fileMimeType) || !isset($json->fileSizeKB)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received for finalization. Missing one or more required fields.']);
+        }
+        
+        $tempFilePath = $json->tempFilePath;
+        $templateName = trim($json->templateName);
+        $templateFields = $json->templateFields;
+        $originalFileName = $json->originalFileName;
+        $fileMimeType = $json->fileMimeType;
+        $fileSizeKB = $json->fileSizeKB;
+
+        if (empty($templateName)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Template name cannot be empty.']);
+        }
+        
+        $realTempFilePath = realpath($tempFilePath);
+        $expectedTempDir = realpath(WRITEPATH . 'uploads/temp_templates');
+
+        if ($realTempFilePath === false) {
+            log_message('error', "Finalize Error: tempFilePath '{$tempFilePath}' does not resolve to a real path or does not exist.");
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Temporary file path is invalid or file does not exist. Please try uploading again.']);
+        }
+
+        if ($expectedTempDir === false) {
+            log_message('critical', "Finalize Error: Expected temporary directory " . WRITEPATH . "uploads/temp_templates' does not exist or is not accessible.");
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Server configuration error regarding temporary storage. Contact administrator.']);
+        }
+
+        if (strpos($realTempFilePath, $expectedTempDir) !== 0) {
+            log_message('error', "Finalize Error: tempFilePath '{$realTempFilePath}' is outside the expected directory '{$expectedTempDir}'.");
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid temporary file path (security check failed).']);
+        }
+
+        if (!file_exists($realTempFilePath)) {
+            log_message('error', "Finalize Error: Temporary file '{$realTempFilePath}' not found after realpath success. This could be a race condition or permissions issue.");
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Temporary file not found. It might have expired or been moved. Please try uploading again.']);
+        }
+
+        $uploadPath = WRITEPATH . 'uploads/templates';
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0777, true);
+        }
+
+        $newFileNameOnServer = basename($realTempFilePath);
+        $finalFilePath = $uploadPath . '/' . $newFileNameOnServer;
+
+        if (!rename($realTempFilePath, $finalFilePath)) {
+            if (file_exists($realTempFilePath)) {
+                unlink($realTempFilePath);
+            }
+            log_message('error', "Finalize Error: Could not move temp file '{$realTempFilePath}' to '{$finalFilePath}'. Check permissions.");
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not move template file to final destination.']);
+        }
+        
+        $templateModel = model('App\\Models\\TemplateFilesModel');
+        $dataToInsert = [
+            'name' => $templateName,
+            'path' => $finalFilePath,
+            'size' => $fileSizeKB, 
+            'type' => $fileMimeType,
+            'templateFields' => json_encode($templateFields),
+            'createdAt' => date('Y-m-d H:i:s')
+        ];
+
+        try {
+            $newTemplateId = $templateModel->insert($dataToInsert);
+            if ($newTemplateId === false) {
+                if (file_exists($finalFilePath)) {
+                    unlink($finalFilePath);
+                }
+                log_message('error', 'Failed to insert new template file (finalize). Errors: ' . print_r($templateModel->errors(), true));
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not save template to database.', 'errors' => $templateModel->errors()]);
+            }
+
+            $newTemplate = $templateModel->find($newTemplateId);
+            if ($newTemplate) {
+                if (!empty($newTemplate['templateFields']) && is_string($newTemplate['templateFields'])) {
+                    $decodedFields = json_decode($newTemplate['templateFields'], true);
+                    $newTemplate['templateFields'] = is_array($decodedFields) ? $decodedFields : [];
+                } else {
+                    $newTemplate['templateFields'] = [];
+                }
+                $newTemplate['filledFiles'] = [];
+                return $this->response->setJSON(['success' => true, 'message' => 'Template finalized and saved successfully.', 'newTemplate' => $newTemplate]);
+            } else {
+                if (file_exists($finalFilePath)) {
+                    unlink($finalFilePath);
+                }
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Template saved but could not be retrieved.']);
+            }
+        } catch (\Exception $e) {
+            if (file_exists($finalFilePath)) {
+                unlink($finalFilePath);
+            }
+            log_message('error', '[Controller Exception - FinalizeTemplate] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected server error occurred during finalization.']);
+        }
+    }
 }
