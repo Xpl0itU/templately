@@ -28,7 +28,7 @@
                         </a>
                     
                                         <?php if (auth()->user() && auth()->user()->inGroup('superadmin', 'admin')) : ?>
-                            <a href="/user-management" class="px-3 py-2 text-gray-600 hover:text-blue-600 transition duration-200 <?php echo $userManagementActive ? 'border-b-2 border-purple-600 text-purple-600' : '' ?>">
+                            <a href="/user-management" class="px-3 py-2 text-gray-600 hover:text-indigo-600 transition duration-200 <?php echo $userManagementActive ? 'border-b-2 border-indigo-600 text-indigo-600' : '' ?>">
                                 <i class="fas fa-users-cog mr-2"></i>User Management
                             </a>
                                         <?php endif; ?>

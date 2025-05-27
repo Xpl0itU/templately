@@ -146,6 +146,12 @@
             font-weight: 500;
         }
 
+        .file-hierarchy .file-item.bg-green-100 {
+            background-color: #dcfce7 !important;
+            border-left: 4px solid #22c55e;
+            font-weight: 500;
+        }
+
         .button-loading {
             position: relative;
             pointer-events: none;
@@ -201,15 +207,15 @@
                 
                 <div id="templateUploadSection" class="p-4 border-b border-gray-200 bg-gray-50">
                     <h4 class="text-lg font-semibold text-gray-700 mb-3">Upload New Template</h4>
-                    <button id="openUploadWizardButton" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
-                        <i class="fas fa-upload mr-2"></i>Upload Template Wizard
+                    <button id="openUploadWizardButton" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fas fa-upload mr-2"></i>Upload Template
                     </button>
                     <div id="uploadStatus" class="mt-2 text-sm text-gray-600"></div>
                 </div>
                 
                 <div class="p-4">
                     <h4 class="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-                        <i class="fas fa-folder text-yellow-500 mr-2"></i>Template Files
+                        <i class="fas fa-folder text-blue-500 mr-2"></i>Template Files
                     </h4>
                     <div class="file-hierarchy overflow-y-auto max-h-96" id="fileHierarchy">
                         <ul class="list-none p-0">
@@ -218,7 +224,7 @@
                                     <li class="folder-item mb-2" data-template-id="<?php echo esc($template['id']) ?>">
                                         <span class="flex items-center p-2 rounded-md hover:bg-blue-50 cursor-pointer">
                                             <i class="fas fa-chevron-right text-gray-400 mr-2 transition-transform duration-200 folder-chevron"></i>
-                                            <i class="fas fa-folder-open text-yellow-500 mr-2"></i>
+                                            <i class="fas fa-folder-open text-blue-500 mr-2"></i>
                                             <?php echo esc($template['name']) ?>
                                         </span>
                                         <ul class="pl-6" style="display: none;">
@@ -228,7 +234,7 @@
                                                         data-id="<?php echo esc($filledFile['id']) ?>"
                                                         data-name="<?php echo esc($filledFile['name']) ?>"
                                                         data-template-id="<?php echo esc($template['id']) ?>">
-                                                        <i class="fas fa-file-alt text-blue-500 mr-2"></i>
+                                                        <i class="fas fa-edit text-green-500 mr-2"></i>
                                                         <?php echo esc($filledFile['name']) ?>
                                                     </li>
                                                 <?php endforeach; ?>
@@ -262,7 +268,7 @@
                         <i class="fas fa-times mr-2"></i>Cancel
                     </button>
                     <div id="exportButtonGroup" class="relative" style="display: none;">
-                        <button id="exportButton" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                        <button id="exportButton" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
                             <i class="fas fa-download mr-2"></i>Export
                             <i class="fas fa-chevron-down ml-2"></i>
                         </button>
@@ -1021,13 +1027,13 @@
                     if (template.filledFiles && template.filledFiles.length > 0) {
                         template.filledFiles.forEach(filledFile => {
                             const fileLi = document.createElement('li');
-                            fileLi.className = 'file-item p-2 rounded-md hover:bg-blue-50 cursor-pointer mb-1 flex items-center';
+                            fileLi.className = 'file-item p-2 rounded-md hover:bg-green-50 cursor-pointer mb-1 flex items-center';
                             fileLi.dataset.id = filledFile.id;
                             fileLi.dataset.name = filledFile.name;
                             fileLi.dataset.templateId = template.id;
                             
                             const fileIcon = document.createElement('i');
-                            fileIcon.className = 'fas fa-file-alt text-blue-500 mr-2';
+                            fileIcon.className = 'fas fa-edit text-green-500 mr-2';
                             fileLi.appendChild(fileIcon);
                             
                             const fileText = document.createTextNode(filledFile.name);
@@ -1047,11 +1053,11 @@
                 const activeFile = currentSelectedFilledFile ? fileHierarchy.querySelector(`.file-item[data-id='${currentSelectedFilledFile.id}']`) : null;
                 const activeTemplate = currentSelectedTemplate ? fileHierarchy.querySelector(`.folder-item[data-template-id='${currentSelectedTemplate.id}']`) : null;
 
-                document.querySelectorAll('.file-item.bg-blue-100').forEach(item => item.classList.remove('bg-blue-100'));
-                document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => span.classList.remove('bg-blue-100'));
+                        document.querySelectorAll('.file-item.bg-blue-100, .file-item.bg-green-100').forEach(item => item.classList.remove('bg-blue-100', 'bg-green-100'));
+                        document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => span.classList.remove('bg-blue-100'));
 
                 if (activeFile) {
-                    activeFile.classList.add('bg-blue-100');
+                    activeFile.classList.add('bg-green-100');
                     const parentFolder = activeFile.closest('.folder-item');
                     if (parentFolder) {
                         const folderList = parentFolder.querySelector('ul');
@@ -1096,10 +1102,26 @@
                 }, 50);             
             }
 
+            function updateButtonColorsForFileType(isFilledFile) { // Could change param from bool to string, for now, this will work just fine
+                if (isFilledFile) {
+                    // Green for filled files
+                    editButton.className = 'bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center';
+                    exportButton.className = 'bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center';
+                } else {
+                    // Blue for templates
+                    editButton.className = 'bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center';
+                    exportButton.className = 'bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center';
+                }
+            }
+
             function renderFileDetails(fileData, mode = 'view') {
                 fileDetails.innerHTML = '';
                 fileNameHeading.textContent = fileData.name || 'File Details';
                 fileActionsDiv.style.display = 'flex';
+
+                // Update button colors for filled files (green) or templates (blue)
+                const isFilledFile = fileData.hasOwnProperty('template_id') || currentSelectedFilledFile;
+                updateButtonColorsForFileType(isFilledFile);
 
                 if (!fileData.filledData || typeof fileData.filledData !== 'object') {
                     fileDetails.innerHTML = '<div class="p-4 text-center"><i class="fas fa-exclamation-circle text-yellow-500 text-3xl mb-2"></i><p class="text-gray-600">No structured data available for this file.</p></div>';
@@ -1127,7 +1149,9 @@
                         input.name = key;
                         input.value = value;
                         input.dataset.originalValue = value;
-                        input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                        input.className = isFilledFile ? 
+                            'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500' :
+                            'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
                         
                         item.appendChild(label);
                         item.appendChild(input);
@@ -1171,6 +1195,10 @@
                 fileNameHeading.textContent = `Template: ${template.name}`;
                 fileDetails.innerHTML = '';
                 fileActionsDiv.style.display = 'flex'; 
+                
+                // Reset button colors to blue for template view
+                updateButtonColorsForFileType(false);
+                
                 editButton.style.display = 'none';
                 saveButton.style.display = 'none';
                 cancelButton.style.display = 'none';
@@ -1264,7 +1292,7 @@
                         fileItem.className = 'p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors duration-150 flex items-center';
                         
                         const fileIcon = document.createElement('i');
-                        fileIcon.className = 'fas fa-file-alt text-blue-500 mr-3 text-lg';
+                        fileIcon.className = 'fas fa-edit text-green-500 mr-3 text-lg';
                         fileItem.appendChild(fileIcon);
                         
                         const fileInfo = document.createElement('div');
@@ -1371,13 +1399,13 @@
                                 if (noFilesLi) noFilesLi.remove();
 
                                 const newFileLiElement = document.createElement('li');
-                                newFileLiElement.className = 'file-item p-2 rounded-md hover:bg-blue-50 cursor-pointer mb-1 flex items-center';
+                                newFileLiElement.className = 'file-item p-2 rounded-md hover:bg-green-50 cursor-pointer mb-1 flex items-center';
                                 newFileLiElement.dataset.id = newFilledFile.id;
                                 newFileLiElement.dataset.name = newFilledFile.name;
                                 newFileLiElement.dataset.templateId = templateId;
                                 
                                 const fileIcon = document.createElement('i');
-                                fileIcon.className = 'fas fa-file-alt text-blue-500 mr-2';
+                                fileIcon.className = 'fas fa-edit text-green-500 mr-2';
                                 newFileLiElement.appendChild(fileIcon);
                                 
                                 const fileText = document.createTextNode(newFilledFile.name);
@@ -1397,11 +1425,11 @@
                         originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
-                        document.querySelectorAll('.file-item.bg-blue-100').forEach(item => item.classList.remove('bg-blue-100'));
+                        document.querySelectorAll('.file-item.bg-blue-100, .file-item.bg-green-100').forEach(item => item.classList.remove('bg-blue-100', 'bg-green-100'));
                         document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => span.classList.remove('bg-blue-100'));
                             
                         const newSidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${newFilledFile.id}']`);
-                        if (newSidebarFileItem) newSidebarFileItem.classList.add('bg-blue-100');
+                        if (newSidebarFileItem) newSidebarFileItem.classList.add('bg-green-100');
                         
                         showModal('success', 'New file created successfully: ' + newFilledFile.name);
                         renderTemplateOverview(targetTemplate);
@@ -1490,7 +1518,7 @@
                 const parentElement = clickTarget.parentElement;
 
                 document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
-                    item.classList.remove('bg-blue-100');
+                    item.classList.remove('bg-blue-100', 'bg-green-100');
                 });
 
                 if (clickTarget.tagName === 'SPAN' && parentElement.classList.contains('folder-item')) {
@@ -1529,7 +1557,7 @@
                         currentSelectedFilledFile.template_id = templateIdForFile;
                         currentSelectedTemplate = null;                         originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
-                        clickTarget.classList.add('bg-blue-100');
+                        clickTarget.classList.add('bg-green-100');
                     } else {
                         fileNameHeading.textContent = 'File not found';
                         fileDetails.innerHTML = '<p class="text-gray-600">Details could not be loaded.</p>';
@@ -1557,12 +1585,12 @@
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
                         document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
-                            item.classList.remove('bg-blue-100');
+                            item.classList.remove('bg-blue-100', 'bg-green-100');
                         });
                         
                         const sidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${filledFileId}']`);
                         if (sidebarFileItem) {
-                            sidebarFileItem.classList.add('bg-blue-100');
+                            sidebarFileItem.classList.add('bg-green-100');
                             const parentFolder = sidebarFileItem.closest('.folder-item');
                             if (parentFolder) {
                                 const folderList = parentFolder.querySelector('ul');

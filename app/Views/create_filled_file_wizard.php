@@ -16,7 +16,7 @@
     <div class="max-w-4xl mx-auto">
                 <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-2xl font-bold text-gray-900 mb-6">
-                <i class="fas fa-file-plus mr-2 text-purple-500"></i>
+                <i class="fas fa-edit mr-2 text-blue-500"></i>
                 Select a Template
             </h2>
             
@@ -43,7 +43,7 @@
                             <?php endif; ?>
                             
                             <div class="mt-3 pt-3 border-t border-gray-100">
-                                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
+                                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition duration-200">
                                     <i class="fas fa-arrow-right mr-2"></i>
                                     Use This Template
                                 </button>
@@ -89,10 +89,10 @@
             const templateCards = document.querySelectorAll('.template-card');
             templateCards.forEach(card => {
                 card.addEventListener('mouseenter', function() {
-                    this.classList.add('border-purple-300', 'bg-purple-50');
+                    this.classList.add('border-blue-300', 'bg-blue-50');
                 });
                 card.addEventListener('mouseleave', function() {
-                    this.classList.remove('border-purple-300', 'bg-purple-50');
+                    this.classList.remove('border-blue-300', 'bg-blue-50');
                 });
             });
         });

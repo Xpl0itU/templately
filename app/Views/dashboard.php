@@ -30,7 +30,7 @@
         <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-file-pdf text-green-500 text-2xl"></i>
+                    <i class="fas fa-edit text-green-500 text-2xl"></i>
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Filled Files</p>
@@ -39,10 +39,10 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-user-shield text-purple-500 text-2xl"></i>
+                    <i class="fas fa-user-shield text-indigo-500 text-2xl"></i>
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Your Role</p>
@@ -57,13 +57,13 @@
         <div class="mb-8">
         <div class="bg-white rounded-lg shadow-md p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-6">
-                <i class="fas fa-rocket mr-2 text-blue-500"></i>Quick Actions
+                <i class="fas fa-rocket mr-2 text-slate-500"></i>Quick Actions
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <?php if ($userPermissions['canViewTemplates']) : ?>
-                <a href="/file-explorer" class="flex items-center p-6 bg-blue-50 rounded-lg hover:bg-blue-100 transition duration-200 text-center">
+                <a href="/file-explorer" class="flex items-center p-6 bg-slate-50 rounded-lg hover:bg-slate-100 transition duration-200 text-center">
                     <div class="w-full">
-                        <i class="fas fa-folder-open text-blue-500 text-3xl mb-3"></i>
+                        <i class="fas fa-folder-open text-slate-500 text-3xl mb-3"></i>
                         <div class="font-medium text-gray-900 mb-1">Browse Files</div>
                         <div class="text-sm text-gray-600">View all templates and files</div>
                     </div>
@@ -71,9 +71,9 @@
                 <?php endif; ?>
                 
                 <?php if ($userPermissions['canCreateTemplates']) : ?>
-                <a href="/file-explorer/upload-template" class="flex items-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition duration-200 text-center">
+                <a href="/file-explorer/upload-template" class="flex items-center p-6 bg-blue-50 rounded-lg hover:bg-blue-100 transition duration-200 text-center">
                     <div class="w-full">
-                        <i class="fas fa-plus text-green-500 text-3xl mb-3"></i>
+                        <i class="fas fa-upload text-blue-500 text-3xl mb-3"></i>
                         <div class="font-medium text-gray-900 mb-1">Upload Template</div>
                         <div class="text-sm text-gray-600">Add a new template file</div>
                     </div>
@@ -81,9 +81,9 @@
                 <?php endif; ?>
                 
                 <?php if ($userPermissions['canCreateFilledFiles']) : ?>
-                <a href="/file-explorer/create-filled-file" class="flex items-center p-6 bg-purple-50 rounded-lg hover:bg-purple-100 transition duration-200 text-center">
+                <a href="/file-explorer/create-filled-file" class="flex items-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition duration-200 text-center">
                     <div class="w-full">
-                        <i class="fas fa-file-plus text-purple-500 text-3xl mb-3"></i>
+                        <i class="fas fa-edit text-green-500 text-3xl mb-3"></i>
                         <div class="font-medium text-gray-900 mb-1">Create Filled File</div>
                         <div class="text-sm text-gray-600">Fill out a template</div>
                     </div>
@@ -144,7 +144,7 @@
             <div class="space-y-3">
                 <?php foreach ($recentFilledFiles as $file): ?>
                 <a href="/file-explorer#filled-file-<?php echo $file['id'] ?>" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-green-50 hover:border-green-200 border border-transparent transition duration-200 cursor-pointer">
-                    <i class="fas fa-file-pdf text-green-500 mr-3"></i>
+                    <i class="fas fa-edit text-green-500 mr-3"></i>
                     <div class="flex-1">
                         <p class="font-medium text-gray-900 hover:text-green-700"><?php echo esc($file['name']) ?></p>
                         <p class="text-sm text-gray-600">
@@ -160,7 +160,7 @@
             </div>
             <?php else: ?>
             <div class="text-center py-8">
-                <i class="fas fa-file-pdf text-gray-300 text-4xl mb-3"></i>
+                <i class="fas fa-edit text-gray-300 text-4xl mb-3"></i>
                 <p class="text-gray-500">No filled files available</p>
                 <?php if ($userPermissions['canCreateFilledFiles']): ?>
                     <a href="/file-explorer/create-filled-file" class="inline-block mt-3 text-green-600 hover:text-green-700">
