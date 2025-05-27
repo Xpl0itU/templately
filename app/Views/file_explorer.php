@@ -1468,7 +1468,7 @@
                 }
                 const parentElement = clickTarget.parentElement;
 
-                                document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
+                document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
                     item.classList.remove('bg-blue-100');
                 });
 
@@ -1535,14 +1535,14 @@
                         currentSelectedTemplate = null;                         originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
-                                                document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
+                        document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
                             item.classList.remove('bg-blue-100');
                         });
                         
                         const sidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${filledFileId}']`);
                         if (sidebarFileItem) {
                             sidebarFileItem.classList.add('bg-blue-100');
-                                                        const parentFolder = sidebarFileItem.closest('.folder-item');
+                            const parentFolder = sidebarFileItem.closest('.folder-item');
                             if (parentFolder) {
                                 const folderList = parentFolder.querySelector('ul');
                                 const chevronIcon = parentFolder.querySelector('.folder-chevron');
@@ -1654,7 +1654,7 @@
                     const result = await response.json();
 
                     if (result.success) {
-                                                const templateOfDeletedFile = findTemplateById(currentSelectedFilledFile.template_id);
+                        const templateOfDeletedFile = findTemplateById(currentSelectedFilledFile.template_id);
                         if (templateOfDeletedFile && templateOfDeletedFile.filledFiles) {
                             const fileIndex = templateOfDeletedFile.filledFiles.findIndex(ff => ff.id.toString() === currentSelectedFilledFile.id.toString());
                             if (fileIndex > -1) {
@@ -1677,7 +1677,7 @@
                     console.error('Error deleting file:', error);
                     showModal('error', 'Error deleting file: ' + error.message);
                 } finally {
-                                        deleteFilledFileButton.disabled = false;
+                    deleteFilledFileButton.disabled = false;
                     deleteFilledFileButton.textContent = 'Delete File';
                 }
             });
@@ -1717,7 +1717,7 @@
                             templatesData.splice(templateIndex, 1);
                         }
 
-                                                refreshSidebar();
+                        refreshSidebar();
                         fileNameHeading.textContent = 'Select a file';
                         fileDetails.innerHTML = '<p>Click on a file to view its details here.</p>';
                         fileActionsDiv.style.display = 'none';
@@ -1733,7 +1733,7 @@
                     console.error('Error deleting template:', error);
                     showModal('error', 'Error deleting template: ' + error.message);
                 } finally {
-                                        deleteTemplateButton.disabled = false;
+                    deleteTemplateButton.disabled = false;
                     deleteTemplateButton.textContent = 'Delete Template';
                 }
             });

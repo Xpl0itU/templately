@@ -210,10 +210,10 @@
 
                     if (result.success) {
                         showAlert(result.message, 'success');
-                                                updateGroupBadge(userId, newGroup);
+                        updateGroupBadge(userId, newGroup);
                     } else {
                         showAlert(result.message, 'error');
-                                                location.reload();
+                        location.reload();
                     }
                 } catch (error) {
                     showAlert('An error occurred while updating the user group.', 'error');
@@ -226,9 +226,9 @@
             const row = document.querySelector(`tr[data-user-id="${userId}"]`);
             const badge = row.querySelector('.inline-flex');
             
-                        badge.className = badge.className.replace(/bg-\w+-100 text-\w+-800/g, '');
+            badge.className = badge.className.replace(/bg-\w+-100 text-\w+-800/g, '');
             
-                        const colorMap = {
+            const colorMap = {
                 'superadmin': 'bg-red-100 text-red-800',
                 'admin': 'bg-orange-100 text-orange-800',
                 'developer': 'bg-purple-100 text-purple-800',
@@ -260,7 +260,7 @@
 
                 if (result.success) {
                     showAlert(result.message, 'success');
-                                        document.querySelector(`tr[data-user-id="${userId}"]`).remove();
+                    document.querySelector(`tr[data-user-id="${userId}"]`).remove();
                 } else {
                     showAlert(result.message, 'error');
                 }
@@ -275,7 +275,7 @@
             alertDiv.textContent = message;
             alertDiv.classList.remove('hidden');
             
-                        setTimeout(() => {
+            setTimeout(() => {
                 alertDiv.classList.add('hidden');
             }, 5000);
         }
