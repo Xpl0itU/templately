@@ -1640,7 +1640,7 @@
 
                 try {
                     const response = await fetch(`/file-explorer/delete-filled-file/${currentSelectedFilledFile.id}`, {
-                        method: 'DELETE',
+                        method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
@@ -1698,7 +1698,7 @@
 
                 try {
                     const response = await fetch(`/file-explorer/delete-template/${currentSelectedTemplate.id}`, {
-                        method: 'DELETE',
+                        method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
