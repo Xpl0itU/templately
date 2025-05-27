@@ -187,7 +187,7 @@
 
 <?php echo $this->section('pageScripts') ?>
     <script>
-                document.querySelectorAll('.group-select').forEach(select => {
+        document.querySelectorAll('.group-select').forEach(select => {
             select.addEventListener('change', async function() {
                 const userId = this.dataset.userId;
                 const newGroup = this.value;

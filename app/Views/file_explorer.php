@@ -502,7 +502,7 @@
 
 <?php echo $this->section('pageScripts') ?>
     <script>
-                const modals = {
+        const modals = {
             success: document.getElementById('successModal'),
             error: document.getElementById('errorModal'),
             confirm: document.getElementById('confirmModal'),
@@ -513,7 +513,7 @@
             const modal = modals[type];
             if (!modal) return;
 
-                        if (type === 'success') {
+            if (type === 'success') {
                 document.getElementById('successMessage').textContent = message;
             } else if (type === 'error') {
                 document.getElementById('errorMessage').textContent = message;
@@ -524,13 +524,13 @@
                 document.getElementById('inputValue').value = '';
             }
 
-                        modal.classList.remove('hidden');
+            modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.querySelector('.modal-content').classList.remove('scale-95');
                 modal.querySelector('.modal-content').classList.add('scale-100');
             }, 10);
 
-                        if (type === 'confirm' && callback) {
+            if (type === 'confirm' && callback) {
                 const confirmOk = document.getElementById('confirmOk');
                 const confirmCancel = document.getElementById('confirmCancel');
                 
@@ -588,7 +588,7 @@
                 inputCancel.addEventListener('click', handleInputCancel);
                 inputValue.addEventListener('keypress', handleKeyPress);
                 
-                                setTimeout(() => inputValue.focus(), 100);
+                setTimeout(() => inputValue.focus(), 100);
             }
         }
 
@@ -603,22 +603,22 @@
             }, 150);
         }
 
-                function showInputModal(message) {
+        function showInputModal(message) {
             return new Promise((resolve) => {
                 showModal('input', message, resolve);
             });
         }
 
-                function showConfirmModal(message) {
+        function showConfirmModal(message) {
             return new Promise((resolve) => {
                 showModal('confirm', message, resolve);
             });
         }
 
-                document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
+        document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
         document.getElementById('errorModalClose').addEventListener('click', () => hideModal('error'));
 
-                Object.values(modals).forEach(modal => {
+        Object.values(modals).forEach(modal => {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     const modalType = Object.keys(modals).find(key => modals[key] === modal);
@@ -627,7 +627,7 @@
             });
         });
 
-                function updateFileLabel() {
+        function updateFileLabel() {
             const input = document.getElementById('templateFileWizard');
             const fileLabel = document.getElementById('fileLabel');
             const filePreview = document.getElementById('filePreview');
@@ -656,7 +656,7 @@
             fileLabel.parentElement.parentElement.classList.remove('border-blue-500', 'bg-blue-50');
         }
 
-                function updateWizardSteps(currentStep) {
+        function updateWizardSteps(currentStep) {
             const steps = [
                 document.getElementById('step1Circle'),
                 document.getElementById('step2Circle'),
@@ -849,7 +849,7 @@
                 }
             });
 
-                        const dropZone = document.querySelector('.border-dashed');
+            const dropZone = document.querySelector('.border-dashed');
             
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, preventDefaults, false);
@@ -982,11 +982,11 @@
                     const templateSpan = document.createElement('span');
                     templateSpan.className = 'flex items-center p-2 rounded-md hover:bg-blue-50 cursor-pointer';
                     
-                                        const chevronIcon = document.createElement('i');
+                    const chevronIcon = document.createElement('i');
                     chevronIcon.className = 'fas fa-chevron-right text-gray-400 mr-2 transition-transform duration-200 folder-chevron';
                     templateSpan.appendChild(chevronIcon);
                     
-                                        const folderIcon = document.createElement('i');
+                    const folderIcon = document.createElement('i');
                     folderIcon.className = 'fas fa-folder-open text-yellow-500 mr-2';
                     templateSpan.appendChild(folderIcon);
                     
@@ -1005,7 +1005,7 @@
                             fileLi.dataset.name = filledFile.name;
                             fileLi.dataset.templateId = template.id;
                             
-                                                        const fileIcon = document.createElement('i');
+                            const fileIcon = document.createElement('i');
                             fileIcon.className = 'fas fa-file-alt text-blue-500 mr-2';
                             fileLi.appendChild(fileIcon);
                             
@@ -1023,19 +1023,15 @@
                     fileHierarchyUl.appendChild(templateLi);
                 });
                 
-                                const activeFile = currentSelectedFilledFile ? 
-                    fileHierarchy.querySelector(`.file-item[data-id='${currentSelectedFilledFile.id}']`) : null;
-                const activeTemplate = currentSelectedTemplate ?
-                    fileHierarchy.querySelector(`.folder-item[data-template-id='${currentSelectedTemplate.id}']`) : null;
+                const activeFile = currentSelectedFilledFile ? fileHierarchy.querySelector(`.file-item[data-id='${currentSelectedFilledFile.id}']`) : null;
+                const activeTemplate = currentSelectedTemplate ? fileHierarchy.querySelector(`.folder-item[data-template-id='${currentSelectedTemplate.id}']`) : null;
 
-                                document.querySelectorAll('.file-item.bg-blue-100').forEach(item => 
-                    item.classList.remove('bg-blue-100'));
-                document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => 
-                    span.classList.remove('bg-blue-100'));
+                document.querySelectorAll('.file-item.bg-blue-100').forEach(item => item.classList.remove('bg-blue-100'));
+                document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => span.classList.remove('bg-blue-100'));
 
-                                if (activeFile) {
+                if (activeFile) {
                     activeFile.classList.add('bg-blue-100');
-                                        const parentFolder = activeFile.closest('.folder-item');
+                    const parentFolder = activeFile.closest('.folder-item');
                     if (parentFolder) {
                         const folderList = parentFolder.querySelector('ul');
                         const chevronIcon = parentFolder.querySelector('.folder-chevron');
@@ -1049,7 +1045,7 @@
                 } else if (activeTemplate) {
                     const templateSpan = activeTemplate.querySelector('span');
                     if (templateSpan) templateSpan.classList.add('bg-blue-100');
-                                        const folderList = activeTemplate.querySelector('ul');
+                    const folderList = activeTemplate.querySelector('ul');
                     const chevronIcon = activeTemplate.querySelector('.folder-chevron');
                     if (folderList) {
                         folderList.style.display = 'block';
@@ -1059,29 +1055,29 @@
                     }
                 }
                 
-                                setTimeout(() => {
+                setTimeout(() => {
                     document.querySelectorAll('.folder-item').forEach(folderItem => {
                         const folderList = folderItem.querySelector('ul');
                         const chevronIcon = folderItem.querySelector('.folder-chevron');
                         
                         if (folderList && chevronIcon) {
-                                                        let isOpen = false;
+                            let isOpen = false;
                             
-                                                        if (folderList.style.display === 'block') {
+                            if (folderList.style.display === 'block') {
                                 isOpen = true;
-                            } else if (folderList.style.display === 'none') {
-                                isOpen = false;
                             } else {
-                                                                                                isOpen = false;
+                                isOpen = false;
                             }
                             
                             chevronIcon.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
                         }
                     });
-                }, 50);             }
+                }, 50);             
+            }
 
             function renderFileDetails(fileData, mode = 'view') {
-                fileDetails.innerHTML = '';                 fileNameHeading.textContent = fileData.name || 'File Details';
+                fileDetails.innerHTML = '';
+                fileNameHeading.textContent = fileData.name || 'File Details';
                 fileActionsDiv.style.display = 'flex';
 
                 if (!fileData.filledData || typeof fileData.filledData !== 'object') {
@@ -1109,7 +1105,8 @@
                         input.type = 'text';
                         input.name = key;
                         input.value = value;
-                        input.dataset.originalValue = value;                         input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                        input.dataset.originalValue = value;
+                        input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
                         
                         item.appendChild(label);
                         item.appendChild(input);
@@ -1149,9 +1146,11 @@
             }
 
             function renderTemplateOverview(template) {
-                currentSelectedTemplate = template;                 fileNameHeading.textContent = `Template: ${template.name}`;
-                fileDetails.innerHTML = '';                 fileActionsDiv.style.display = 'flex'; 
-                                editButton.style.display = 'none';
+                currentSelectedTemplate = template;
+                fileNameHeading.textContent = `Template: ${template.name}`;
+                fileDetails.innerHTML = '';
+                fileActionsDiv.style.display = 'flex'; 
+                editButton.style.display = 'none';
                 saveButton.style.display = 'none';
                 cancelButton.style.display = 'none';
                 deleteFilledFileButton.style.display = 'none';
@@ -1161,7 +1160,7 @@
                 const container = document.createElement('div');
                 container.className = 'space-y-6';
 
-                                const detailsSection = document.createElement('div');
+                const detailsSection = document.createElement('div');
                 detailsSection.className = 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden';
                 
                 const detailsHeader = document.createElement('div');
@@ -1176,7 +1175,7 @@
                 const detailsContent = document.createElement('div');
                 detailsContent.className = 'p-4';
                 
-                                const fieldsHeading2 = document.createElement('h4');
+                const fieldsHeading2 = document.createElement('h4');
                 fieldsHeading2.className = 'text-md font-semibold text-gray-700 mb-2';
                 fieldsHeading2.textContent = 'Available Fields:';
                 detailsContent.appendChild(fieldsHeading2);
@@ -1202,7 +1201,7 @@
                 detailsSection.appendChild(detailsContent);
                 container.appendChild(detailsSection);
 
-                                const filesSection = document.createElement('div');
+                const filesSection = document.createElement('div');
                 filesSection.className = 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden';
                 
                 const filesHeader = document.createElement('div');
@@ -1213,7 +1212,7 @@
                 filesHeading.innerHTML = '<i class="fas fa-file-alt mr-2"></i>Filled Files';
                 filesHeader.appendChild(filesHeading);
                 
-                                if (userPermissions.canCreateFilledFiles) {
+                if (userPermissions.canCreateFilledFiles) {
                     const createButton = document.createElement('button');
                     createButton.className = 'bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded-lg transition duration-200 text-sm flex items-center';
                     createButton.dataset.templateId = template.id;
@@ -1356,7 +1355,7 @@
                                 newFileLiElement.dataset.name = newFilledFile.name;
                                 newFileLiElement.dataset.templateId = templateId;
                                 
-                                                                const fileIcon = document.createElement('i');
+                                const fileIcon = document.createElement('i');
                                 fileIcon.className = 'fas fa-file-alt text-blue-500 mr-2';
                                 newFileLiElement.appendChild(fileIcon);
                                 
@@ -1364,9 +1363,9 @@
                                 newFileLiElement.appendChild(fileText);
                                 filesUl.appendChild(newFileLiElement);
                                 
-                                                                filesUl.style.display = 'block';
+                                filesUl.style.display = 'block';
                                 
-                                                                const chevronIcon = templateLi.querySelector('.folder-chevron');
+                                const chevronIcon = templateLi.querySelector('.folder-chevron');
                                 if (chevronIcon) {
                                     chevronIcon.style.transform = 'rotate(90deg)';
                                 }
@@ -1377,12 +1376,10 @@
                         originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
-                                                document.querySelectorAll('.file-item.bg-blue-100').forEach(item => 
-                            item.classList.remove('bg-blue-100'));
-                        document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => 
-                            span.classList.remove('bg-blue-100'));
+                        document.querySelectorAll('.file-item.bg-blue-100').forEach(item => item.classList.remove('bg-blue-100'));
+                        document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => span.classList.remove('bg-blue-100'));
                             
-                                                const newSidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${newFilledFile.id}']`);
+                        const newSidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${newFilledFile.id}']`);
                         if (newSidebarFileItem) newSidebarFileItem.classList.add('bg-blue-100');
                         
                         showModal('success', 'New file created successfully: ' + newFilledFile.name);
@@ -1461,10 +1458,11 @@
             fileHierarchy.addEventListener('click', function(event) {
                 const target = event.target;
                 
-                                let clickTarget = target;
+                let clickTarget = target;
                 if (target.tagName === 'I') {
-                                        if (target.classList.contains('folder-chevron')) {
-                        clickTarget = target.parentElement;                     } else {
+                    if (target.classList.contains('folder-chevron')) {
+                        clickTarget = target.parentElement;
+                    } else {
                         clickTarget = target.parentElement;
                     }
                 }
@@ -1474,15 +1472,15 @@
                     item.classList.remove('bg-blue-100');
                 });
 
-                                if (clickTarget.tagName === 'SPAN' && parentElement.classList.contains('folder-item')) {
-                                        const folderList = parentElement.querySelector('ul');
+                if (clickTarget.tagName === 'SPAN' && parentElement.classList.contains('folder-item')) {
+                    const folderList = parentElement.querySelector('ul');
                     const chevronIcon = clickTarget.querySelector('.folder-chevron');
                     
                     if (folderList) {
                         const isOpen = folderList.style.display === 'block';
                         folderList.style.display = isOpen ? 'none' : 'block';
                         
-                                                if (chevronIcon) {
+                        if (chevronIcon) {
                             if (isOpen) {
                                 chevronIcon.style.transform = 'rotate(0deg)';
                             } else {
@@ -1491,7 +1489,7 @@
                         }
                     }
                     
-                                        const templateId = parentElement.dataset.templateId;
+                    const templateId = parentElement.dataset.templateId;
                     const selectedTemplate = findTemplateById(templateId);
 
                     if (selectedTemplate) {
@@ -1500,8 +1498,7 @@
                         renderTemplateOverview(selectedTemplate);
                         clickTarget.classList.add('bg-blue-100');
                     }
-                } 
-                                else if (clickTarget.classList.contains('file-item')) {
+                } else if (clickTarget.classList.contains('file-item')) {
                     const filledFileId = clickTarget.dataset.id;
                     const templateIdForFile = clickTarget.dataset.templateId;
                     const selectedFile = findFilledFileById(filledFileId);
@@ -1525,8 +1522,8 @@
                     (event.target.parentElement && event.target.parentElement.classList.contains('template-overview-file-link'))) {
                     event.preventDefault();
                     
-                                        const linkElement = event.target.classList.contains('template-overview-file-link') ? 
-                        event.target : event.target.parentElement;
+                    const linkElement = event.target.classList.contains('template-overview-file-link') ? 
+                    event.target : event.target.parentElement;
                     
                     const filledFileId = linkElement.dataset.id;
                     const templateId = linkElement.dataset.templateId;
@@ -1627,7 +1624,7 @@
                 }
             });
 
-                        deleteFilledFileButton.addEventListener('click', async () => {
+            deleteFilledFileButton.addEventListener('click', async () => {
                 if (!currentSelectedFilledFile) return;
                 
                 const confirmed = await showConfirmModal('Are you sure you want to delete this filled file? This action cannot be undone.');
@@ -1635,7 +1632,7 @@
                     return;
                 }
 
-                                deleteFilledFileButton.disabled = true;
+                deleteFilledFileButton.disabled = true;
                 deleteFilledFileButton.textContent = 'Deleting...';
 
                 try {
@@ -1665,7 +1662,7 @@
                             }
                         }
 
-                                                refreshSidebar();
+                        refreshSidebar();
                         fileNameHeading.textContent = 'Select a file';
                         fileDetails.innerHTML = '<p>Click on a file to view its details here.</p>';
                         fileActionsDiv.style.display = 'none';
@@ -1685,7 +1682,7 @@
                 }
             });
 
-                        deleteTemplateButton.addEventListener('click', async () => {
+            deleteTemplateButton.addEventListener('click', async () => {
                 if (!currentSelectedTemplate) return;
                 
                 const confirmed = await showConfirmModal(`Are you sure you want to delete the template "${currentSelectedTemplate.name}" and all its filled files? This action cannot be undone.`);
@@ -1693,7 +1690,7 @@
                     return;
                 }
 
-                                deleteTemplateButton.disabled = true;
+                deleteTemplateButton.disabled = true;
                 deleteTemplateButton.textContent = 'Deleting...';
 
                 try {
@@ -1741,20 +1738,17 @@
                 }
             });
 
-            // Export dropdown functionality
             exportButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 exportDropdown.classList.toggle('hidden');
             });
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', (e) => {
                 if (!exportButtonGroup.contains(e.target)) {
                     exportDropdown.classList.add('hidden');
                 }
             });
 
-            // Export DOCX functionality
             exportDocxButton.addEventListener('click', async () => {
                 if (!currentSelectedFilledFile) return;
                 
@@ -1773,7 +1767,6 @@
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
-                    // Handle file download
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -1792,7 +1785,6 @@
                 }
             });
 
-            // Export PDF functionality
             exportPdfButton.addEventListener('click', async () => {
                 if (!currentSelectedFilledFile) return;
                 
@@ -1811,7 +1803,6 @@
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
-                    // Handle file download
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -1835,33 +1826,30 @@
                 fileDetails.innerHTML = '<p>There are no templates to display.</p>';
             }
             
-                        function initializeChevrons() {
+            function initializeChevrons() {
                 document.querySelectorAll('.folder-item').forEach(folderItem => {
                     const folderList = folderItem.querySelector('ul');
                     const chevronIcon = folderItem.querySelector('.folder-chevron');
                     
                     if (folderList && chevronIcon) {
-                                                let isOpen = false;
-                        
-                                                if (folderList.style.display === 'block') {
+                        let isOpen = false;
+                        if (folderList.style.display === 'block') {
                             isOpen = true;
                         } else if (folderList.style.display === 'none') {
                             isOpen = false;
                         } else {
-                                                        const computedStyle = window.getComputedStyle(folderList);
+                            const computedStyle = window.getComputedStyle(folderList);
                             isOpen = computedStyle.display !== 'none';
                         }
                         
-                                                chevronIcon.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
-                        
-                                                console.log(`Folder ${folderItem.dataset.templateId}: isOpen=${isOpen}, inline=${folderList.style.display}, computed=${window.getComputedStyle(folderList).display}`);
+                        chevronIcon.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
                     }
                 });
             }
             
-                        setTimeout(initializeChevrons, 100);
-            
-                        window.addEventListener('load', () => {
+            setTimeout(initializeChevrons, 100);
+
+            window.addEventListener('load', () => {
                 setTimeout(initializeChevrons, 50);
             });
         });
