@@ -10,7 +10,7 @@
                 </div>
             </div>
 
-                        <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-6">
                                 <?php if (!isset($hideNavLinks) || !$hideNavLinks) : ?>
                                     <?php 
                                     $currentPath = current_url();
@@ -19,29 +19,23 @@
                                     $userManagementActive = strpos($currentPath, '/user-management') !== false;
                                     ?>
                     
-                                        <?php if (!$dashboardActive) : ?>
-                        <a href="/dashboard" class="text-gray-600 hover:text-blue-600 transition duration-200">
+                        <a href="/dashboard" class="px-3 py-2 text-gray-600 hover:text-blue-600 transition duration-200 <?php echo $dashboardActive ? 'border-b-2 border-blue-600 text-blue-600' : '' ?>">
                             <i class="fas fa-home mr-2"></i>Dashboard
                         </a>
-                                        <?php endif; ?>
                     
-                                        <?php if (!$fileExplorerActive) : ?>
-                        <a href="/file-explorer" class="<?php echo $dashboardActive ? 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg' : 'text-gray-600 hover:text-blue-600' ?> transition duration-200">
+                        <a href="/file-explorer" class="px-3 py-2 text-gray-600 hover:text-blue-600 transition duration-200 <?php echo $fileExplorerActive ? 'border-b-2 border-blue-600 text-blue-600' : '' ?>">
                             <i class="fas fa-folder-open mr-2"></i>File Explorer
                         </a>
-                                        <?php endif; ?>
                     
                                         <?php if (auth()->user() && auth()->user()->inGroup('superadmin', 'admin')) : ?>
-                                            <?php if (!$userManagementActive) : ?>
-                            <a href="/user-management" class="<?php echo $dashboardActive ? 'bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg' : 'text-gray-600 hover:text-blue-600' ?> transition duration-200">
+                            <a href="/user-management" class="px-3 py-2 text-gray-600 hover:text-blue-600 transition duration-200 <?php echo $userManagementActive ? 'border-b-2 border-purple-600 text-purple-600' : '' ?>">
                                 <i class="fas fa-users-cog mr-2"></i>User Management
                             </a>
-                                            <?php endif; ?>
                                         <?php endif; ?>
                                 <?php endif; ?>
 
                                 <?php if (auth()->user()) : ?>
-                    <div class="text-gray-700">
+                    <div class="ml-6 text-gray-700">
                         <i class="fas fa-user-circle mr-2"></i>
                                     <?php if (isset($showWelcome) && $showWelcome) : ?>
                             Welcome, <span class="font-semibold"><?php echo esc(auth()->user()->username) ?></span>
