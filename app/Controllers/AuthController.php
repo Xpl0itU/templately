@@ -6,7 +6,6 @@ use CodeIgniter\API\ResponseTrait;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Exceptions\ValidationException;
 use CodeIgniter\Shield\Traits\Viewable;
-use CodeIgniter\Shield\Entities\User;
 
 class AuthController extends BaseController
 {
@@ -15,9 +14,6 @@ class AuthController extends BaseController
 
     protected $helpers = ['auth', 'setting'];
 
-    /**
-     * Displays the login form.
-     */
     public function loginView()
     {
         if (auth()->loggedIn()) {
@@ -27,9 +23,6 @@ class AuthController extends BaseController
         return $this->view(setting('Auth.views')['login']);
     }
 
-    /**
-     * Attempts to log the user in.
-     */
     public function loginAction()
     {
         $rules = $this->getValidationRules('login');
@@ -43,17 +36,16 @@ class AuthController extends BaseController
         $credentials['password'] = $this->request->getPost('password');
         $remember                = (bool) $this->request->getPost('remember');
 
-        /** @var Session $authenticator */
+        /**
+ * @var Session $authenticator 
+*/
         $authenticator = auth('session')->getAuthenticator();
 
-        // Attempt to login
         $result = $authenticator->remember($remember)->attempt($credentials);
         if (! $result->isOK()) {
             return redirect()->route('login')->withInput()->with('error', $result->reason());
         }
 
-        // If an action has been defined for login, start it up.
-        // Shield v1.1.0 uses $result->extraInfo() for the user identity to pass to actions
         if ($authenticator->hasAction() && $result->extraInfo() !== null) {
             $authenticator->startLogin($result->extraInfo());
         }
@@ -66,14 +58,11 @@ class AuthController extends BaseController
             return redirect()->route('login')->withInput()->with('error', lang('Auth.bannedUser'));
         }
 
-        // Trigger login event, in case anyone cares
-        // Shield v1.1.0 uses $result->extraInfo() for the user identity
         if ($result->extraInfo() !== null) {
             $authenticator->completeLogin($result->extraInfo());
         }
 
 
-        // If no action is defined since login, redirect to the default route.
         if (! $authenticator->hasAction()) {
             return redirect()->to(config(\Config\Auth::class)->loginRedirect());
         }
@@ -81,9 +70,6 @@ class AuthController extends BaseController
         return redirect()->to((string) $authenticator->getAction());
     }
 
-    /**
-     * Logs the user out.
-     */
     public function logoutAction()
     {
         // Capture the user before the session is destroyed.
@@ -160,7 +146,9 @@ class AuthController extends BaseController
         // Add to default group
         $users->addToDefaultGroup($user);
 
-        /** @var Session $authenticator */
+        /**
+ * @var Session $authenticator 
+*/
         $authenticator = auth('session')->getAuthenticator();
 
         // If an action is required after registration (e.g. email activation)
@@ -183,8 +171,8 @@ class AuthController extends BaseController
     /**
      * Returns the rules that should be used for validation.
      *
-     * @param string|null $type The type of rules to return. (login|register)
-     * @return array<string, array<string, array<string>|string>>
+     * @param          string|null $type The type of rules to return. (login|register)
+     * @return         array<string, array<string, array<string>|string>>
      * @phpstan-return array<string, array<string, string|list<string>>>
      */
     protected function getValidationRules(?string $type = null): array
@@ -254,13 +242,13 @@ class AuthController extends BaseController
              $rules['username'] = [
                 'label' => 'Auth.username',
                 'rules' => $usernameRules,
-            ];
+             ];
         }
         // Add email rules if 'email' is in the allowed fields for registration
-         if (in_array('email', $registrationFields, true)) {
+        if (in_array('email', $registrationFields, true)) {
             $rules['email'] = [
-                'label' => 'Auth.email',
-                'rules' => $emailRules,
+               'label' => 'Auth.email',
+               'rules' => $emailRules,
             ];
         }
         return $rules;

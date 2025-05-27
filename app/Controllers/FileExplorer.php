@@ -8,7 +8,6 @@ class FileExplorer extends BaseController
 {
     public function index()
     {
-        // Check if user has permission to view templates
         if (!auth()->user()->can('templates.view')) {
             return redirect()->to('/')->with('error', 'You do not have permission to view templates.');
         }
@@ -54,7 +53,6 @@ class FileExplorer extends BaseController
 
     public function updateFilledFile($id = null)
     {
-        // Check if user has permission to edit filled files
         if (!auth()->user()->can('filled-files.edit')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to edit filled files.']);
         }
@@ -95,7 +93,6 @@ class FileExplorer extends BaseController
 
     public function createFilledFile()
     {
-        // Check if user has permission to create filled files
         if (!auth()->user()->can('filled-files.create')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create filled files.']);
         }
@@ -127,10 +124,10 @@ class FileExplorer extends BaseController
 
         $filledFilesModel = new FilledFilesModel();
 
-        $newFilledData = new \stdClass(); // Start with an empty object
+        $newFilledData = new \stdClass();
         if (isset($template['templateFields']) && is_array($template['templateFields'])) {
             foreach ($template['templateFields'] as $field) {
-                $newFilledData->$field = ''; // Initialize each field with an empty string
+                $newFilledData->$field = '';
             }
         }
 
@@ -171,7 +168,6 @@ class FileExplorer extends BaseController
 
     public function analyzeTemplateFile()
     {
-        // Check if user has permission to create templates
         if (!auth()->user()->can('templates.create')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
         }
@@ -212,18 +208,19 @@ class FileExplorer extends BaseController
 
         $templateFields = $this->extractTemplateFieldsFromFile($tempFilePath);
 
-        return $this->response->setJSON([
+        return $this->response->setJSON(
+            [
             'success' => true,
             'message' => 'File analyzed successfully.',
             'tempFilePath' => $tempFilePath,
             'originalFileName' => $file->getClientName(),
             'templateFields' => $templateFields
-        ]);
+            ]
+        );
     }
 
     public function finalizeTemplateUpload()
     {
-        // Check if user has permission to create templates
         if (!auth()->user()->can('templates.create')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
         }
@@ -242,7 +239,6 @@ class FileExplorer extends BaseController
         $tempFilePath = $json->tempFilePath;
         $templateName = trim($json->templateName);
         $templateFields = $json->templateFields;
-        $originalFileName = $json->originalFileName;
         $fileMimeType = $json->fileMimeType;
         $fileSizeKB = $json->fileSizeKB;
 
@@ -336,7 +332,6 @@ class FileExplorer extends BaseController
 
     public function deleteTemplate($id = null)
     {
-        // Check if user has permission to delete templates
         if (!auth()->user()->can('templates.delete')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to delete templates.']);
         }
@@ -357,16 +352,13 @@ class FileExplorer extends BaseController
         }
 
         try {
-            // Delete associated filled files first
             $filledFilesModel = new FilledFilesModel();
             $filledFilesModel->where('templateFileId', $id)->delete();
 
-            // Delete the template file from filesystem
             if (!empty($template['path']) && file_exists($template['path'])) {
                 unlink($template['path']);
             }
 
-            // Delete the template from database
             $templateModel->delete($id);
 
             return $this->response->setJSON(['success' => true, 'message' => 'Template and associated filled files deleted successfully.']);
@@ -378,7 +370,6 @@ class FileExplorer extends BaseController
 
     public function deleteFilledFile($id = null)
     {
-        // Check if user has permission to delete filled files
         if (!auth()->user()->can('filled-files.delete')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to delete filled files.']);
         }

@@ -1,8 +1,8 @@
-<?= $this->extend('auth/layout') ?>
+<?php echo $this->extend('auth/layout') ?>
 
-<?= $this->section('title') ?>Register<?= $this->endSection() ?>
+<?php echo $this->section('title') ?>Register<?php echo $this->endSection() ?>
 
-<?= $this->section('main') ?>
+<?php echo $this->section('main') ?>
 
 <div class="glass-effect rounded-xl shadow-2xl p-8">
     <div class="text-center mb-8">
@@ -15,7 +15,7 @@
         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
             <div class="flex">
                 <div class="py-1"><i class="fas fa-exclamation-circle mr-2"></i></div>
-                <div><?= session('error') ?></div>
+                <div><?php echo session('error') ?></div>
             </div>
         </div>
     <?php elseif (session('errors') !== null) : ?>
@@ -25,18 +25,18 @@
                 <div>
                     <?php if (is_array(session('errors'))) : ?>
                         <?php foreach (session('errors') as $error) : ?>
-                            <?= $error ?><br>
+                            <?php echo $error ?><br>
                         <?php endforeach ?>
                     <?php else : ?>
-                        <?= session('errors') ?>
+                        <?php echo session('errors') ?>
                     <?php endif ?>
                 </div>
             </div>
         </div>
     <?php endif ?>
 
-    <form action="<?= url_to('register') ?>" method="post" class="space-y-6">
-        <?= csrf_field() ?>
+    <form action="<?php echo url_to('register') ?>" method="post" class="space-y-6">
+        <?php echo csrf_field() ?>
 
         
         <div>
@@ -48,7 +48,7 @@
                    name="email" 
                    inputmode="email" 
                    autocomplete="email" 
-                   value="<?= old('email') ?>" 
+                   value="<?php echo old('email') ?>" 
                    required
                    class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition duration-200"
                    placeholder="Enter your email">
@@ -64,7 +64,7 @@
                    name="username" 
                    inputmode="text" 
                    autocomplete="username" 
-                   value="<?= old('username') ?>" 
+                   value="<?php echo old('username') ?>" 
                    required
                    class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition duration-200"
                    placeholder="Choose a username">
@@ -115,7 +115,7 @@
         <div class="text-center">
             <p class="text-sm">
                 Already have an account? 
-                <a href="<?= url_to('login') ?>" class="text-indigo-600 hover:text-indigo-500 font-medium transition duration-200">
+                <a href="<?php echo url_to('login') ?>" class="text-indigo-600 hover:text-indigo-500 font-medium transition duration-200">
                     Sign in here
                 </a>
             </p>
@@ -123,4 +123,4 @@
     </form>
 </div>
 
-<?= $this->endSection() ?>
+<?php echo $this->endSection() ?>

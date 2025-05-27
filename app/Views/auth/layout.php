@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <title><?= $this->renderSection('title') ?> | Templately</title>
+    <title><?php echo $this->renderSection('title') ?> | Templately</title>
 
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,7 +22,7 @@
         }
     </style>
 
-    <?= $this->renderSection('pageStyles') ?>
+    <?php echo $this->renderSection('pageStyles') ?>
 </head>
 
 <body class="gradient-bg min-h-screen">
@@ -37,10 +37,10 @@
             </div>
 
             
-            <?= $this->renderSection('main') ?>
+            <?php echo $this->renderSection('main') ?>
         </div>
     </div>
 
-    <?= $this->renderSection('pageScripts') ?>
+    <?php echo $this->renderSection('pageScripts') ?>
 </body>
 </html>

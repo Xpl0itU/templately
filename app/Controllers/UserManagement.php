@@ -8,20 +8,19 @@ class UserManagement extends BaseController
 {
     public function index()
     {
-        // Check if user has admin privileges
         if (!auth()->user()->inGroup('superadmin', 'admin')) {
             return redirect()->to('/')->with('error', 'You do not have permission to access user management.');
         }
 
         $userModel = model('CodeIgniter\Shield\Models\UserModel');
         
-        // Get groups from configuration
+        /**
+ * @var \CodeIgniter\Shield\Config\AuthGroups $authGroups 
+*/
         $authGroups = config('AuthGroups');
         
-        // Get all users
         $allUsers = $userModel->findAll();
         
-        // Process users to include group information
         $users = [];
         foreach ($allUsers as $user) {
             $userData = [
@@ -33,18 +32,16 @@ class UserManagement extends BaseController
                 'group' => null
             ];
             
-            // Get user's groups
             $userGroups = $user->getGroups();
             if (!empty($userGroups)) {
-                $userData['group'] = $userGroups[0]; // Get the first group
+                $userData['group'] = $userGroups[0];
             } else {
-                $userData['group'] = 'user'; // Default group
+                $userData['group'] = 'user';
             }
             
             $users[] = $userData;
         }
         
-        // Convert groups configuration to array format for the view
         $groups = [];
         foreach ($authGroups->groups as $groupKey => $groupData) {
             $groups[] = [
@@ -64,7 +61,6 @@ class UserManagement extends BaseController
     
     public function updateUserGroup()
     {
-        // Check if user has admin privileges
         if (!auth()->user()->inGroup('superadmin', 'admin')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to manage users.']);
         }
@@ -86,16 +82,13 @@ class UserManagement extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'User not found.']);
         }
         
-        // Prevent removing admin privileges from the current user
         if ($user->id === auth()->user()->id && !in_array($json->group, ['superadmin', 'admin'])) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'You cannot remove your own admin privileges.']);
         }
         
         try {
-            // Remove user from all groups first
             $user->syncGroups();
             
-            // Add to new group
             $user->addGroup($json->group);
             
             return $this->response->setJSON(['success' => true, 'message' => 'User group updated successfully.']);
@@ -107,7 +100,6 @@ class UserManagement extends BaseController
     
     public function deleteUser($id = null)
     {
-        // Check if user has superadmin privileges
         if (!auth()->user()->inGroup('superadmin')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Only superadmins can delete users.']);
         }
@@ -127,7 +119,6 @@ class UserManagement extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'User not found.']);
         }
         
-        // Prevent deleting own account
         if ($user->id === auth()->user()->id) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'You cannot delete your own account.']);
         }

@@ -1,17 +1,19 @@
-<?= $this->extend('layouts/app') ?>
+<?php echo $this->extend('layouts/app') ?>
 
-<?= $this->section('title') ?>File Explorer<?= $this->endSection() ?>
+<?php echo $this->section('title') ?>File Explorer<?php echo $this->endSection() ?>
 
-<?= $this->section('navigation') ?>
-    <?= $this->include('components/navigation', [
+<?php echo $this->section('navigation') ?>
+    <?php echo $this->include(
+        'components/navigation', [
         'pageTitle' => 'File Explorer',
         'pageIcon' => 'folder-open',
         'stickyNav' => true,
         'showWelcome' => false
-    ]) ?>
-<?= $this->endSection() ?>
+        ]
+    ) ?>
+<?php echo $this->endSection() ?>
 
-<?= $this->section('pageStyles') ?>
+<?php echo $this->section('pageStyles') ?>
     <style>
         .file-hierarchy ul {
             list-style-type: none;
@@ -167,9 +169,9 @@
             opacity: 0;
         }
     </style>
-<?= $this->endSection() ?>
+<?php echo $this->endSection() ?>
 
-<?= $this->section('content') ?>
+<?php echo $this->section('content') ?>
     <div class="flex flex-col md:flex-row gap-6">
                     <div class="w-full md:w-1/3 bg-white rounded-lg shadow-lg overflow-hidden">
                 <div class="glass-header p-4 border-b border-gray-200">
@@ -192,21 +194,21 @@
                         <ul class="list-none p-0">
                             <?php if (!empty($templates)) : ?>
                                 <?php foreach ($templates as $template) : ?>
-                                    <li class="folder-item mb-2" data-template-id="<?= esc($template['id']) ?>">
+                                    <li class="folder-item mb-2" data-template-id="<?php echo esc($template['id']) ?>">
                                         <span class="flex items-center p-2 rounded-md hover:bg-blue-50 cursor-pointer">
                                             <i class="fas fa-chevron-right text-gray-400 mr-2 transition-transform duration-200 folder-chevron"></i>
                                             <i class="fas fa-folder-open text-yellow-500 mr-2"></i>
-                                            <?= esc($template['name']) ?>
+                                            <?php echo esc($template['name']) ?>
                                         </span>
                                         <ul class="pl-6" style="display: none;">
                                             <?php if (!empty($template['filledFiles'])) : ?>
                                                 <?php foreach ($template['filledFiles'] as $filledFile) : ?>
                                                     <li class="file-item p-2 rounded-md hover:bg-blue-50 cursor-pointer mb-1 flex items-center" 
-                                                        data-id="<?= esc($filledFile['id']) ?>"
-                                                        data-name="<?= esc($filledFile['name']) ?>"
-                                                        data-template-id="<?= esc($template['id']) ?>">
+                                                        data-id="<?php echo esc($filledFile['id']) ?>"
+                                                        data-name="<?php echo esc($filledFile['name']) ?>"
+                                                        data-template-id="<?php echo esc($template['id']) ?>">
                                                         <i class="fas fa-file-alt text-blue-500 mr-2"></i>
-                                                        <?= esc($filledFile['name']) ?>
+                                                        <?php echo esc($filledFile['name']) ?>
                                                     </li>
                                                 <?php endforeach; ?>
                                             <?php else : ?>
@@ -482,9 +484,9 @@
             </div>
         </div>
     </div>
-<?= $this->endSection() ?>
+<?php echo $this->endSection() ?>
 
-<?= $this->section('pageScripts') ?>
+<?php echo $this->section('pageScripts') ?>
     <script>
                 const modals = {
             success: document.getElementById('successModal'),
@@ -712,8 +714,8 @@
             let currentSelectedTemplate = null;
             let originalFilledData = null;
 
-            const templatesData = <?= json_encode($templates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?> || [];
-            const userPermissions = <?= json_encode($userPermissions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+            const templatesData = <?php echo json_encode($templates, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?> || [];
+            const userPermissions = <?php echo json_encode($userPermissions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
 
             function findFilledFileById(filledFileId) {
                 for (const template of templatesData) {
@@ -887,7 +889,7 @@
                 const formData = new FormData();
                 formData.append('templateFile', wizardState.uploadedFile);
                 const csrfToken = document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content');
-                formData.append('<?= csrf_token() ?>', csrfToken);
+                formData.append('<?php echo csrf_token() ?>', csrfToken);
 
                 try {
                     const response = await fetch('/file-explorer/analyze-template', {
@@ -1390,7 +1392,7 @@
                     originalFileName: wizardState.originalFileName,
                     fileMimeType: wizardState.fileMimeType,
                     fileSizeKB: wizardState.fileSizeKB,
-                    '<?= csrf_token() ?>': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                    '<?php echo csrf_token() ?>': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
                 };
 
                 try {
@@ -1753,4 +1755,4 @@
             });
         });
     </script>
-<?= $this->endSection() ?>
+<?php echo $this->endSection() ?>

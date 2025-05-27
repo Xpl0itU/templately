@@ -1,17 +1,19 @@
-<?= $this->extend('layouts/app') ?>
+<?php echo $this->extend('layouts/app') ?>
 
-<?= $this->section('title') ?>User Management<?= $this->endSection() ?>
+<?php echo $this->section('title') ?>User Management<?php echo $this->endSection() ?>
 
-<?= $this->section('navigation') ?>
-    <?= $this->include('components/navigation', [
+<?php echo $this->section('navigation') ?>
+    <?php echo $this->include(
+        'components/navigation', [
         'pageTitle' => 'User Management',
         'pageIcon' => 'users-cog',
         'stickyNav' => false,
         'showWelcome' => false
-    ]) ?>
-<?= $this->endSection() ?>
+        ]
+    ) ?>
+<?php echo $this->endSection() ?>
 
-<?= $this->section('content') ?>
+<?php echo $this->section('content') ?>
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div id="alertMessage" class="hidden mb-6 p-4 rounded-lg"></div>
 
@@ -46,30 +48,30 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <?php foreach ($users as $user): ?>
-                        <tr class="hover:bg-gray-50" data-user-id="<?= $user['id'] ?>">
+                        <tr class="hover:bg-gray-50" data-user-id="<?php echo $user['id'] ?>">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10">
                                         <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                                            <?= strtoupper(substr($user['username'] ?? $user['email'], 0, 1)) ?>
+                                            <?php echo strtoupper(substr($user['username'] ?? $user['email'], 0, 1)) ?>
                                         </div>
                                     </div>
                                     <div class="ml-4">
                                         <div class="text-sm font-medium text-gray-900">
-                                            <?= esc($user['username'] ?? 'N/A') ?>
+                                            <?php echo esc($user['username'] ?? 'N/A') ?>
                                         </div>
                                         <div class="text-sm text-gray-500">
-                                            ID: <?= $user['id'] ?>
+                                            ID: <?php echo $user['id'] ?>
                                         </div>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <?= esc($user['email']) ?>
+                                <?php echo esc($user['email']) ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                    <?= match($user['group'] ?? 'user') {
+                                    <?php echo match($user['group'] ?? 'user') {
                                         'superadmin' => 'bg-red-100 text-red-800',
                                         'admin' => 'bg-orange-100 text-orange-800',
                                         'developer' => 'bg-purple-100 text-purple-800',
@@ -77,26 +79,26 @@
                                         default => 'bg-gray-100 text-gray-800'
                                     } ?>">
                                     <i class="fas fa-shield-alt mr-1"></i>
-                                    <?= esc($user['group'] ?? 'user') ?>
+                                    <?php echo esc($user['group'] ?? 'user') ?>
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <?= date('M j, Y', strtotime($user['created_at'])) ?>
+                                <?php echo date('M j, Y', strtotime($user['created_at'])) ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                 <select class="group-select text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-blue-500 focus:border-blue-500"
-                                        data-user-id="<?= $user['id'] ?>"
-                                        <?= $user['id'] === $currentUser->id ? 'disabled' : '' ?>>
+                                        data-user-id="<?php echo $user['id'] ?>"
+                                        <?php echo $user['id'] === $currentUser->id ? 'disabled' : '' ?>>
                                     <?php foreach ($groups as $group): ?>
-                                    <option value="<?= esc($group['title']) ?>" 
-                                            <?= (($user['group'] ?? 'user') === $group['title']) ? 'selected' : '' ?>>
-                                        <?= esc(ucfirst($group['title'])) ?>
+                                    <option value="<?php echo esc($group['title']) ?>" 
+                                            <?php echo (($user['group'] ?? 'user') === $group['title']) ? 'selected' : '' ?>>
+                                        <?php echo esc(ucfirst($group['title'])) ?>
                                     </option>
                                     <?php endforeach; ?>
                                 </select>
                                 
-                                <?php if ($currentUser->inGroup('superadmin') && $user['id'] !== $currentUser->id): ?>
-                                <button onclick="deleteUser(<?= $user['id'] ?>)" 
+                                <?php if ($currentUser->inGroup('superadmin') && $user['id'] !== $currentUser->id) : ?>
+                                <button onclick="deleteUser(<?php echo $user['id'] ?>)" 
                                         class="inline-flex items-center px-3 py-1 border border-transparent text-xs leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-200">
                                     <i class="fas fa-trash mr-1"></i>Delete
                                 </button>
@@ -167,23 +169,23 @@
                     ?>
                     <?php foreach ($groupCounts as $group => $count): ?>
                     <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span class="font-medium text-gray-900 capitalize"><?= esc($group) ?></span>
-                        <span class="text-2xl font-bold text-blue-600"><?= $count ?></span>
+                        <span class="font-medium text-gray-900 capitalize"><?php echo esc($group) ?></span>
+                        <span class="text-2xl font-bold text-blue-600"><?php echo $count ?></span>
                     </div>
                     <?php endforeach; ?>
                     <div class="border-t pt-3 mt-3">
                         <div class="flex justify-between items-center">
                             <span class="font-semibold text-gray-900">Total Users</span>
-                            <span class="text-2xl font-bold text-green-600"><?= count($users) ?></span>
+                            <span class="text-2xl font-bold text-green-600"><?php echo count($users) ?></span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-<?= $this->endSection() ?>
+<?php echo $this->endSection() ?>
 
-<?= $this->section('pageScripts') ?>
+<?php echo $this->section('pageScripts') ?>
     <script>
                 document.querySelectorAll('.group-select').forEach(select => {
             select.addEventListener('change', async function() {
@@ -278,4 +280,4 @@
             }, 5000);
         }
     </script>
-<?= $this->endSection() ?>
+<?php echo $this->endSection() ?>
