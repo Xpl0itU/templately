@@ -6,8 +6,13 @@ use App\Models\FilledFilesModel;
 
 class FileExplorer extends BaseController
 {
-    public function index(): string
+    public function index()
     {
+        // Check if user has permission to view templates
+        if (!auth()->user()->can('templates.view')) {
+            return redirect()->to('/')->with('error', 'You do not have permission to view templates.');
+        }
+
         $templateModel = model('App\Models\TemplateFilesModel');
         $templates = $templateModel->findAll();
 
@@ -33,12 +38,27 @@ class FileExplorer extends BaseController
 
         $data = [
             'templates' => $templates,
+            'userPermissions' => [
+                'canViewTemplates' => auth()->user()->can('templates.view'),
+                'canCreateTemplates' => auth()->user()->can('templates.create'),
+                'canEditTemplates' => auth()->user()->can('templates.edit'),
+                'canDeleteTemplates' => auth()->user()->can('templates.delete'),
+                'canViewFilledFiles' => auth()->user()->can('filled-files.view'),
+                'canCreateFilledFiles' => auth()->user()->can('filled-files.create'),
+                'canEditFilledFiles' => auth()->user()->can('filled-files.edit'),
+                'canDeleteFilledFiles' => auth()->user()->can('filled-files.delete'),
+            ]
         ];
         return view('file_explorer', $data);
     }
 
     public function updateFilledFile($id = null)
     {
+        // Check if user has permission to edit filled files
+        if (!auth()->user()->can('filled-files.edit')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to edit filled files.']);
+        }
+
         if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
@@ -75,6 +95,11 @@ class FileExplorer extends BaseController
 
     public function createFilledFile()
     {
+        // Check if user has permission to create filled files
+        if (!auth()->user()->can('filled-files.create')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create filled files.']);
+        }
+
         if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
@@ -146,6 +171,11 @@ class FileExplorer extends BaseController
 
     public function analyzeTemplateFile()
     {
+        // Check if user has permission to create templates
+        if (!auth()->user()->can('templates.create')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
+        }
+
         if ($this->request->getMethod(true) !== 'POST') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
@@ -193,6 +223,11 @@ class FileExplorer extends BaseController
 
     public function finalizeTemplateUpload()
     {
+        // Check if user has permission to create templates
+        if (!auth()->user()->can('templates.create')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
+        }
+
         if ($this->request->getMethod(true) !== 'POST') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
@@ -296,6 +331,79 @@ class FileExplorer extends BaseController
             }
             log_message('error', '[Controller Exception - FinalizeTemplate] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected server error occurred during finalization.']);
+        }
+    }
+
+    public function deleteTemplate($id = null)
+    {
+        // Check if user has permission to delete templates
+        if (!auth()->user()->can('templates.delete')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to delete templates.']);
+        }
+
+        if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        if (empty($id)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Template ID is required.']);
+        }
+
+        $templateModel = model('App\\Models\\TemplateFilesModel');
+        $template = $templateModel->find($id);
+
+        if (!$template) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Template not found.']);
+        }
+
+        try {
+            // Delete associated filled files first
+            $filledFilesModel = new FilledFilesModel();
+            $filledFilesModel->where('templateFileId', $id)->delete();
+
+            // Delete the template file from filesystem
+            if (!empty($template['path']) && file_exists($template['path'])) {
+                unlink($template['path']);
+            }
+
+            // Delete the template from database
+            $templateModel->delete($id);
+
+            return $this->response->setJSON(['success' => true, 'message' => 'Template and associated filled files deleted successfully.']);
+        } catch (\Exception $e) {
+            log_message('error', 'Error deleting template: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while deleting the template.']);
+        }
+    }
+
+    public function deleteFilledFile($id = null)
+    {
+        // Check if user has permission to delete filled files
+        if (!auth()->user()->can('filled-files.delete')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to delete filled files.']);
+        }
+
+        if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        if (empty($id)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Filled file ID is required.']);
+        }
+
+        $filledFilesModel = new FilledFilesModel();
+        $file = $filledFilesModel->find($id);
+
+        if (!$file) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Filled file not found.']);
+        }
+
+        try {
+            $filledFilesModel->delete($id);
+            return $this->response->setJSON(['success' => true, 'message' => 'Filled file deleted successfully.']);
+        } catch (\Exception $e) {
+            log_message('error', 'Error deleting filled file: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while deleting the filled file.']);
         }
     }
 }
