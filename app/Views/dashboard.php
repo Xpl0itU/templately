@@ -14,192 +14,161 @@
 <?php echo $this->endSection() ?>
 
 <?php echo $this->section('content') ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-file-alt text-blue-500 text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Total Templates</p>
-                        <p class="text-2xl font-bold text-gray-900"><?php echo $totalTemplates ?></p>
-                    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-file-alt text-blue-500 text-2xl"></i>
                 </div>
-            </div>
-
-                        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-file-pdf text-green-500 text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Filled Files</p>
-                        <p class="text-2xl font-bold text-gray-900"><?php echo $totalFilledFiles ?></p>
-                    </div>
-                </div>
-            </div>
-
-                        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-user-shield text-purple-500 text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Your Role</p>
-                        <p class="text-2xl font-bold text-gray-900 capitalize">
-                            <?php echo esc($user->getGroups()[0] ?? 'User') ?>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-                        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-bolt text-orange-500 text-2xl"></i>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Quick Actions</p>
-                        <p class="text-sm text-gray-900">Get started fast</p>
-                    </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Templates</p>
+                    <p class="text-2xl font-bold text-gray-900"><?php echo $totalTemplates ?></p>
                 </div>
             </div>
         </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    <i class="fas fa-rocket mr-2 text-blue-500"></i>Quick Actions
-                </h3>
-                <div class="space-y-3">
-                    <?php if ($userPermissions['canViewTemplates']) : ?>
-                    <a href="/file-explorer" class="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition duration-200">
-                        <i class="fas fa-folder-open text-blue-500 mr-3"></i>
-                        <span class="font-medium text-gray-900">Browse Templates & Files</span>
-                    </a>
-                    <?php endif; ?>
-                    
-                    <?php if ($userPermissions['canCreateTemplates']) : ?>
-                    <button onclick="openFileExplorer()" class="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition duration-200 w-full text-left">
-                        <i class="fas fa-plus text-green-500 mr-3"></i>
-                        <span class="font-medium text-gray-900">Upload New Template</span>
-                    </button>
-                    <?php endif; ?>
-                    
-                    <?php if ($userPermissions['canCreateFilledFiles']) : ?>
-                    <button onclick="openFileExplorer()" class="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition duration-200 w-full text-left">
-                        <i class="fas fa-file-plus text-purple-500 mr-3"></i>
-                        <span class="font-medium text-gray-900">Create Filled File</span>
-                    </button>
-                    <?php endif; ?>
-                    
-                    <?php if ($user->inGroup('superadmin', 'admin')) : ?>
-                    <a href="/user-management" class="flex items-center p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition duration-200">
-                        <i class="fas fa-users-cog text-indigo-500 mr-3"></i>
-                        <span class="font-medium text-gray-900">Manage Users</span>
-                    </a>
-                    <?php endif; ?>
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-file-pdf text-green-500 text-2xl"></i>
                 </div>
-            </div>
-
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    <i class="fas fa-shield-alt mr-2 text-green-500"></i>Your Permissions
-                </h3>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canViewTemplates'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">View Templates</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canCreateTemplates'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">Create Templates</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canEditTemplates'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">Edit Templates</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canDeleteTemplates'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">Delete Templates</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canViewFilledFiles'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">View Filled Files</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canCreateFilledFiles'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">Create Filled Files</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canEditFilledFiles'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">Edit Filled Files</span>
-                    </div>
-                    <div class="flex items-center">
-                        <i class="fas fa-<?php echo $userPermissions['canDeleteFilledFiles'] ? 'check text-green-500' : 'times text-red-500' ?> mr-2"></i>
-                        <span class="text-sm text-gray-700">Delete Filled Files</span>
-                    </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Filled Files</p>
+                    <p class="text-2xl font-bold text-gray-900"><?php echo $totalFilledFiles ?></p>
                 </div>
             </div>
         </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    <i class="fas fa-clock mr-2 text-blue-500"></i>Recent Templates
-                </h3>
-                <?php if (!empty($recentTemplates)) : ?>
-                <div class="space-y-3">
-                    <?php foreach ($recentTemplates as $template): ?>
-                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-                        <i class="fas fa-file-alt text-blue-500 mr-3"></i>
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900"><?php echo esc($template['name']) ?></p>
-                            <p class="text-sm text-gray-600">
-                                Created: <?php echo date('M j, Y', strtotime($template['createdAt'])) ?>
-                            </p>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+        <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-user-shield text-purple-500 text-2xl"></i>
                 </div>
-                <?php else: ?>
-                <p class="text-gray-600 text-center py-4">No templates available</p>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Your Role</p>
+                    <p class="text-2xl font-bold text-gray-900 capitalize">
+                        <?php echo esc($user->getGroups()[0] ?? 'User') ?>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div class="mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6">
+                <i class="fas fa-rocket mr-2 text-blue-500"></i>Quick Actions
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <?php if ($userPermissions['canViewTemplates']) : ?>
+                <a href="/file-explorer" class="flex items-center p-6 bg-blue-50 rounded-lg hover:bg-blue-100 transition duration-200 text-center">
+                    <div class="w-full">
+                        <i class="fas fa-folder-open text-blue-500 text-3xl mb-3"></i>
+                        <div class="font-medium text-gray-900 mb-1">Browse Files</div>
+                        <div class="text-sm text-gray-600">View all templates and files</div>
+                    </div>
+                </a>
                 <?php endif; ?>
-            </div>
-
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                    <i class="fas fa-history mr-2 text-green-500"></i>Recent Filled Files
-                </h3>
-                <?php if (!empty($recentFilledFiles)) : ?>
-                <div class="space-y-3">
-                    <?php foreach ($recentFilledFiles as $file): ?>
-                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-                        <i class="fas fa-file-pdf text-green-500 mr-3"></i>
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900"><?php echo esc($file['name']) ?></p>
-                            <p class="text-sm text-gray-600">
-                                Template: <?php echo esc($file['template_name']) ?>
-                            </p>
-                            <p class="text-xs text-gray-500">
-                                Created: <?php echo date('M j, Y', strtotime($file['createdAt'])) ?>
-                            </p>
-                        </div>
+                
+                <?php if ($userPermissions['canCreateTemplates']) : ?>
+                <a href="/file-explorer/upload-template" class="flex items-center p-6 bg-green-50 rounded-lg hover:bg-green-100 transition duration-200 text-center">
+                    <div class="w-full">
+                        <i class="fas fa-plus text-green-500 text-3xl mb-3"></i>
+                        <div class="font-medium text-gray-900 mb-1">Upload Template</div>
+                        <div class="text-sm text-gray-600">Add a new template file</div>
                     </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php else: ?>
-                <p class="text-gray-600 text-center py-4">No filled files available</p>
+                </a>
+                <?php endif; ?>
+                
+                <?php if ($userPermissions['canCreateFilledFiles']) : ?>
+                <a href="/file-explorer/create-filled-file" class="flex items-center p-6 bg-purple-50 rounded-lg hover:bg-purple-100 transition duration-200 text-center">
+                    <div class="w-full">
+                        <i class="fas fa-file-plus text-purple-500 text-3xl mb-3"></i>
+                        <div class="font-medium text-gray-900 mb-1">Create Filled File</div>
+                        <div class="text-sm text-gray-600">Fill out a template</div>
+                    </div>
+                </a>
+                <?php endif; ?>
+                
+                <?php if ($user->inGroup('superadmin', 'admin')) : ?>
+                <a href="/user-management" class="flex items-center p-6 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition duration-200 text-center">
+                    <div class="w-full">
+                        <i class="fas fa-users-cog text-indigo-500 text-3xl mb-3"></i>
+                        <div class="font-medium text-gray-900 mb-1">Manage Users</div>
+                        <div class="text-sm text-gray-600">User administration</div>
+                    </div>
+                </a>
                 <?php endif; ?>
             </div>
         </div>
     </div>
-<?php echo $this->endSection() ?>
 
-<?php echo $this->section('pageScripts') ?>
-    <script>
-        function openFileExplorer() {
-            window.location.href = '/file-explorer';
-        }
-    </script>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-clock mr-2 text-blue-500"></i>Recent Templates
+            </h3>
+            <?php if (!empty($recentTemplates)) : ?>
+            <div class="space-y-3">
+                <?php foreach ($recentTemplates as $template): ?>
+                <a href="/file-explorer#template-<?php echo $template['id'] ?>" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-200 border border-transparent transition duration-200 cursor-pointer">
+                    <i class="fas fa-file-alt text-blue-500 mr-3"></i>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900 hover:text-blue-700"><?php echo esc($template['name']) ?></p>
+                        <p class="text-sm text-gray-600">
+                            Created: <?php echo date('M j, Y', strtotime($template['createdAt'])) ?>
+                        </p>
+                    </div>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="text-center py-8">
+                <i class="fas fa-file-alt text-gray-300 text-4xl mb-3"></i>
+                <p class="text-gray-500">No templates available</p>
+                <?php if ($userPermissions['canCreateTemplates']): ?>
+                    <a href="/file-explorer/upload-template" class="inline-block mt-3 text-blue-600 hover:text-blue-700">
+                        Upload your first template
+                    </a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                <i class="fas fa-history mr-2 text-green-500"></i>Recent Filled Files
+            </h3>
+            <?php if (!empty($recentFilledFiles)) : ?>
+            <div class="space-y-3">
+                <?php foreach ($recentFilledFiles as $file): ?>
+                <a href="/file-explorer#filled-file-<?php echo $file['id'] ?>" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-green-50 hover:border-green-200 border border-transparent transition duration-200 cursor-pointer">
+                    <i class="fas fa-file-pdf text-green-500 mr-3"></i>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900 hover:text-green-700"><?php echo esc($file['name']) ?></p>
+                        <p class="text-sm text-gray-600">
+                            Template: <?php echo esc($file['template_name']) ?>
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            Created: <?php echo date('M j, Y', strtotime($file['createdAt'])) ?>
+                        </p>
+                    </div>
+                    <i class="fas fa-arrow-right text-gray-400"></i>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="text-center py-8">
+                <i class="fas fa-file-pdf text-gray-300 text-4xl mb-3"></i>
+                <p class="text-gray-500">No filled files available</p>
+                <?php if ($userPermissions['canCreateFilledFiles']): ?>
+                    <a href="/file-explorer/create-filled-file" class="inline-block mt-3 text-green-600 hover:text-green-700">
+                        Create your first filled file
+                    </a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
 <?php echo $this->endSection() ?>

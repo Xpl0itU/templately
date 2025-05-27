@@ -168,6 +168,27 @@
         .button-loading .button-text {
             opacity: 0;
         }
+
+        .fragment-highlight {
+            background-color: #fef3c7 !important;
+            border: 2px solid #f59e0b !important;
+            animation: fragment-pulse 2s ease-in-out;
+        }
+
+        @keyframes fragment-pulse {
+            0% { 
+                background-color: #fef3c7;
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+            }
+            50% { 
+                background-color: #fde68a;
+                box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+            }
+            100% { 
+                background-color: #fef3c7;
+                box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+            }
+        }
     </style>
 <?php echo $this->endSection() ?>
 
@@ -1848,6 +1869,76 @@
             }
             
             setTimeout(initializeChevrons, 100);
+            
+            function handleUrlFragment() {
+                const hash = window.location.hash;
+                if (hash) {
+                    if (hash === '#upload-template') {
+                        const uploadWizardModal = document.getElementById('uploadWizardModal');
+                        if (uploadWizardModal) {
+                            uploadWizardModal.classList.remove('hidden');
+                            history.replaceState(null, null, window.location.pathname + window.location.search);
+                        }
+                        return;
+                    }
+                    
+                    const match = hash.match(/^#(template|filled-file)-(\d+)$/);
+                    if (match) {
+                        const [, type, id] = match;
+                        
+                        if (type === 'template') {
+                            const templateFolder = document.querySelector(`[data-template-id="${id}"]`);
+                            if (templateFolder && templateFolder.classList.contains('folder-item')) {
+                                highlightAndScrollToElement(templateFolder);
+                                setTimeout(() => {
+                                    const templateSpan = templateFolder.querySelector('span');
+                                    if (templateSpan) templateSpan.click();
+                                }, 100);
+                            }
+                        } else if (type === 'filled-file') {
+                            const filledFile = document.querySelector(`[data-id="${id}"]`);
+                            if (filledFile && filledFile.classList.contains('file-item')) {
+                                const templateId = filledFile.getAttribute('data-template-id');
+                                const templateFolder = document.querySelector(`[data-template-id="${templateId}"].folder-item`);
+                                if (templateFolder) {
+                                    const folderList = templateFolder.querySelector('ul');
+                                    const chevronIcon = templateFolder.querySelector('.folder-chevron');
+                                    if (folderList && chevronIcon) {
+                                        folderList.style.display = 'block';
+                                        chevronIcon.style.transform = 'rotate(90deg)';
+                                    }
+                                }
+                                
+                                highlightAndScrollToElement(filledFile);
+                                setTimeout(() => {
+                                    filledFile.click();
+                                }, 100);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            function highlightAndScrollToElement(element) {
+                document.querySelectorAll('.fragment-highlight').forEach(el => {
+                    el.classList.remove('fragment-highlight');
+                });
+                
+                element.classList.add('fragment-highlight');
+                
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                
+                setTimeout(() => {
+                    element.classList.remove('fragment-highlight');
+                }, 3000);
+            }
+            
+            setTimeout(handleUrlFragment, 200);
+            
+            window.addEventListener('hashchange', handleUrlFragment);
 
             window.addEventListener('load', () => {
                 setTimeout(initializeChevrons, 50);

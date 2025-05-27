@@ -24,6 +24,8 @@ $routes->post('user-management/delete/(:num)', 'UserManagement::deleteUser/$1', 
 
 // File explorer routes
 $routes->get('/file-explorer', 'FileExplorer::index', ['filter' => 'sessionauth']);
+$routes->get('/file-explorer/upload-template', 'FileExplorer::uploadTemplateWizard', ['filter' => 'sessionauth']);
+$routes->get('/file-explorer/create-filled-file', 'FileExplorer::createFilledFileWizard', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/update-filled-file/(:num)', 'FileExplorer::updateFilledFile/$1', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/create-filled-file', 'FileExplorer::createFilledFile', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/analyze-template', 'FileExplorer::analyzeTemplateFile', ['filter' => 'sessionauth']);

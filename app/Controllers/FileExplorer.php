@@ -458,4 +458,32 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while exporting the PDF file.']);
         }
     }
+    
+    public function uploadTemplateWizard()
+    {
+        if (!auth()->user()->can('templates.create')) {
+            return redirect()->to('/')->with('error', 'You do not have permission to create templates.');
+        }
+
+        return redirect()->to('/file-explorer#upload-template');
+    }
+    
+    public function createFilledFileWizard()
+    {
+        if (!auth()->user()->can('filled-files.create')) {
+            return redirect()->to('/')->with('error', 'You do not have permission to create filled files.');
+        }
+
+        $templateModel = model('App\Models\TemplateFilesModel');
+        $templates = $templateModel->findAll();
+
+        $data = [
+            'templates' => $templates,
+            'userPermissions' => [
+                'canCreateFilledFiles' => auth()->user()->can('filled-files.create'),
+            ]
+        ];
+
+        return view('create_filled_file_wizard', $data);
+    }
 }
