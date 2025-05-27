@@ -30,6 +30,8 @@ $routes->post('/file-explorer/analyze-template', 'FileExplorer::analyzeTemplateF
 $routes->post('/file-explorer/finalize-template-upload', 'FileExplorer::finalizeTemplateUpload', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/delete-template/(:num)', 'FileExplorer::deleteTemplate/$1', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/delete-filled-file/(:num)', 'FileExplorer::deleteFilledFile/$1', ['filter' => 'sessionauth']);
+$routes->post('/file-explorer/export-docx/(:num)', 'FileExplorer::exportDocx/$1', ['filter' => 'sessionauth']);
+$routes->post('/file-explorer/export-pdf/(:num)', 'FileExplorer::exportPdf/$1', ['filter' => 'sessionauth']);
 
 // CI Shield default routes
 service('auth')->routes($routes);

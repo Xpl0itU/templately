@@ -46,6 +46,7 @@ class FileExplorer extends BaseController
                 'canCreateFilledFiles' => auth()->user()->can('filled-files.create'),
                 'canEditFilledFiles' => auth()->user()->can('filled-files.edit'),
                 'canDeleteFilledFiles' => auth()->user()->can('filled-files.delete'),
+                'canExportFilledFiles' => auth()->user()->can('filled-files.view'), // View permission fits the best
             ]
         ];
         return view('file_explorer', $data);
@@ -395,6 +396,66 @@ class FileExplorer extends BaseController
         } catch (\Exception $e) {
             log_message('error', 'Error deleting filled file: ' . $e->getMessage());
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while deleting the filled file.']);
+        }
+    }
+
+    public function exportDocx($id = null)
+    {
+        if (!auth()->user()->can('filled-files.view')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to export filled files.']);
+        }
+
+        if (!$id) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'File ID is required.']);
+        }
+
+        try {
+            $filledFilesModel = model('App\\Models\\FilledFilesModel');
+            $filledFile = $filledFilesModel->find($id);
+
+            if (!$filledFile) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Filled file not found.']);
+            }
+
+            // TODO: Implement DOCX export functionality
+            return $this->response->setStatusCode(501)->setJSON([
+                'success' => false, 
+                'message' => 'DOCX export functionality is not yet implemented.'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error exporting DOCX: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while exporting the DOCX file.']);
+        }
+    }
+
+    public function exportPdf($id = null)
+    {
+        if (!auth()->user()->can('filled-files.view')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to export filled files.']);
+        }
+
+        if (!$id) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'File ID is required.']);
+        }
+
+        try {
+            $filledFilesModel = model('App\\Models\\FilledFilesModel');
+            $filledFile = $filledFilesModel->find($id);
+
+            if (!$filledFile) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Filled file not found.']);
+            }
+
+            // TODO: Implement PDF export functionality
+            return $this->response->setStatusCode(501)->setJSON([
+                'success' => false, 
+                'message' => 'PDF export functionality is not yet implemented.'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error exporting PDF: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while exporting the PDF file.']);
         }
     }
 }

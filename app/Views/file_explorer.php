@@ -240,6 +240,20 @@
                     <button id="cancelButton" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center" style="display: none;">
                         <i class="fas fa-times mr-2"></i>Cancel
                     </button>
+                    <div id="exportButtonGroup" class="relative" style="display: none;">
+                        <button id="exportButton" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                            <i class="fas fa-download mr-2"></i>Export
+                            <i class="fas fa-chevron-down ml-2"></i>
+                        </button>
+                        <div id="exportDropdown" class="hidden absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-full">
+                            <button id="exportDocxButton" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center">
+                                <i class="fas fa-file-word text-blue-600 mr-2"></i>Export as DOCX
+                            </button>
+                            <button id="exportPdfButton" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center">
+                                <i class="fas fa-file-pdf text-red-600 mr-2"></i>Export as PDF
+                            </button>
+                        </div>
+                    </div>
                     <button id="deleteFilledFileButton" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center ml-auto" style="display: none;">
                         <i class="fas fa-trash mr-2"></i><span id="deleteFilledFileText">Delete File</span>
                     </button>
@@ -677,6 +691,11 @@
             const deleteFilledFileText = document.getElementById('deleteFilledFileText');
             const deleteTemplateButton = document.getElementById('deleteTemplateButton');
             const deleteTemplateText = document.getElementById('deleteTemplateText');
+            const exportButtonGroup = document.getElementById('exportButtonGroup');
+            const exportButton = document.getElementById('exportButton');
+            const exportDropdown = document.getElementById('exportDropdown');
+            const exportDocxButton = document.getElementById('exportDocxButton');
+            const exportPdfButton = document.getElementById('exportPdfButton');
             const uploadStatusDiv = document.getElementById('uploadStatus');
 
             const openUploadWizardButton = document.getElementById('openUploadWizardButton');
@@ -1118,12 +1137,14 @@
                     cancelButton.style.display = 'block';
                     deleteFilledFileButton.style.display = 'none';
                     deleteTemplateButton.style.display = 'none';
+                    exportButtonGroup.style.display = 'none';
                 } else {
                     editButton.style.display = Object.keys(fileData.filledData).length > 0 && userPermissions.canEditFilledFiles ? 'block' : 'none';
                     saveButton.style.display = 'none';
                     cancelButton.style.display = 'none';
                     deleteFilledFileButton.style.display = userPermissions.canDeleteFilledFiles ? 'block' : 'none';
                     deleteTemplateButton.style.display = 'none';
+                    exportButtonGroup.style.display = Object.keys(fileData.filledData).length > 0 && userPermissions.canExportFilledFiles ? 'block' : 'none';
                 }
             }
 
@@ -1135,6 +1156,7 @@
                 cancelButton.style.display = 'none';
                 deleteFilledFileButton.style.display = 'none';
                 deleteTemplateButton.style.display = userPermissions.canDeleteTemplates ? 'block' : 'none';
+                exportButtonGroup.style.display = 'none';
 
                 const container = document.createElement('div');
                 container.className = 'space-y-6';
@@ -1716,6 +1738,95 @@
                 } finally {
                                         deleteTemplateButton.disabled = false;
                     deleteTemplateButton.textContent = 'Delete Template';
+                }
+            });
+
+            // Export dropdown functionality
+            exportButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                exportDropdown.classList.toggle('hidden');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!exportButtonGroup.contains(e.target)) {
+                    exportDropdown.classList.add('hidden');
+                }
+            });
+
+            // Export DOCX functionality
+            exportDocxButton.addEventListener('click', async () => {
+                if (!currentSelectedFilledFile) return;
+                
+                exportDropdown.classList.add('hidden');
+                
+                try {
+                    const response = await fetch(`/file-explorer/export-docx/${currentSelectedFilledFile.id}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Handle file download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${currentSelectedFilledFile.name}.docx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    showModal('success', 'DOCX file exported successfully!');
+                } catch (error) {
+                    console.error('Error exporting DOCX:', error);
+                    showModal('error', 'Error exporting DOCX: ' + error.message);
+                }
+            });
+
+            // Export PDF functionality
+            exportPdfButton.addEventListener('click', async () => {
+                if (!currentSelectedFilledFile) return;
+                
+                exportDropdown.classList.add('hidden');
+                
+                try {
+                    const response = await fetch(`/file-explorer/export-pdf/${currentSelectedFilledFile.id}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Handle file download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${currentSelectedFilledFile.name}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    showModal('success', 'PDF file exported successfully!');
+                } catch (error) {
+                    console.error('Error exporting PDF:', error);
+                    showModal('error', 'Error exporting PDF: ' + error.message);
                 }
             });
 
