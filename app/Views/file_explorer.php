@@ -1289,7 +1289,10 @@
                 if (template.filledFiles && template.filledFiles.length > 0) {
                     template.filledFiles.forEach(filledFile => {
                         const fileItem = document.createElement('div');
-                        fileItem.className = 'p-3 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors duration-150 flex items-center';
+                        fileItem.className = 'p-3 hover:bg-green-50 rounded-lg border border-gray-200 transition-colors duration-150 flex items-center cursor-pointer hover:border-green-300';
+                        fileItem.dataset.id = filledFile.id;
+                        fileItem.dataset.templateId = template.id;
+                        fileItem.classList.add('template-overview-file-link');
                         
                         const fileIcon = document.createElement('i');
                         fileIcon.className = 'fas fa-edit text-green-500 mr-3 text-lg';
@@ -1302,21 +1305,26 @@
                         fileName.className = 'font-medium text-gray-800';
                         fileName.textContent = filledFile.name;
                         fileInfo.appendChild(fileName);
+
+                        // Show whichever date is more recent
+                        let fileDate = filledFile.updatedAt > filledFile.createdAt ? filledFile.updatedAt : filledFile.createdAt;
+                        if (fileDate) {
+                            fileDate = new Date(fileDate);
+                            fileDate = `${fileDate.toLocaleDateString()} ${fileDate.toLocaleTimeString()}`;
+                        } else {
+                            fileDate = "Unknown date";
+                        }
                         
-                        const fileDate = document.createElement('div');
-                        fileDate.className = 'text-xs text-gray-500';
-                        fileDate.textContent = filledFile.created_at ? new Date(filledFile.created_at).toLocaleDateString() : 'Unknown date';
-                        fileInfo.appendChild(fileDate);
+                        const fileDateDiv = document.createElement('div');
+                        fileDateDiv.className = 'text-xs text-gray-500';
+                        fileDateDiv.textContent = fileDate;
+                        fileInfo.appendChild(fileDateDiv);
                         
                         fileItem.appendChild(fileInfo);
                         
-                        const viewButton = document.createElement('button');
-                        viewButton.className = 'ml-2 text-blue-600 hover:text-blue-800 flex items-center text-sm';
-                        viewButton.innerHTML = '<i class="fas fa-eye mr-1"></i> View';
-                        viewButton.dataset.id = filledFile.id;
-                        viewButton.dataset.templateId = template.id;
-                        viewButton.classList.add('template-overview-file-link');
-                        fileItem.appendChild(viewButton);
+                        const viewIcon = document.createElement('i');
+                        viewIcon.className = 'fas fa-arrow-right text-gray-400 ml-2';
+                        fileItem.appendChild(viewIcon);
                         
                         filesList.appendChild(fileItem);
                     });
@@ -1567,12 +1575,11 @@
             });
 
             fileDetails.addEventListener('click', function(event) {
-                if (event.target.classList.contains('template-overview-file-link') || 
-                    (event.target.parentElement && event.target.parentElement.classList.contains('template-overview-file-link'))) {
+                // Find the closest element with template-overview-file-link class
+                const linkElement = event.target.closest('.template-overview-file-link');
+                
+                if (linkElement) {
                     event.preventDefault();
-                    
-                    const linkElement = event.target.classList.contains('template-overview-file-link') ? 
-                    event.target : event.target.parentElement;
                     
                     const filledFileId = linkElement.dataset.id;
                     const templateId = linkElement.dataset.templateId;
