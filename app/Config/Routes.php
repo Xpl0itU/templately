@@ -28,12 +28,12 @@ $routes->get('/file-explorer/upload-template', 'FileExplorer::uploadTemplateWiza
 $routes->get('/file-explorer/create-filled-file', 'FileExplorer::createFilledFileWizard', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/update-filled-file/(:num)', 'FileExplorer::updateFilledFile/$1', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/create-filled-file', 'FileExplorer::createFilledFile', ['filter' => 'sessionauth']);
-$routes->post('/file-explorer/analyze-template', 'FileExplorer::analyzeTemplateFile', ['filter' => 'sessionauth']);
+$routes->post('/file-explorer/analyze-template', 'FileExplorer::analyzeTemplate', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/finalize-template-upload', 'FileExplorer::finalizeTemplateUpload', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/delete-template/(:num)', 'FileExplorer::deleteTemplate/$1', ['filter' => 'sessionauth']);
 $routes->post('/file-explorer/delete-filled-file/(:num)', 'FileExplorer::deleteFilledFile/$1', ['filter' => 'sessionauth']);
-$routes->post('/file-explorer/export-docx/(:num)', 'FileExplorer::exportDocx/$1', ['filter' => 'sessionauth']);
-$routes->post('/file-explorer/export-pdf/(:num)', 'FileExplorer::exportPdf/$1', ['filter' => 'sessionauth']);
+$routes->get('/file-explorer/export-docx/(:num)', 'FileExplorer::exportDocx/$1', ['filter' => 'sessionauth']);
+$routes->get('/file-explorer/export-pdf/(:num)', 'FileExplorer::exportPdf/$1', ['filter' => 'sessionauth']);
 
 // CI Shield default routes
 service('auth')->routes($routes);

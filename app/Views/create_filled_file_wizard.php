@@ -32,7 +32,7 @@
                             
                             <p class="text-sm text-gray-600 mb-2">
                                 <i class="fas fa-calendar-alt mr-1"></i>
-                                Created: <?php echo date('M j, Y', strtotime($template['createdAt'])) ?>
+                                Created: <?php echo isset($template['createdAt']) && $template['createdAt'] ? date('M j, Y', strtotime($template['createdAt'])) : 'Unknown date' ?>
                             </p>
                             
                             <?php if (!empty($template['templateFields']) && is_array($template['templateFields'])): ?>
@@ -66,10 +66,10 @@
                 </div>
             <?php endif; ?>
             
-                        <div class="mt-8 pt-6 border-t border-gray-200">
-                <a href="/dashboard" class="inline-flex items-center text-gray-600 hover:text-blue-600 transition duration-200">
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <a href="/file-explorer" class="inline-flex items-center text-gray-600 hover:text-blue-600 transition duration-200">
                     <i class="fas fa-arrow-left mr-2"></i>
-                    Back to Dashboard
+                    Back to File Explorer
                 </a>
             </div>
         </div>
@@ -79,7 +79,6 @@
 <?php echo $this->section('pageScripts') ?>
     <script>
         function selectTemplate(templateId, templateName) {
-            // Redirect to file explorer with the selected template
             const url = `/file-explorer#create-filled-file-${templateId}`;
             window.location.href = url;
         }

@@ -2,23 +2,29 @@
 
 namespace App\Controllers;
 
-use App\Models\FilledFilesModel;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class FileExplorer extends BaseController
 {
+    protected $templateModel;
+    protected $filledFileModel;
+
+    public function __construct()
+    {
+        $this->templateModel = model('App\Models\TemplateModel');
+        $this->filledFileModel = model('App\Models\FilledFilesModel');
+    }
+
     public function index()
     {
         if (!auth()->user()->can('templates.view')) {
             return redirect()->to('/')->with('error', 'You do not have permission to view templates.');
         }
 
-        $templateModel = model('App\Models\TemplateFilesModel');
-        $templates = $templateModel->findAll();
+        $templates = $this->templateModel->findAll();
+        $filledFiles = $this->filledFileModel->findAll();
 
-        $filledFilesModel = model('App\\Models\\FilledFilesModel');
-        $filledFiles = $filledFilesModel->findAll();
-
-        // Join the filled files with the templates
+        // Join the filled files with templates
         foreach ($templates as &$template) {
             if (!empty($template['templateFields']) && is_string($template['templateFields'])) {
                 $decodedFields = json_decode($template['templateFields'], true);
@@ -29,66 +35,191 @@ class FileExplorer extends BaseController
 
             $template['filledFiles'] = [];
             foreach ($filledFiles as $file) {
-                if ($file['templateFileId'] == $template['id']) {
+                if (isset($file['templateFileId']) && isset($template['id']) && $file['templateFileId'] == $template['id']) {
+                    $file['id'] = $file['id'] ?? null;
+                    $file['name'] = $file['name'] ?? 'Unnamed File';
+                    $file['createdAt'] = $file['createdAt'] ?? null;
+                    $file['updatedAt'] = $file['updatedAt'] ?? null;
+                    
+                    // Parse filledData if it's a JSON string
+                    if (isset($file['filledData']) && is_string($file['filledData'])) {
+                        $file['filledData'] = json_decode($file['filledData'], true) ?: [];
+                    } else {
+                        $file['filledData'] = $file['filledData'] ?? [];
+                    }
                     $template['filledFiles'][] = $file;
                 }
             }
         }
 
         $data = [
+            'title' => 'File Explorer',
             'templates' => $templates,
-            'userPermissions' => [
-                'canViewTemplates' => auth()->user()->can('templates.view'),
-                'canCreateTemplates' => auth()->user()->can('templates.create'),
-                'canEditTemplates' => auth()->user()->can('templates.edit'),
-                'canDeleteTemplates' => auth()->user()->can('templates.delete'),
-                'canViewFilledFiles' => auth()->user()->can('filled-files.view'),
-                'canCreateFilledFiles' => auth()->user()->can('filled-files.create'),
-                'canEditFilledFiles' => auth()->user()->can('filled-files.edit'),
-                'canDeleteFilledFiles' => auth()->user()->can('filled-files.delete'),
-                'canExportFilledFiles' => auth()->user()->can('filled-files.view'), // View permission fits the best
-            ]
+            'userPermissions' => $this->getUserPermissions()
         ];
+
         return view('file_explorer', $data);
     }
 
-    public function updateFilledFile($id = null)
+    protected function getUserPermissions()
     {
-        if (!auth()->user()->can('filled-files.edit')) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to edit filled files.']);
-        }
-
-        if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
-        }
-
-        $json = $this->request->getJSON();
-
-        if (empty($id) || empty($json) || !isset($json->filledData) || !is_object($json->filledData)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received. ID and filledData object are required.']);
-        }
-
-        $filledFilesModel = new FilledFilesModel();
-        $file = $filledFilesModel->find($id);
-
-        if (!$file) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'File not found.']);
-        }
-
-        $dataToUpdate = [
-            'filledData' => json_encode($json->filledData),
+        return [
+            'canViewTemplates' => auth()->user()->can('templates.view'),
+            'canCreateTemplates' => auth()->user()->can('templates.create'),
+            'canEditTemplates' => auth()->user()->can('templates.edit'),
+            'canDeleteTemplates' => auth()->user()->can('templates.delete'),
+            'canViewFilledFiles' => auth()->user()->can('filled-files.view'),
+            'canCreateFilledFiles' => auth()->user()->can('filled-files.create'),
+            'canEditFilledFiles' => auth()->user()->can('filled-files.edit'),
+            'canDeleteFilledFiles' => auth()->user()->can('filled-files.delete'),
+            'canExportFilledFiles' => auth()->user()->can('filled-files.view'),
         ];
+    }
+
+    public function analyzeTemplate()
+    {
+        if (!auth()->user()->can('templates.create')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
+        }
+
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
+        }
+
+        $file = $this->request->getFile('templateFile');
+        
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No valid file uploaded']);
+        }
+
+        if ($file->getClientExtension() !== 'docx') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Only .docx files are supported']);
+        }
 
         try {
-            if ($filledFilesModel->update($id, $dataToUpdate)) {
-                return $this->response->setJSON(['success' => true, 'message' => 'File updated successfully.']);
-            } else {
-                log_message('error', 'Failed to update file ID: ' . $id . ' Errors: ' . print_r($filledFilesModel->errors(), true));
-                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not update file in database.', 'errors' => $filledFilesModel->errors()]);
+            $tempDir = WRITEPATH . 'uploads/temp/';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
             }
+
+            // Generate unique filename
+            $tempFileName = uniqid('template_') . '.docx';
+            $tempFilePath = $tempDir . $tempFileName;
+            
+            if (!$file->move($tempDir, $tempFileName)) {
+                throw new \Exception('Failed to save uploaded file');
+            }
+
+            $templateFields = $this->extractTemplateFields($tempFilePath);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'tempFilePath' => $tempFilePath,
+                'templateFields' => $templateFields,
+                'message' => 'Template analyzed successfully'
+            ]);
+
         } catch (\Exception $e) {
-            log_message('error', '[Controller Exception] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
+            log_message('error', 'Template analysis error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error analyzing template: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    protected function extractTemplateFields($filePath)
+    {
+        try {
+            $templateProcessor = new TemplateProcessor($filePath);
+            
+            $variables = $templateProcessor->getVariables();
+            
+            return array_unique($variables);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Field extraction error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function finalizeTemplateUpload()
+    {
+        if (!auth()->user()->can('templates.create')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
+        }
+
+        if (!$this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
+        }
+
+        $json = $this->request->getJSON(true);
+        
+        if (!isset($json['tempFilePath']) || !isset($json['templateName'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Missing required data']);
+        }
+
+        try {
+            $tempFilePath = $json['tempFilePath'];
+            $templateName = trim($json['templateName']);
+            $templateFields = $json['templateFields'] ?? [];
+            $originalFileName = $json['originalFileName'] ?? 'template.docx';
+
+            if (!file_exists($tempFilePath)) {
+                throw new \Exception('Temporary file not found');
+            }
+
+            $storageDir = WRITEPATH . 'uploads/templates/';
+            if (!is_dir($storageDir)) {
+                mkdir($storageDir, 0755, true);
+            }
+
+            $permanentFileName = uniqid('template_') . '.docx';
+            $permanentFilePath = $storageDir . $permanentFileName;
+
+            if (!rename($tempFilePath, $permanentFilePath)) {
+                throw new \Exception('Failed to save template file');
+            }
+
+            $templateData = [
+                'name' => $templateName,
+                'originalFileName' => $originalFileName,
+                'path' => $permanentFilePath,
+                'templateFields' => json_encode($templateFields),
+                'createdAt' => date('Y-m-d H:i:s'),
+                'updatedAt' => date('Y-m-d H:i:s')
+            ];
+
+            $templateId = $this->templateModel->insert($templateData);
+            
+            if (!$templateId) {
+                if (file_exists($permanentFilePath)) {
+                    unlink($permanentFilePath);
+                }
+                throw new \Exception('Failed to save template to database');
+            }
+
+            $newTemplate = $this->templateModel->find($templateId);
+            $newTemplate['templateFields'] = is_array($newTemplate['templateFields']) ? $newTemplate['templateFields'] : json_decode($newTemplate['templateFields'], true);
+            $newTemplate['filledFiles'] = [];
+
+            return $this->response->setJSON([
+                'success' => true,
+                'newTemplate' => $newTemplate,
+                'message' => 'Template uploaded successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Template finalization error: ' . $e->getMessage());
+            
+            if (isset($tempFilePath) && file_exists($tempFilePath)) {
+                unlink($tempFilePath);
+            }
+
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error saving template: ' . $e->getMessage()
+            ]);
         }
     }
 
@@ -108,226 +239,92 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received. template_id and name are required.']);
         }
 
-        $templateModel = model('App\\Models\\TemplateFilesModel');
-        $template = $templateModel->find($json->template_id);
-
-        if (!$template) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Template not found.']);
-        }
-
-        // Ensure templateFields is an array, decoding if it's a JSON string
-        if (!empty($template['templateFields']) && is_string($template['templateFields'])) {
-            $decodedFields = json_decode($template['templateFields'], true);
-            $template['templateFields'] = is_array($decodedFields) ? $decodedFields : [];
-        } elseif (empty($template['templateFields'])) {
-            $template['templateFields'] = []; // Default to empty array
-        }
-
-        $filledFilesModel = new FilledFilesModel();
-
-        $newFilledData = new \stdClass();
-        if (isset($template['templateFields']) && is_array($template['templateFields'])) {
-            foreach ($template['templateFields'] as $field) {
-                $newFilledData->$field = '';
-            }
-        }
-
-        $dataToInsert = [
-            'name' => trim($json->name),
-            'templateFileId' => $json->template_id,
-            'filledData' => json_encode($newFilledData),
-            'createdAt' => date('Y-m-d H:i:s'),
-        ];
-
         try {
-            $newFileId = $filledFilesModel->insert($dataToInsert);
+            if ($this->filledFileModel->where('templateFileId', $json->template_id)->where('name', trim($json->name))->first()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'A file with this name already exists for this template'
+                ]);
+            }
+
+            $template = $this->templateModel->find($json->template_id);
+            if (!$template) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Template not found.']);
+            }
+
+            $templateFields = [];
+            if (!empty($template['templateFields'])) {
+                $templateFields = is_string($template['templateFields']) ? 
+                    json_decode($template['templateFields'], true) : 
+                    $template['templateFields'];
+            
+                if (!is_array($templateFields)) {
+                    $templateFields = [];
+                }
+            }
+
+            $initialData = [];
+            foreach ($templateFields as $field) {
+                if (is_string($field)) {
+                    $initialData[$field] = '';
+                }
+            }
+
+            $dataToInsert = [
+                'name' => trim($json->name),
+                'templateFileId' => $json->template_id,
+                'filledData' => $initialData,
+                'createdAt' => date('Y-m-d H:i:s'),
+            ];
+
+            $newFileId = $this->filledFileModel->insert($dataToInsert);
             if ($newFileId === false) {
-                log_message('error', 'Failed to insert new filled file. Errors: ' . print_r($filledFilesModel->errors(), true));
-                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not create file in database.', 'errors' => $filledFilesModel->errors()]);
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not create file in database.']);
             }
 
-            $newFilledFile = $filledFilesModel->find($newFileId);
+            $newFilledFile = $this->filledFileModel->find($newFileId);
             if ($newFilledFile) {
-                $newFilledFile['filledData'] = json_decode($newFilledFile['filledData'] ?? '{}');
                 return $this->response->setJSON(['success' => true, 'message' => 'File created successfully.', 'newFilledFile' => $newFilledFile]);
-            } else {
-                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'File created but could not be retrieved.']);
             }
+
         } catch (\Exception $e) {
-            log_message('error', '[Controller Exception] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
+            log_message('error', '[Controller Exception] ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server: ' . $e->getMessage()]);
         }
     }
 
-    // TODO: Implement
-    private function extractTemplateFieldsFromFile(string $filePath): array
+    public function updateFilledFile($id = null)
     {
-        sleep(2);
-        log_message('info', 'Mock extracting fields from: ' . $filePath);
-        return ['firstName', 'lastName', 'date', 'productName'];
-    }
-
-    public function analyzeTemplateFile()
-    {
-        if (!auth()->user()->can('templates.create')) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
+        if (!auth()->user()->can('filled-files.edit')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to edit filled files.']);
         }
 
-        if ($this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
-        }
-
-        $validationRule = [
-            'templateFile' => [
-                'label' => 'Template File',
-                'rules' => [
-                    'uploaded[templateFile]',
-                    'mime_in[templateFile,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,text/plain]',
-                    'max_size[templateFile,20480]', // Max 20MB
-                ],
-            ],
-        ];
-
-        if (!$this->validate($validationRule)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Validation failed', 'errors' => $this->validator->getErrors()]);
-        }
-
-        $file = $this->request->getFile('templateFile');
-
-        if (!$file->isValid() || $file->hasMoved()) {
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'File error: ' . $file->getErrorString() . ' (' . $file->getError() . ')']);
-        }
-
-        $tempUploadPath = WRITEPATH . 'uploads/temp_templates';
-        if (!is_dir($tempUploadPath)) {
-            mkdir($tempUploadPath, 0777, true);
-        }
-
-        $newName = $file->getRandomName();
-        $file->move($tempUploadPath, $newName);
-        $tempFilePath = $tempUploadPath . '/' . $newName;
-
-        $templateFields = $this->extractTemplateFieldsFromFile($tempFilePath);
-
-        return $this->response->setJSON(
-            [
-            'success' => true,
-            'message' => 'File analyzed successfully.',
-            'tempFilePath' => $tempFilePath,
-            'originalFileName' => $file->getClientName(),
-            'templateFields' => $templateFields
-            ]
-        );
-    }
-
-    public function finalizeTemplateUpload()
-    {
-        if (!auth()->user()->can('templates.create')) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
-        }
-
-        if ($this->request->getMethod(true) !== 'POST') {
+        if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
 
         $json = $this->request->getJSON();
-        log_message('debug', 'Finalize Template Upload JSON payload: ' . print_r($json, true));
 
-        if (empty($json) || !isset($json->tempFilePath) || !isset($json->templateName) || !isset($json->templateFields) || !isset($json->originalFileName) || !isset($json->fileMimeType) || !isset($json->fileSizeKB)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received for finalization. Missing one or more required fields.']);
+        if (empty($id) || empty($json) || !isset($json->filledData) || !is_object($json->filledData)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received. ID and filledData object are required.']);
         }
-        
-        $tempFilePath = $json->tempFilePath;
-        $templateName = trim($json->templateName);
-        $templateFields = $json->templateFields;
-        $fileMimeType = $json->fileMimeType;
-        $fileSizeKB = $json->fileSizeKB;
-
-        if (empty($templateName)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Template name cannot be empty.']);
-        }
-        
-        $realTempFilePath = realpath($tempFilePath);
-        $expectedTempDir = realpath(WRITEPATH . 'uploads/temp_templates');
-
-        if ($realTempFilePath === false) {
-            log_message('error', "Finalize Error: tempFilePath '{$tempFilePath}' does not resolve to a real path or does not exist.");
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Temporary file path is invalid or file does not exist. Please try uploading again.']);
-        }
-
-        if ($expectedTempDir === false) {
-            log_message('critical', "Finalize Error: Expected temporary directory " . WRITEPATH . "uploads/temp_templates' does not exist or is not accessible.");
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Server configuration error regarding temporary storage. Contact administrator.']);
-        }
-
-        if (strpos($realTempFilePath, $expectedTempDir) !== 0) {
-            log_message('error', "Finalize Error: tempFilePath '{$realTempFilePath}' is outside the expected directory '{$expectedTempDir}'.");
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid temporary file path (security check failed).']);
-        }
-
-        if (!file_exists($realTempFilePath)) {
-            log_message('error', "Finalize Error: Temporary file '{$realTempFilePath}' not found after realpath success. This could be a race condition or permissions issue.");
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Temporary file not found. It might have expired or been moved. Please try uploading again.']);
-        }
-
-        $uploadPath = WRITEPATH . 'uploads/templates';
-        if (!is_dir($uploadPath)) {
-            mkdir($uploadPath, 0777, true);
-        }
-
-        $newFileNameOnServer = basename($realTempFilePath);
-        $finalFilePath = $uploadPath . '/' . $newFileNameOnServer;
-
-        if (!rename($realTempFilePath, $finalFilePath)) {
-            if (file_exists($realTempFilePath)) {
-                unlink($realTempFilePath);
-            }
-            log_message('error', "Finalize Error: Could not move temp file '{$realTempFilePath}' to '{$finalFilePath}'. Check permissions.");
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not move template file to final destination.']);
-        }
-        
-        $templateModel = model('App\\Models\\TemplateFilesModel');
-        $dataToInsert = [
-            'name' => $templateName,
-            'path' => $finalFilePath,
-            'size' => $fileSizeKB, 
-            'type' => $fileMimeType,
-            'templateFields' => json_encode($templateFields),
-            'createdAt' => date('Y-m-d H:i:s')
-        ];
 
         try {
-            $newTemplateId = $templateModel->insert($dataToInsert);
-            if ($newTemplateId === false) {
-                if (file_exists($finalFilePath)) {
-                    unlink($finalFilePath);
-                }
-                log_message('error', 'Failed to insert new template file (finalize). Errors: ' . print_r($templateModel->errors(), true));
-                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not save template to database.', 'errors' => $templateModel->errors()]);
-            }
+            $updateData = [
+                'filledData' => json_encode((array)$json->filledData),
+                'updatedAt' => date('Y-m-d H:i:s')
+            ];
 
-            $newTemplate = $templateModel->find($newTemplateId);
-            if ($newTemplate) {
-                if (!empty($newTemplate['templateFields']) && is_string($newTemplate['templateFields'])) {
-                    $decodedFields = json_decode($newTemplate['templateFields'], true);
-                    $newTemplate['templateFields'] = is_array($decodedFields) ? $decodedFields : [];
-                } else {
-                    $newTemplate['templateFields'] = [];
-                }
-                $newTemplate['filledFiles'] = [];
-                return $this->response->setJSON(['success' => true, 'message' => 'Template finalized and saved successfully.', 'newTemplate' => $newTemplate]);
+            $success = $this->filledFileModel->update($id, $updateData);
+
+            if ($success) {
+                return $this->response->setJSON(['success' => true, 'message' => 'File updated successfully.']);
             } else {
-                if (file_exists($finalFilePath)) {
-                    unlink($finalFilePath);
-                }
-                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Template saved but could not be retrieved.']);
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not update file in database.']);
             }
         } catch (\Exception $e) {
-            if (file_exists($finalFilePath)) {
-                unlink($finalFilePath);
-            }
-            log_message('error', '[Controller Exception - FinalizeTemplate] ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected server error occurred during finalization.']);
+            log_message('error', '[Controller Exception] ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
         }
     }
 
@@ -345,24 +342,21 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Template ID is required.']);
         }
 
-        $templateModel = model('App\\Models\\TemplateFilesModel');
-        $template = $templateModel->find($id);
-
-        if (!$template) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Template not found.']);
-        }
-
         try {
-            $filledFilesModel = new FilledFilesModel();
-            $filledFilesModel->where('templateFileId', $id)->delete();
+            $this->filledFileModel->where('templateFileId', $id)->delete();
 
-            if (!empty($template['path']) && file_exists($template['path'])) {
+            $template = $this->templateModel->find($id);
+            if ($template && !empty($template['path']) && file_exists($template['path'])) {
                 unlink($template['path']);
             }
 
-            $templateModel->delete($id);
+            $success = $this->templateModel->delete($id);
 
-            return $this->response->setJSON(['success' => true, 'message' => 'Template and associated filled files deleted successfully.']);
+            if ($success) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Template and associated filled files deleted successfully.']);
+            } else {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Failed to delete template.']);
+            }
         } catch (\Exception $e) {
             log_message('error', 'Error deleting template: ' . $e->getMessage());
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while deleting the template.']);
@@ -383,16 +377,14 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Filled file ID is required.']);
         }
 
-        $filledFilesModel = new FilledFilesModel();
-        $file = $filledFilesModel->find($id);
-
-        if (!$file) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Filled file not found.']);
-        }
-
         try {
-            $filledFilesModel->delete($id);
-            return $this->response->setJSON(['success' => true, 'message' => 'Filled file deleted successfully.']);
+            $success = $this->filledFileModel->delete($id);
+            
+            if ($success) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Filled file deleted successfully.']);
+            } else {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Failed to delete filled file.']);
+            }
         } catch (\Exception $e) {
             log_message('error', 'Error deleting filled file: ' . $e->getMessage());
             return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while deleting the filled file.']);
@@ -410,22 +402,55 @@ class FileExplorer extends BaseController
         }
 
         try {
-            $filledFilesModel = model('App\\Models\\FilledFilesModel');
-            $filledFile = $filledFilesModel->find($id);
-
+            $filledFile = $this->filledFileModel->find($id);
             if (!$filledFile) {
-                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Filled file not found.']);
+                throw new \Exception('Filled file not found');
             }
 
-            // TODO: Implement DOCX export functionality
-            return $this->response->setStatusCode(501)->setJSON([
-                'success' => false, 
-                'message' => 'DOCX export functionality is not yet implemented.'
-            ]);
+            if (!isset($filledFile['templateFileId'])) {
+                throw new \Exception('Template file ID not found in filled file record');
+            }
+
+            $template = $this->templateModel->find($filledFile['templateFileId']);
+            if (!$template) {
+                throw new \Exception('Template not found');
+            }
+
+            if (!file_exists($template['path'])) {
+                throw new \Exception('Template file not found');
+            }
+
+            $templateProcessor = new TemplateProcessor($template['path']);
+            
+            $filledData = is_string($filledFile['filledData']) ? 
+                json_decode($filledFile['filledData'], true) : 
+                $filledFile['filledData'];
+            
+            foreach ($filledData as $placeholder => $value) {
+                $templateProcessor->setValue($placeholder, $value);
+            }
+
+            $outputFileName = $filledFile['name'] . '.docx';
+            
+            $tempOutputPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
+            $templateProcessor->saveAs($tempOutputPath);
+
+            $this->response->setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            $this->response->setHeader('Content-Disposition', 'attachment; filename="' . $outputFileName . '"');
+            $this->response->setHeader('Content-Length', filesize($tempOutputPath));
+
+            $fileContent = file_get_contents($tempOutputPath);
+            
+            unlink($tempOutputPath);
+
+            return $this->response->setBody($fileContent);
 
         } catch (\Exception $e) {
-            log_message('error', 'Error exporting DOCX: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while exporting the DOCX file.']);
+            log_message('error', 'DOCX export error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error exporting DOCX: ' . $e->getMessage()
+            ]);
         }
     }
 
@@ -440,25 +465,87 @@ class FileExplorer extends BaseController
         }
 
         try {
-            $filledFilesModel = model('App\\Models\\FilledFilesModel');
-            $filledFile = $filledFilesModel->find($id);
-
+            $filledFile = $this->filledFileModel->find($id);
             if (!$filledFile) {
-                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'Filled file not found.']);
+                throw new \Exception('Filled file not found');
             }
 
-            // TODO: Implement PDF export functionality
-            return $this->response->setStatusCode(501)->setJSON([
-                'success' => false, 
-                'message' => 'PDF export functionality is not yet implemented.'
-            ]);
+            if (!isset($filledFile['templateFileId'])) {
+                throw new \Exception('Template file ID not found in filled file record');
+            }
+
+            $template = $this->templateModel->find($filledFile['templateFileId']);
+            if (!$template) {
+                throw new \Exception('Template not found');
+            }
+
+            if (!file_exists($template['path'])) {
+                throw new \Exception('Template file not found');
+            }
+
+            $templateProcessor = new TemplateProcessor($template['path']);
+            
+            $filledData = is_string($filledFile['filledData']) ? 
+                json_decode($filledFile['filledData'], true) : 
+                $filledFile['filledData'];
+            
+            foreach ($filledData as $placeholder => $value) {
+                $templateProcessor->setValue($placeholder, $value);
+            }
+
+            $tempDocxPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
+            $templateProcessor->saveAs($tempDocxPath);
+
+            $tempPdfPath = $this->convertDocxToPdf($tempDocxPath);
+            
+            if (!$tempPdfPath || !file_exists($tempPdfPath)) {
+                throw new \Exception('PDF conversion failed. Please ensure LibreOffice is installed.');
+            }
+
+            $outputFileName = $filledFile['name'] . '.pdf';
+
+            $this->response->setHeader('Content-Type', 'application/pdf');
+            $this->response->setHeader('Content-Disposition', 'attachment; filename="' . $outputFileName . '"');
+            $this->response->setHeader('Content-Length', filesize($tempPdfPath));
+
+            $fileContent = file_get_contents($tempPdfPath);
+            
+            unlink($tempDocxPath);
+            unlink($tempPdfPath);
+
+            return $this->response->setBody($fileContent);
 
         } catch (\Exception $e) {
-            log_message('error', 'Error exporting PDF: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while exporting the PDF file.']);
+            log_message('error', 'PDF export error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error exporting PDF: ' . $e->getMessage()
+            ]);
         }
     }
-    
+
+    protected function convertDocxToPdf($docxPath)
+    {
+        try {
+            $outputDir = dirname($docxPath);
+            $pdfPath = str_replace('.docx', '.pdf', $docxPath);
+            
+            // Use LibreOffice to convert DOCX to PDF
+            $command = "soffice --headless --convert-to pdf --outdir " . escapeshellarg($outputDir) . " " . escapeshellarg($docxPath) . " 2>/dev/null";
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0 && file_exists($pdfPath)) {
+                return $pdfPath;
+            }
+            
+            return false;
+
+        } catch (\Exception $e) {
+            log_message('error', 'PDF conversion error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function uploadTemplateWizard()
     {
         if (!auth()->user()->can('templates.create')) {
@@ -474,16 +561,71 @@ class FileExplorer extends BaseController
             return redirect()->to('/')->with('error', 'You do not have permission to create filled files.');
         }
 
-        $templateModel = model('App\Models\TemplateFilesModel');
-        $templates = $templateModel->findAll();
-
         $data = [
-            'templates' => $templates,
-            'userPermissions' => [
-                'canCreateFilledFiles' => auth()->user()->can('filled-files.create'),
-            ]
+            'templates' => $this->templateModel->findAll(),
+            'userPermissions' => $this->getUserPermissions()
         ];
 
         return view('create_filled_file_wizard', $data);
+    }
+
+    public function analyzeTemplateFile()
+    {
+        if (!auth()->user()->can('templates.create')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to create templates.']);
+        }
+
+        if ($this->request->getMethod(true) !== 'POST') {
+            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+        }
+
+        $validationRule = [
+            'templateFile' => [
+                'label' => 'Template File',
+                'rules' => [
+                    'uploaded[templateFile]',
+                    'mime_in[templateFile,application/vnd.openxmlformats-officedocument.wordprocessingml.document]',
+                    'max_size[templateFile,20480]', // Max 20MB
+                ],
+            ],
+        ];
+
+        if (!$this->validate($validationRule)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Validation failed', 'errors' => $this->validator->getErrors()]);
+        }
+
+        $file = $this->request->getFile('templateFile');
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'File error: ' . $file->getErrorString() . ' (' . $file->getError() . ')']);
+        }
+
+        try {
+            $tempUploadPath = WRITEPATH . 'uploads/temp/';
+            if (!is_dir($tempUploadPath)) {
+                mkdir($tempUploadPath, 0777, true);
+            }
+
+            $newName = uniqid('template_') . '.docx';
+            $file->move($tempUploadPath, $newName);
+            $tempFilePath = $tempUploadPath . $newName;
+
+            $templateFields = $this->extractTemplateFields($tempFilePath);
+
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'File analyzed successfully.',
+                'tempFilePath' => $tempFilePath,
+                'originalFileName' => $file->getClientName(),
+                'templateFields' => $templateFields
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Template analysis error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error analyzing template: ' . $e->getMessage()
+            ]);
+        }
     }
 }

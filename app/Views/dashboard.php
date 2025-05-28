@@ -143,15 +143,15 @@
             <?php if (!empty($recentFilledFiles)) : ?>
             <div class="space-y-3">
                 <?php foreach ($recentFilledFiles as $file): ?>
-                <a href="/file-explorer#filled-file-<?php echo $file['id'] ?>" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-green-50 hover:border-green-200 border border-transparent transition duration-200 cursor-pointer">
+                <a href="/file-explorer#filled-file-<?php echo $file['id'] ?? '' ?>" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-green-50 hover:border-green-200 border border-transparent transition duration-200 cursor-pointer">
                     <i class="fas fa-edit text-green-500 mr-3"></i>
                     <div class="flex-1">
-                        <p class="font-medium text-gray-900 hover:text-green-700"><?php echo esc($file['name']) ?></p>
+                        <p class="font-medium text-gray-900 hover:text-green-700"><?php echo esc($file['name'] ?? 'Unnamed File') ?></p>
                         <p class="text-sm text-gray-600">
-                            Template: <?php echo esc($file['template_name']) ?>
+                            Template: <?php echo esc($file['template_name'] ?? 'Unknown Template') ?>
                         </p>
                         <p class="text-xs text-gray-500">
-                            Created: <?php echo date('M j, Y', strtotime($file['createdAt'])) ?>
+                            Created: <?php echo isset($file['createdAt']) && $file['createdAt'] ? date('M j, Y', strtotime($file['createdAt'])) : 'Unknown date' ?>
                         </p>
                     </div>
                     <i class="fas fa-arrow-right text-gray-400"></i>

@@ -195,6 +195,54 @@
                 box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
             }
         }
+
+        .loading-modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .loading-modal .modal-content {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .loading-modal .modal-content.scale-95 {
+            transform: scale(0.95);
+        }
+
+        .loading-modal .modal-content.scale-100 {
+            transform: scale(1);
+        }
+
+        .loading-spinner {
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .export-progress-bar {
+            width: 100%;
+            height: 4px;
+            background-color: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .export-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            animation: progress-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
     </style>
 <?php echo $this->endSection() ?>
 
@@ -328,9 +376,9 @@
                         <div id="wizardStepUploadFile" class="wizard-step active">
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Step 1: Upload File</h3>
                 <form id="wizardFileUploadForm">
-                    <p class="mb-4 text-gray-600">Select a template file (.docx, .pdf, .txt) containing placeholders that will be filled by users.</p>
+                    <p class="mb-4 text-gray-600">Select a template file (.docx) containing placeholders in the format <code class="bg-gray-100 px-1 rounded">${placeholder_name}</code> that will be filled by users.</p>
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
-                        <input type="file" name="templateFileWizard" id="templateFileWizard" accept=".docx,.pdf,.txt"
+                        <input type="file" name="templateFileWizard" id="templateFileWizard" accept=".docx"
                             required class="hidden" onchange="updateFileLabel()">
                         <label for="templateFileWizard" class="cursor-pointer">
                             <i class="fas fa-cloud-upload-alt text-gray-400 text-4xl mb-3 block"></i>
@@ -402,7 +450,8 @@
                     <p class="text-sm font-medium text-gray-700 mb-1">Detected Fields:</p>
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
                         <ul id="detectedFieldsList" class="max-h-36 overflow-y-auto text-gray-600 text-sm">
-                                                    </ul>
+                            <!-- Fields will be populated here -->
+                        </ul>
                     </div>
                     <div class="flex justify-end space-x-2 mt-4">
                         <button type="button" id="backStep3" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
@@ -525,6 +574,23 @@
             </div>
         </div>
     </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="loading-modal modal-overlay hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="modal-content bg-white rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all duration-300 scale-95">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="loadingTitle" class="text-lg font-semibold text-gray-900">Processing...</h3>
+                <button id="loadingModalClose" class="text-gray-600 text-2xl cursor-pointer hover:text-gray-800 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="text-center">
+                <div class="loading-spinner mb-4"></div>
+                <p id="loadingMessage" class="text-gray-600 mb-4">Please wait while we process your request.</p>
+                <div id="loadingStatus" class="text-sm text-gray-500 mt-2">Initializing...</div>
+            </div>
+        </div>
+    </div>
 <?php echo $this->endSection() ?>
 
 <?php echo $this->section('pageScripts') ?>
@@ -533,10 +599,12 @@
             success: document.getElementById('successModal'),
             error: document.getElementById('errorModal'),
             confirm: document.getElementById('confirmModal'),
-            input: document.getElementById('inputModal')
+            input: document.getElementById('inputModal'),
+            loading: document.getElementById('loadingModal')
         };
 
         const uploadWizardModal = document.getElementById('uploadWizardModal');
+        const loadingModal = document.getElementById('loadingModal');
 
         let currentModal = null;
         let currentModalCallback = null;
@@ -547,6 +615,12 @@
                     if (e.key === 'Escape') {
                         e.preventDefault();
                         resetWizard();
+                        return;
+                    }
+                } else if (!loadingModal.classList.contains('hidden')) {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        hideLoadingModal();
                         return;
                     }
                 }
@@ -602,6 +676,9 @@
                     break;
                 case 'input':
                     document.getElementById('inputOk').click();
+                    break;
+                case 'loading':
+                    hideLoadingModal();
                     break;
             }
         }
@@ -847,6 +924,41 @@
             });
         }
 
+        function showLoadingModal(title = 'Processing...', message = 'Please wait while we process your request.') {
+            currentModal = 'loading';
+            loadingTitle.textContent = title;
+            loadingMessage.textContent = message;
+            loadingStatus.textContent = 'Processing...';
+            
+            loadingModal.classList.remove('hidden');
+            setTimeout(() => {
+                loadingModal.querySelector('.modal-content').classList.remove('scale-95');
+                loadingModal.querySelector('.modal-content').classList.add('scale-100');
+                
+                // Focus the close button
+                const closeButton = document.getElementById('loadingModalClose');
+                if (closeButton) {
+                    setTimeout(() => closeButton.focus(), 100);
+                }
+            }, 10);
+        }
+
+        function hideLoadingModal() {
+            if (currentModal === 'loading') {
+                currentModal = null;
+            }
+            
+            loadingModal.querySelector('.modal-content').classList.remove('scale-100');
+            loadingModal.querySelector('.modal-content').classList.add('scale-95');
+            setTimeout(() => {
+                loadingModal.classList.add('hidden');
+            }, 150);
+        }
+
+        function updateLoadingStatus(status) {
+            loadingStatus.textContent = status;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const fileHierarchy = document.getElementById('fileHierarchy');
             const fileNameHeading = document.getElementById('fileNameHeading');
@@ -869,6 +981,11 @@
 
             const openUploadWizardButton = document.getElementById('openUploadWizardButton');
             const closeWizardButton = uploadWizardModal.querySelector('.close-wizard');
+
+            const loadingTitle = document.getElementById('loadingTitle');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const loadingStatus = document.getElementById('loadingStatus');
+            const loadingModalClose = document.getElementById('loadingModalClose');
 
             const wizardSteps = {
                 stepUploadFile: document.getElementById('wizardStepUploadFile'),
@@ -907,7 +1024,7 @@
             function findFilledFileById(filledFileId) {
                 for (const template of templatesData) {
                     if (template.filledFiles && Array.isArray(template.filledFiles)) {
-                        const foundFile = template.filledFiles.find(ff => ff.id.toString() === filledFileId.toString());
+                        const foundFile = template.filledFiles.find(ff => ff.id && ff.id.toString() === filledFileId.toString());
                         if (foundFile) {
                             if (typeof foundFile.filledData === 'string') {
                                 try {
@@ -927,7 +1044,7 @@
             }
 
             function findTemplateById(templateId) {
-                return templatesData.find(t => t.id.toString() === templateId.toString());
+                return templatesData.find(t => t.id && t.id.toString() === templateId.toString());
             }
 
             let wizardState = {
@@ -1100,14 +1217,21 @@
                         if (wizardState.detectedFields.length > 0) {
                             wizardState.detectedFields.forEach(field => {
                                 const li = document.createElement('li');
-                                li.className = 'py-1 px-2 flex items-center';
-                                li.innerHTML = `<i class="fas fa-tag text-blue-500 mr-2"></i> ${field}`;
+                                li.className = 'py-1 px-2 flex items-center bg-white rounded border';
+                                li.innerHTML = `
+                                    <i class="fas fa-tag text-blue-500 mr-2"></i> 
+                                    <code class="bg-gray-100 px-2 py-1 rounded text-sm">\${${field}}</code>
+                                    <span class="ml-2 text-gray-600">→ ${field.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                `;
                                 detectedFieldsListUl.appendChild(li);
                             });
                         } else {
                             const li = document.createElement('li');
-                            li.className = 'py-1 px-2 flex items-center text-gray-500 italic';
-                            li.innerHTML = '<i class="fas fa-info-circle mr-2"></i> No fields detected (or using mock data).';
+                            li.className = 'py-2 px-2 flex items-center text-amber-600 bg-amber-50 rounded border border-amber-200';
+                            li.innerHTML = `
+                                <i class="fas fa-info-circle mr-2"></i> 
+                                <span>No placeholder fields detected. Make sure your template uses the format <code class="bg-amber-100 px-1 rounded">\${field_name}</code></span>
+                            `;
                             detectedFieldsListUl.appendChild(li);
                         }
                         showWizardStep('stepNameReview');
@@ -1169,9 +1293,9 @@
                         template.filledFiles.forEach(filledFile => {
                             const fileLi = document.createElement('li');
                             fileLi.className = 'file-item p-2 rounded-md hover:bg-green-50 cursor-pointer mb-1 flex items-center';
-                            fileLi.dataset.id = filledFile.id;
-                            fileLi.dataset.name = filledFile.name;
-                            fileLi.dataset.templateId = template.id;
+                            fileLi.dataset.id = filledFile.id || '';
+                            fileLi.dataset.name = filledFile.name || 'Unnamed File';
+                            fileLi.dataset.templateId = template.id || '';
                             
                             const fileIcon = document.createElement('i');
                             fileIcon.className = 'fas fa-edit text-green-500 mr-2';
@@ -1448,10 +1572,22 @@
                         fileInfo.appendChild(fileName);
 
                         // Show whichever date is more recent
-                        let fileDate = filledFile.updatedAt > filledFile.createdAt ? filledFile.updatedAt : filledFile.createdAt;
+                        let fileDate = null;
+                        if (filledFile.updatedAt && filledFile.createdAt) {
+                            fileDate = filledFile.updatedAt > filledFile.createdAt ? filledFile.updatedAt : filledFile.createdAt;
+                        } else if (filledFile.updatedAt) {
+                            fileDate = filledFile.updatedAt;
+                        } else if (filledFile.createdAt) {
+                            fileDate = filledFile.createdAt;
+                        }
+                        
                         if (fileDate) {
-                            fileDate = new Date(fileDate);
-                            fileDate = `${fileDate.toLocaleDateString()} ${fileDate.toLocaleTimeString()}`;
+                            try {
+                                fileDate = new Date(fileDate);
+                                fileDate = `${fileDate.toLocaleDateString()} ${fileDate.toLocaleTimeString()}`;
+                            } catch (e) {
+                                fileDate = "Invalid date";
+                            }
                         } else {
                             fileDate = "Unknown date";
                         }
@@ -1737,20 +1873,7 @@
                         });
                         
                         const sidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${filledFileId}']`);
-                        if (sidebarFileItem) {
-                            sidebarFileItem.classList.add('bg-green-100');
-                            const parentFolder = sidebarFileItem.closest('.folder-item');
-                            if (parentFolder) {
-                                const folderList = parentFolder.querySelector('ul');
-                                const chevronIcon = parentFolder.querySelector('.folder-chevron');
-                                if (folderList) {
-                                    folderList.style.display = 'block';
-                                    if (chevronIcon) {
-                                        chevronIcon.style.transform = 'rotate(90deg)';
-                                    }
-                                }
-                            }
-                        }
+                        if (sidebarFileItem) sidebarFileItem.classList.add('bg-green-100');
                     }
                 }
             });
@@ -1950,18 +2073,24 @@
                 if (!currentSelectedFilledFile) return;
                 
                 exportDropdown.classList.add('hidden');
-                
+                showLoadingModal('Exporting to DOCX', 'Generating your Word document...');
+
                 try {
                     const response = await fetch(`/file-explorer/export-docx/${currentSelectedFilledFile.id}`, {
-                        method: 'POST',
+                        method: 'GET',
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Export failed');
                     }
 
                     const blob = await response.blob();
@@ -1975,8 +2104,11 @@
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
 
-                    showModal('success', 'DOCX file exported successfully!');
+                    hideLoadingModal();
+                    showModal('success', 'DOCX file downloaded successfully!');
+
                 } catch (error) {
+                    hideLoadingModal();
                     console.error('Error exporting DOCX:', error);
                     showModal('error', 'Error exporting DOCX: ' + error.message);
                 }
@@ -1986,18 +2118,24 @@
                 if (!currentSelectedFilledFile) return;
                 
                 exportDropdown.classList.add('hidden');
-                
+                showLoadingModal('Exporting to PDF', 'Converting your document to PDF...');
+
                 try {
                     const response = await fetch(`/file-explorer/export-pdf/${currentSelectedFilledFile.id}`, {
-                        method: 'POST',
+                        method: 'GET',
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Export failed');
                     }
 
                     const blob = await response.blob();
@@ -2011,8 +2149,11 @@
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
 
-                    showModal('success', 'PDF file exported successfully!');
+                    hideLoadingModal();
+                    showModal('success', 'PDF file downloaded successfully!');
+
                 } catch (error) {
+                    hideLoadingModal();
                     console.error('Error exporting PDF:', error);
                     showModal('error', 'Error exporting PDF: ' + error.message);
                 }
@@ -2119,6 +2260,13 @@
             window.addEventListener('load', () => {
                 setTimeout(initializeChevrons, 50);
             });
+
+            // Close button event listeners for modals
+            document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
+            document.getElementById('errorModalClose').addEventListener('click', () => hideModal('error'));
+            document.getElementById('confirmCancel').addEventListener('click', () => hideModal('confirm'));
+            document.getElementById('inputCancel').addEventListener('click', () => hideModal('input'));
+            loadingModalClose.addEventListener('click', hideLoadingModal);
         });
     </script>
 <?php echo $this->endSection() ?>

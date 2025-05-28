@@ -12,7 +12,7 @@ class Dashboard extends BaseController
 
         $user = auth()->user();
         
-        $templateModel = model('App\Models\TemplateFilesModel');
+        $templateModel = model('App\Models\TemplateModel');
         $filledFilesModel = model('App\Models\FilledFilesModel');
         
         $totalTemplates = $templateModel->countAll();
@@ -21,7 +21,7 @@ class Dashboard extends BaseController
         $recentTemplates = $templateModel->orderBy('createdAt', 'DESC')->findAll(5);
         
         $recentFilledFiles = $filledFilesModel->select('filledFiles.*, templateFiles.name as template_name')
-            ->join('templateFiles', 'templateFiles.id = filledFiles.templateFileId')
+            ->join('templateFiles', 'templateFiles.id = filledFiles.templateFileId', 'left')
             ->orderBy('filledFiles.createdAt', 'DESC')
             ->findAll(5);
         
