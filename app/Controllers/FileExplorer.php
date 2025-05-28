@@ -341,7 +341,7 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
 
-        if (empty($id)) {
+        if (is_null($id)) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Template ID is required.']);
         }
 
