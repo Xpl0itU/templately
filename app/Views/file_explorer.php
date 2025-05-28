@@ -536,9 +536,158 @@
             input: document.getElementById('inputModal')
         };
 
+        const uploadWizardModal = document.getElementById('uploadWizardModal');
+
+        let currentModal = null;
+        let currentModalCallback = null;
+
+        function handleGlobalKeydown(e) {
+            if (!currentModal) {
+                if (!uploadWizardModal.classList.contains('hidden')) {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        resetWizard();
+                        return;
+                    }
+                }
+                return;
+            }
+
+            // ESC key - dismiss any modal
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                dismissCurrentModal();
+                return;
+            }
+
+            // Enter key - trigger primary action
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                triggerPrimaryAction();
+                return;
+            }
+
+            // Tab navigation within modal
+            if (e.key === 'Tab') {
+                trapFocus(e);
+            }
+        }
+
+        function dismissCurrentModal() {
+            if (!currentModal) return;
+
+            const modalType = currentModal;
+            
+            if (modalType === 'confirm' && currentModalCallback) {
+                currentModalCallback(false);
+            } else if (modalType === 'input' && currentModalCallback) {
+                currentModalCallback(null);
+            }
+            
+            hideModal(modalType);
+        }
+
+        function triggerPrimaryAction() {
+            if (!currentModal) return;
+
+            switch (currentModal) {
+                case 'success':
+                    document.getElementById('successModalClose').click();
+                    break;
+                case 'error':
+                    document.getElementById('errorModalClose').click();
+                    break;
+                case 'confirm':
+                    document.getElementById('confirmOk').click();
+                    break;
+                case 'input':
+                    document.getElementById('inputOk').click();
+                    break;
+            }
+        }
+
+        function trapFocus(e) {
+            const modal = modals[currentModal];
+            if (!modal) return;
+
+            const focusableElements = modal.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            
+            if (focusableElements.length === 0) return;
+
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === firstFocusable) {
+                    e.preventDefault();
+                    lastFocusable.focus();
+                }
+            } else {
+                if (document.activeElement === lastFocusable) {
+                    e.preventDefault();
+                    firstFocusable.focus();
+                }
+            }
+        }
+
+        function setModalFocus(type) {
+            const modal = modals[type];
+            if (!modal) return;
+
+            let focusTarget;
+            
+            if (type === 'input') {
+                focusTarget = document.getElementById('inputValue');
+            } else {
+                // Find the first button or focusable element
+                focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            }
+            
+            if (focusTarget) {
+                setTimeout(() => focusTarget.focus(), 100);
+            }
+        }
+
+        document.addEventListener('keydown', handleGlobalKeydown);
+
+        function handleWizardKeydown(e) {
+            if (uploadWizardModal.classList.contains('hidden')) return;
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                resetWizard();
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const currentStep = wizardState.currentStep;
+                
+                if (currentStep === 'stepUploadFile') {
+                    const fileInput = document.getElementById('templateFileWizard');
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        wizardFileUploadForm.dispatchEvent(new Event('submit'));
+                    }
+                } else if (currentStep === 'stepNameReview') {
+                    const nameInput = document.getElementById('templateNameWizard');
+                    if (nameInput.value.trim()) {
+                        wizardNameReviewForm.dispatchEvent(new Event('submit'));
+                    }
+                }
+                return;
+            }
+        }
+
+        document.addEventListener('keydown', handleWizardKeydown);
+
         function showModal(type, message, callback = null) {
             const modal = modals[type];
             if (!modal) return;
+
+            currentModal = type;
+            currentModalCallback = callback;
 
             if (type === 'success') {
                 document.getElementById('successMessage').textContent = message;
@@ -555,6 +704,7 @@
             setTimeout(() => {
                 modal.querySelector('.modal-content').classList.remove('scale-95');
                 modal.querySelector('.modal-content').classList.add('scale-100');
+                setModalFocus(type);
             }, 10);
 
             if (type === 'confirm' && callback) {
@@ -591,7 +741,6 @@
                         callback(value);
                         inputOk.removeEventListener('click', handleInput);
                         inputCancel.removeEventListener('click', handleInputCancel);
-                        inputValue.removeEventListener('keypress', handleKeyPress);
                     }
                 };
                 
@@ -600,28 +749,21 @@
                     callback(null);
                     inputOk.removeEventListener('click', handleInput);
                     inputCancel.removeEventListener('click', handleInputCancel);
-                    inputValue.removeEventListener('keypress', handleKeyPress);
-                };
-
-                const handleKeyPress = (e) => {
-                    if (e.key === 'Enter') {
-                        handleInput();
-                    } else if (e.key === 'Escape') {
-                        handleInputCancel();
-                    }
                 };
                 
                 inputOk.addEventListener('click', handleInput);
                 inputCancel.addEventListener('click', handleInputCancel);
-                inputValue.addEventListener('keypress', handleKeyPress);
-                
-                setTimeout(() => inputValue.focus(), 100);
             }
         }
 
         function hideModal(type) {
             const modal = modals[type];
             if (!modal) return;
+
+            if (currentModal === type) {
+                currentModal = null;
+                currentModalCallback = null;
+            }
 
             modal.querySelector('.modal-content').classList.remove('scale-100');
             modal.querySelector('.modal-content').classList.add('scale-95');
@@ -726,7 +868,6 @@
             const uploadStatusDiv = document.getElementById('uploadStatus');
 
             const openUploadWizardButton = document.getElementById('openUploadWizardButton');
-            const uploadWizardModal = document.getElementById('uploadWizardModal');
             const closeWizardButton = uploadWizardModal.querySelector('.close-wizard');
 
             const wizardSteps = {
