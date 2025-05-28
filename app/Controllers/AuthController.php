@@ -114,18 +114,22 @@ class AuthController extends BaseController
             return redirect()->back()->withInput()->with('errors', $users->errors());
         }
 
-        $user = $users->findById($users->getInsertID());
+        $insertId = $users->getInsertID();
+        
+        $user = auth()->getProvider()->findById($insertId);
+        
+        if ($user === null) {
+            return redirect()->back()->withInput()->with('error', 'Failed to create user account.');
+        }
 
         $users->addToDefaultGroup($user);
 
         /**
- * @var Session $authenticator 
-*/
+         * @var Session $authenticator 
+         */
         $authenticator = auth('session')->getAuthenticator();
 
-        if ($authenticator->hasAction()) {
-            $authenticator->startLogin($user); // Prepares the action
-        }
+        $authenticator->startLogin($user);
 
         if (!setting('Auth.requireEmailActivation') && !$authenticator->hasAction()) {
             $authenticator->completeLogin($user);
