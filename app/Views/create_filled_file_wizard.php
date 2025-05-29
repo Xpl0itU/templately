@@ -36,10 +36,38 @@
                             </p>
                             
                             <?php if (!empty($template['templateFields']) && is_array($template['templateFields'])): ?>
-                                <p class="text-xs text-gray-500">
-                                    <i class="fas fa-list mr-1"></i>
-                                    <?php echo count($template['templateFields']) ?> field<?php echo count($template['templateFields']) !== 1 ? 's' : '' ?>
-                                </p>
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-500 mb-1">
+                                        <i class="fas fa-list mr-1"></i>
+                                        <?php echo count($template['templateFields']) ?> field<?php echo count($template['templateFields']) !== 1 ? 's' : '' ?>
+                                    </p>
+                                    <div class="flex flex-wrap gap-1">
+                                        <?php 
+                                        $fieldTypes = [];
+                                        foreach ($template['templateFields'] as $field):
+                                            // Handle both string fields and object fields
+                                            if (is_array($field)) {
+                                                $type = $field['type'] ?? 'text';
+                                            } else {
+                                                $type = 'text';
+                                            }
+                                            $fieldTypes[$type] = ($fieldTypes[$type] ?? 0) + 1;
+                                        endforeach;
+                                        
+                                        foreach ($fieldTypes as $type => $count):
+                                            $iconClass = match($type) {
+                                                'image' => 'fa-image text-purple-500',
+                                                'paragraph' => 'fa-paragraph text-green-500',
+                                                default => 'fa-font text-blue-500'
+                                            };
+                                        ?>
+                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
+                                                <i class="fas <?php echo $iconClass ?> mr-1"></i>
+                                                <?php echo ucfirst($type) ?> (<?php echo $count ?>)
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
                             <?php endif; ?>
                             
                             <div class="mt-3 pt-3 border-t border-gray-100">

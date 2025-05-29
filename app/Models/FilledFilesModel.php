@@ -16,6 +16,7 @@ class FilledFilesModel extends Model
         'templateFileId',
         'name',
         'filledData',
+        'fieldTypes',
         'createdAt',
         'updatedAt'
     ];
@@ -47,12 +48,12 @@ class FilledFilesModel extends Model
     protected $cleanValidationRules = true;
 
     protected $allowCallbacks = true;
-    protected $beforeInsert = ['prepareFilledData'];
+    protected $beforeInsert = ['prepareFilledData', 'prepareFieldTypes'];
     protected $afterInsert = [];
-    protected $beforeUpdate = ['prepareFilledData'];
+    protected $beforeUpdate = ['prepareFilledData', 'prepareFieldTypes'];
     protected $afterUpdate = [];
     protected $beforeFind = [];
-    protected $afterFind = ['parseFilledData'];
+    protected $afterFind = ['parseFilledData', 'parseFieldTypes'];
     protected $beforeDelete = [];
     protected $afterDelete = [];
 
@@ -110,6 +111,54 @@ class FilledFilesModel extends Model
         return $record;
     }
 
+    protected function prepareFieldTypes(array $data)
+    {
+        // Handle both direct data and nested data structures
+        if (isset($data['data']['fieldTypes']) && is_array($data['data']['fieldTypes'])) {
+            $data['data']['fieldTypes'] = json_encode($data['data']['fieldTypes']);
+        } elseif (isset($data['fieldTypes']) && is_array($data['fieldTypes'])) {
+            $data['fieldTypes'] = json_encode($data['fieldTypes']);
+        }
+
+        return $data;
+    }
+
+    protected function parseFieldTypes(array $data)
+    {
+        if (isset($data['data']) && !is_array($data['data'])) {
+            return $data;
+        }
+        
+        if (isset($data['data'])) {
+            if (is_array($data['data']) && isset($data['data'][0])) {
+                foreach ($data['data'] as &$record) {
+                    $record = $this->parseFieldTypesForRecord($record);
+                }
+            } else {
+                $data['data'] = $this->parseFieldTypesForRecord($data['data']);
+            }
+        } elseif (isset($data['fieldTypes'])) {
+            $data = $this->parseFieldTypesForRecord($data);
+        }
+
+        return $data;
+    }
+
+    protected function parseFieldTypesForRecord($record)
+    {
+        if (!is_array($record)) {
+            return $record;
+        }
+        
+        if (isset($record['fieldTypes']) && is_string($record['fieldTypes'])) {
+            $decoded = json_decode($record['fieldTypes'], true);
+            $record['fieldTypes'] = is_array($decoded) ? $decoded : [];
+        } elseif (!isset($record['fieldTypes'])) {
+            $record['fieldTypes'] = [];
+        }
+        return $record;
+    }
+
     public function createFromTemplate($templateId, $fileName)
     {
         $templateModel = new TemplateModel();
@@ -125,14 +174,27 @@ class FilledFilesModel extends Model
         }
 
         $initialData = [];
+        $defaultFieldTypes = [];
         foreach ($templateFields as $field) {
-            $initialData[$field] = '';
+            // Extract field name from different formats
+            $fieldName = '';
+            if (is_string($field)) {
+                $fieldName = $field;
+            } elseif (is_array($field)) {
+                $fieldName = $field['name'] ?? $field['field'] ?? $field;
+            }
+            
+            if (!empty($fieldName)) {
+                $initialData[$fieldName] = '';
+                $defaultFieldTypes[$fieldName] = 'text'; // Default all fields to text type
+            }
         }
 
         $filledFileData = [
             'templateFileId' => $templateId,
             'name' => $fileName,
-            'filledData' => json_encode($initialData)
+            'filledData' => json_encode($initialData),
+            'fieldTypes' => json_encode($defaultFieldTypes)
         ];
 
         $filledFileId = $this->insert($filledFileData);
@@ -144,12 +206,18 @@ class FilledFilesModel extends Model
         return $this->find($filledFileId);
     }
 
-    public function updateFilledData($filledFileId, array $filledData)
+    public function updateFilledData($filledFileId, array $filledData, array $fieldTypes = [])
     {
-        return $this->update($filledFileId, [
+        $updateData = [
             'filledData' => json_encode($filledData),
             'updatedAt' => date('Y-m-d H:i:s')
-        ]);
+        ];
+        
+        if (!empty($fieldTypes)) {
+            $updateData['fieldTypes'] = json_encode($fieldTypes);
+        }
+        
+        return $this->update($filledFileId, $updateData);
     }
 
     public function getByTemplateId($templateId)

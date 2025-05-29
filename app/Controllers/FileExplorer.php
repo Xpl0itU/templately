@@ -135,8 +135,7 @@ class FileExplorer extends BaseController
             
             $variables = $templateProcessor->getVariables();
             
-            return array_unique($variables);
-
+            return $variables;
         } catch (\Exception $e) {
             log_message('error', 'Field extraction error: ' . $e->getMessage());
             return [];
@@ -264,16 +263,28 @@ class FileExplorer extends BaseController
             }
 
             $initialData = [];
+            $defaultFieldTypes = [];
             foreach ($templateFields as $field) {
+                $fieldName = '';
                 if (is_string($field)) {
-                    $initialData[$field] = '';
+                    $fieldName = $field;
+                } elseif (is_array($field) && isset($field['name'])) {
+                    $fieldName = $field['name'];
+                } elseif (is_array($field) && isset($field['field'])) {
+                    $fieldName = $field['field'];
+                }
+                
+                if (!empty($fieldName)) {
+                    $initialData[$fieldName] = '';
+                    $defaultFieldTypes[$fieldName] = 'text'; // Default all fields to text
                 }
             }
 
             $dataToInsert = [
                 'name' => trim($json->name),
                 'templateFileId' => $json->template_id,
-                'filledData' => $initialData,
+                'filledData' => json_encode($initialData),
+                'fieldTypes' => json_encode($defaultFieldTypes),
                 'createdAt' => date('Y-m-d H:i:s'),
             ];
 
@@ -303,28 +314,127 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
         }
 
-        $json = $this->request->getJSON();
-
-        if (empty($id) || empty($json) || !isset($json->filledData) || !is_object($json->filledData)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received. ID and filledData object are required.']);
+        if (empty($id)) {
+            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'File ID is required.']);
         }
 
         try {
+            $existingFile = $this->filledFileModel->find($id);
+            if (!$existingFile) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'File not found.']);
+            }
+
+            $filledDataJson = $this->request->getPost('filledData');
+            $fieldTypesJson = $this->request->getPost('fieldTypes');
+            $imageSizesJson = $this->request->getPost('imageSizes');
+            $fieldsWithNewImagesJson = $this->request->getPost('fieldsWithNewImages');
+            
+            if (empty($filledDataJson)) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received.']);
+            }
+
+            $filledData = json_decode($filledDataJson, true);
+            $fieldTypes = $fieldTypesJson ? json_decode($fieldTypesJson, true) : [];
+            $imageSizes = $imageSizesJson ? json_decode($imageSizesJson, true) : [];
+            $fieldsWithNewImages = $fieldsWithNewImagesJson ? json_decode($fieldsWithNewImagesJson, true) : [];
+            
+            if (!is_array($filledData)) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid filled data format.']);
+            }
+
+            log_message('info', 'Starting image upload handling for filled file ID: ' . $id);
+            
+            $uploadedFiles = $this->request->getFiles();
+            log_message('info', 'getFiles() returned: ' . count($uploadedFiles) . ' files');
+            
+            if (!empty($uploadedFiles)) {
+                log_message('info', 'File keys from getFiles(): ' . implode(', ', array_keys($uploadedFiles)));
+                
+                foreach ($uploadedFiles as $fieldName => $file) {
+                    log_message('info', 'Processing file field: ' . $fieldName);
+                    log_message('info', 'File valid: ' . ($file->isValid() ? 'yes' : 'no'));
+                    log_message('info', 'File moved: ' . ($file->hasMoved() ? 'yes' : 'no'));
+                    
+                    if (strpos($fieldName, 'image_') === 0 && $file->isValid() && !$file->hasMoved()) {
+                        $actualFieldName = substr($fieldName, 6); // Remove 'image_' prefix
+                        log_message('info', 'Processing image for field: ' . $actualFieldName);
+
+                        $mimeType = $file->getClientMimeType();
+                        log_message('info', 'File MIME type: ' . $mimeType);
+                        
+                        if (!$mimeType || strpos($mimeType, 'image/') !== 0) {
+                            log_message('warning', 'Skipping non-image file: ' . $mimeType);
+                            continue; // Skip non-image files
+                        }
+
+                        $imageDir = WRITEPATH . 'uploads/images/filled_files/' . $id . '/';
+                        if (!is_dir($imageDir)) {
+                            if (!mkdir($imageDir, 0755, true)) {
+                                log_message('error', 'Failed to create image directory: ' . $imageDir);
+                                continue;
+                            }
+                            log_message('info', 'Created image directory: ' . $imageDir);
+                        }
+
+                        // Generate unique filename
+                        $extension = $file->getClientExtension();
+                        $newName = $actualFieldName . '_' . time() . '_' . uniqid() . '.' . $extension;
+                        log_message('info', 'Generated filename: ' . $newName);
+
+                        if ($file->move($imageDir, $newName)) {
+                            log_message('info', 'Successfully moved file to: ' . $imageDir . $newName);
+                            
+                            $existingFilledData = is_string($existingFile['filledData']) ?
+                                json_decode($existingFile['filledData'], true) :
+                                $existingFile['filledData'];
+
+                            if (!empty($existingFilledData[$actualFieldName])) {
+                                $oldImagePath = $imageDir . basename($existingFilledData[$actualFieldName]);
+                                if (file_exists($oldImagePath)) {
+                                    @unlink($oldImagePath);
+                                    log_message('info', 'Deleted old image: ' . $oldImagePath);
+                                }
+                            }
+
+                            $filledData[$actualFieldName] = $newName;
+                            log_message('info', 'Updated filledData for field: ' . $actualFieldName . ' = ' . $newName);
+                        } else {
+                            log_message('error', 'Failed to move file: ' . $file->getErrorString());
+                        }
+                    }
+                }
+            } else {
+                log_message('warning', 'No files found in upload');
+            }
+
             $updateData = [
-                'filledData' => json_encode((array)$json->filledData),
+                'filledData' => json_encode($filledData),
                 'updatedAt' => date('Y-m-d H:i:s')
             ];
+            
+            if (!empty($fieldTypes)) {
+                $updateData['fieldTypes'] = json_encode($fieldTypes);
+            }
+            
+            if (!empty($imageSizes)) {
+                $updateData['imageSizes'] = json_encode($imageSizes);
+            }
 
             $success = $this->filledFileModel->update($id, $updateData);
 
             if ($success) {
-                return $this->response->setJSON(['success' => true, 'message' => 'File updated successfully.']);
+                return $this->response->setJSON([
+                    'success' => true, 
+                    'message' => 'File updated successfully.',
+                    'updatedData' => $filledData,
+                    'fieldTypes' => $fieldTypes
+                ]);
             } else {
                 return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'Could not update file in database.']);
             }
         } catch (\Exception $e) {
             log_message('error', '[Controller Exception] ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server.']);
+            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An unexpected error occurred on the server: ' . $e->getMessage()]);
         }
     }
 
@@ -421,13 +531,52 @@ class FileExplorer extends BaseController
             }
 
             $templateProcessor = new TemplateProcessor($template['path']);
-            
-            $filledData = is_string($filledFile['filledData']) ? 
-                json_decode($filledFile['filledData'], true) : 
+
+            $filledData = is_string($filledFile['filledData']) ?
+                json_decode($filledFile['filledData'], true) :
                 $filledFile['filledData'];
             
+            $fieldTypes = [];
+            if (!empty($filledFile['fieldTypes'])) {
+                $fieldTypes = is_string($filledFile['fieldTypes']) ? 
+                    json_decode($filledFile['fieldTypes'], true) : 
+                    $filledFile['fieldTypes'];
+            }
+            
+            $imageSizes = [];
+            if (!empty($filledFile['imageSizes'])) {
+                $imageSizes = is_string($filledFile['imageSizes']) ? 
+                    json_decode($filledFile['imageSizes'], true) : 
+                    $filledFile['imageSizes'];
+            }
+            
             foreach ($filledData as $placeholder => $value) {
-                $templateProcessor->setValue($placeholder, $value);
+                $fieldType = $fieldTypes[$placeholder] ?? 'text';
+
+                if ($fieldType === 'image' && !empty($value)) {
+                    $imagePath = WRITEPATH . 'uploads/images/filled_files/' . $id . '/' . $value;
+                    if (file_exists($imagePath)) {
+                        try {
+                            $imageSettings = $imageSizes[$placeholder] ?? [];
+                            $width = $imageSettings['width'] ?? 300;
+                            $height = $imageSettings['height'] ?? 200;
+                            $ratio = $imageSettings['ratio'] ?? true;
+
+                            $templateProcessor->setImageValue($placeholder, [
+                                'path' => $imagePath,
+                                'width' => $width,
+                                'height' => $height,
+                                'ratio' => $ratio
+                            ]);
+                        } catch (\Exception $e) {
+                            $templateProcessor->setValue($placeholder, '[Image: ' . basename($value) . ']');
+                        }
+                    } else {
+                        $templateProcessor->setValue($placeholder, '[Image not found]');
+                    }
+                } else {
+                    $templateProcessor->setValue($placeholder, $value ?: '');
+                }
             }
 
             $outputFileName = $filledFile['name'] . '.docx';
@@ -484,13 +633,52 @@ class FileExplorer extends BaseController
             }
 
             $templateProcessor = new TemplateProcessor($template['path']);
-            
-            $filledData = is_string($filledFile['filledData']) ? 
-                json_decode($filledFile['filledData'], true) : 
+
+            $filledData = is_string($filledFile['filledData']) ?
+                json_decode($filledFile['filledData'], true) :
                 $filledFile['filledData'];
             
+            $fieldTypes = [];
+            if (!empty($filledFile['fieldTypes'])) {
+                $fieldTypes = is_string($filledFile['fieldTypes']) ? 
+                    json_decode($filledFile['fieldTypes'], true) : 
+                    $filledFile['fieldTypes'];
+            }
+            
+            $imageSizes = [];
+            if (!empty($filledFile['imageSizes'])) {
+                $imageSizes = is_string($filledFile['imageSizes']) ? 
+                    json_decode($filledFile['imageSizes'], true) : 
+                    $filledFile['imageSizes'];
+            }
+            
             foreach ($filledData as $placeholder => $value) {
-                $templateProcessor->setValue($placeholder, $value);
+                $fieldType = $fieldTypes[$placeholder] ?? 'text';
+
+                if ($fieldType === 'image' && !empty($value)) {
+                    $imagePath = WRITEPATH . 'uploads/images/filled_files/' . $id . '/' . $value;
+                    if (file_exists($imagePath)) {
+                        try {
+                            $imageSettings = $imageSizes[$placeholder] ?? [];
+                            $width = $imageSettings['width'] ?? 300;
+                            $height = $imageSettings['height'] ?? 200;
+                            $ratio = $imageSettings['ratio'] ?? true;
+
+                            $templateProcessor->setImageValue($placeholder, [
+                                'path' => $imagePath,
+                                'width' => $width,
+                                'height' => $height,
+                                'ratio' => $ratio
+                            ]);
+                        } catch (\Exception $e) {
+                            $templateProcessor->setValue($placeholder, '[Image: ' . basename($value) . ']');
+                        }
+                    } else {
+                        $templateProcessor->setValue($placeholder, '[Image not found]');
+                    }
+                } else {
+                    $templateProcessor->setValue($placeholder, $value ?: '');
+                }
             }
 
             $tempDocxPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
@@ -626,6 +814,64 @@ class FileExplorer extends BaseController
                 'success' => false,
                 'message' => 'Error analyzing template: ' . $e->getMessage()
             ]);
+        }
+    }
+
+    public function serveImage($filledFileId = null, $imageName = null)
+    {
+        if (!auth()->user()->can('filled-files.view')) {
+            return $this->response->setStatusCode(403);
+        }
+
+        if (!$filledFileId || !$imageName) {
+            return $this->response->setStatusCode(404);
+        }
+
+        try {
+            $filledFile = $this->filledFileModel->find($filledFileId);
+            if (!$filledFile) {
+                return $this->response->setStatusCode(404);
+            }
+
+            $imageName = basename($imageName);
+            $imagePath = WRITEPATH . 'uploads/images/filled_files/' . $filledFileId . '/' . $imageName;
+
+            if (!file_exists($imagePath) || !is_file($imagePath)) {
+                return $this->response->setStatusCode(404);
+            }
+
+            $filledData = is_string($filledFile['filledData']) ? 
+                json_decode($filledFile['filledData'], true) : 
+                $filledFile['filledData'];
+            
+            $imageFound = false;
+            if (is_array($filledData)) {
+                foreach ($filledData as $value) {
+                    if (is_string($value) && strpos($value, $imageName) !== false) {
+                        $imageFound = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!$imageFound) {
+                return $this->response->setStatusCode(403);
+            }
+
+            $mimeType = mime_content_type($imagePath);
+            if (!$mimeType || strpos($mimeType, 'image/') !== 0) {
+                return $this->response->setStatusCode(400);
+            }
+
+            $this->response->setHeader('Content-Type', $mimeType);
+            $this->response->setHeader('Content-Length', filesize($imagePath));
+            $this->response->setHeader('Cache-Control', 'private, max-age=3600');
+            
+            return $this->response->setBody(file_get_contents($imagePath));
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error serving image: ' . $e->getMessage());
+            return $this->response->setStatusCode(500);
         }
     }
 }

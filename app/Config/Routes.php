@@ -34,6 +34,8 @@ $routes->post('/file-explorer/delete-template/(:num)', 'FileExplorer::deleteTemp
 $routes->post('/file-explorer/delete-filled-file/(:num)', 'FileExplorer::deleteFilledFile/$1', ['filter' => 'sessionauth']);
 $routes->get('/file-explorer/export-docx/(:num)', 'FileExplorer::exportDocx/$1', ['filter' => 'sessionauth']);
 $routes->get('/file-explorer/export-pdf/(:num)', 'FileExplorer::exportPdf/$1', ['filter' => 'sessionauth']);
+$routes->get('file-explorer/serve-image/(:num)/(:any)', 'FileExplorer::serveImage/$1/$2');
+$routes->post('file-explorer/upload-field-image/(:num)/(:segment)', 'FileExplorer::uploadFieldImage/$1/$2');
 
 // CI Shield default routes
 service('auth')->routes($routes);

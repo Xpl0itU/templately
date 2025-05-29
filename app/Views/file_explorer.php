@@ -243,6 +243,51 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.8; }
         }
+
+        .field-type-selector {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .field-input-container {
+            position: relative;
+        }
+
+        .image-upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            background: #f7fafc;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .image-upload-area:hover {
+            border-color: #4299e1;
+            background: #ebf8ff;
+        }
+
+        .image-upload-area.dragover {
+            border-color: #3182ce;
+            background: #bee3f8;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+
+        .field-type-icon {
+            font-size: 0.75rem;
+            margin-right: 0.25rem;
+        }
     </style>
 <?php echo $this->endSection() ?>
 
@@ -449,9 +494,9 @@
                     </div>
                     <p class="text-sm font-medium text-gray-700 mb-1">Detected Fields:</p>
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                        <ul id="detectedFieldsList" class="max-h-36 overflow-y-auto text-gray-600 text-sm">
-                            <!-- Fields will be populated here -->
-                        </ul>
+                        <div id="detectedFieldsList" class="max-h-36 overflow-y-auto text-gray-600 text-sm">
+                            <!-- TO BE POPULATED -->
+                        </div>
                     </div>
                     <div class="flex justify-end space-x-2 mt-4">
                         <button type="button" id="backStep3" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
@@ -575,7 +620,6 @@
         </div>
     </div>
 
-    <!-- Loading Modal -->
     <div id="loadingModal" class="loading-modal modal-overlay hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="modal-content bg-white rounded-lg shadow-xl max-w-md w-full p-6 transform transition-all duration-300 scale-95">
             <div class="flex justify-between items-center mb-4">
@@ -646,6 +690,111 @@
                 trapFocus(e);
             }
         }
+
+        function dismissCurrentModal() {
+            if (!currentModal) return;
+
+            const modalType = currentModal;
+            
+            if (modalType === 'confirm' && currentModalCallback) {
+                currentModalCallback(false);
+            } else if (modalType === 'input' && currentModalCallback) {
+                currentModalCallback(null);
+            }
+            
+            hideModal(modalType);
+        }
+
+        function triggerPrimaryAction() {
+            if (!currentModal) return;
+
+            switch (currentModal) {
+                case 'success':
+                    document.getElementById('successModalClose').click();
+                    break;
+                case 'error':
+                    document.getElementById('errorModalClose').click();
+                    break;
+                case 'confirm':
+                    document.getElementById('confirmOk').click();
+                    break;
+                case 'input':
+                    document.getElementById('inputOk').click();
+                    break;
+                case 'loading':
+                    hideLoadingModal();
+                    break;
+            }
+        }
+
+        function trapFocus(e) {
+            const modal = modals[currentModal];
+            if (!modal) return;
+
+            const focusableElements = modal.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            
+            if (focusableElements.length === 0) return;
+
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                if (document.activeElement === firstFocusable) {
+                    e.preventDefault();
+                    lastFocusable.focus();
+                }
+            } else {
+                if (document.activeElement === lastFocusable) {
+                    e.preventDefault();
+                    firstFocusable.focus();
+                }
+            }
+        }
+
+        function setModalFocus(type) {
+            const modal = modals[type];
+            if (!modal) return;
+
+            let focusTarget;
+            
+            if (type === 'input') {
+                focusTarget = document.getElementById('inputValue');
+            } else {
+                // Find the first button or focusable element
+                focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            }
+            
+            if (focusTarget) {
+                setTimeout(() => focusTarget.focus(), 100);
+            }
+        }
+
+        document.addEventListener('keydown', handleGlobalKeydown);
+        
+        window.clearImageSelection = function(fieldName) {
+            const container = document.querySelector(`#input_container_${fieldName}`);
+            if (container) {
+                const fileInput = container.querySelector('input[type="file"]');
+                const previewArea = container.querySelector('.mt-2');
+                const hiddenInput = container.querySelector('input[type="hidden"]');
+                const uploadArea = container.querySelector('.image-upload-area');
+                
+                if (fileInput) fileInput.value = '';
+                if (previewArea) {
+                    previewArea.classList.add('hidden');
+                    previewArea.innerHTML = '';
+                }
+                if (hiddenInput) hiddenInput.removeAttribute('data-has-new-file');
+                if (uploadArea) {
+                    uploadArea.innerHTML = `
+                        <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-gray-600">Click to upload or drag image here</p>
+                    `;
+                }
+            }
+        };
 
         function dismissCurrentModal() {
             if (!currentModal) return;
@@ -1218,10 +1367,15 @@
                             wizardState.detectedFields.forEach(field => {
                                 const li = document.createElement('li');
                                 li.className = 'py-1 px-2 flex items-center bg-white rounded border';
+                                
+                                // Handle both string and object field formats
+                                const fieldName = typeof field === 'string' ? field : (field.name || field.field || field);
+                                const displayName = fieldName.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                
                                 li.innerHTML = `
                                     <i class="fas fa-tag text-blue-500 mr-2"></i> 
-                                    <code class="bg-gray-100 px-2 py-1 rounded text-sm">\${${field}}</code>
-                                    <span class="ml-2 text-gray-600">→ ${field.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                    <code class="bg-gray-100 px-2 py-1 rounded text-sm">\${${fieldName}}</code>
+                                    <span class="ml-2 text-gray-600">→ ${displayName}</span>
                                 `;
                                 detectedFieldsListUl.appendChild(li);
                             });
@@ -1399,59 +1553,386 @@
                 const list = document.createElement('div');
                 list.className = 'space-y-4';
                 
+                const fieldTypes = fileData.fieldTypes || {};
+                
                 for (const [key, value] of Object.entries(fileData.filledData)) {
                     const item = document.createElement('div');
+                    const fieldType = fieldTypes[key] || 'text';
                     
                     if (mode === 'edit') {
-                        item.className = 'flex flex-col';
+                        item.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-4';
+                        
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'flex items-center justify-between mb-3';
                         
                         const label = document.createElement('label');
-                        label.className = 'block text-sm font-medium text-gray-700 mb-1';
+                        label.className = 'block text-sm font-medium text-gray-700';
                         label.textContent = key;
                         
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.name = key;
-                        input.value = value;
-                        input.dataset.originalValue = value;
-                        input.className = isFilledFile ? 
-                            'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500' :
-                            'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                        const typeSelector = document.createElement('select');
+                        typeSelector.className = 'text-xs px-2 py-1 border border-gray-300 rounded';
+                        typeSelector.name = `fieldType_${key}`;
+                        typeSelector.innerHTML = `
+                            <option value="text" ${fieldType === 'text' ? 'selected' : ''}>
+                                Text
+                            </option>
+                            <option value="paragraph" ${fieldType === 'paragraph' ? 'selected' : ''}>
+                                Paragraph
+                            </option>
+                            <option value="image" ${fieldType === 'image' ? 'selected' : ''}>
+                                Image
+                            </option>
+                        `;
                         
-                        item.appendChild(label);
-                        item.appendChild(input);
+                        headerDiv.appendChild(label);
+                        headerDiv.appendChild(typeSelector);
+                        item.appendChild(headerDiv);
+                        
+                        const inputContainer = document.createElement('div');
+                        inputContainer.className = 'field-input-container';
+                        inputContainer.id = `input_container_${key}`;
+                        
+                        function createFieldInput(type, fieldName, fieldValue) {
+                            if (type === 'image') {
+                                const imageDiv = document.createElement('div');
+                                imageDiv.className = 'space-y-3';
+                                
+                                const hiddenInput = document.createElement('input');
+                                hiddenInput.type = 'hidden';
+                                hiddenInput.name = fieldName;
+                                hiddenInput.value = fieldValue || '';
+                                
+                                const sizeControlsDiv = document.createElement('div');
+                                sizeControlsDiv.className = 'bg-gray-50 p-3 rounded-lg border border-gray-200';
+                                
+                                const sizeLabel = document.createElement('div');
+                                sizeLabel.className = 'text-sm font-medium text-gray-700 mb-2 flex items-center';
+                                sizeLabel.innerHTML = '<i class="fas fa-ruler-combined mr-2 text-blue-500"></i>Image Size Settings:';
+                                sizeControlsDiv.appendChild(sizeLabel);
+                                
+                                const sizeGrid = document.createElement('div');
+                                sizeGrid.className = 'grid grid-cols-2 gap-3 mb-2';
+                                
+                                const widthDiv = document.createElement('div');
+                                const widthLabel = document.createElement('label');
+                                widthLabel.className = 'block text-xs font-medium text-gray-600 mb-1';
+                                widthLabel.textContent = 'Width (px):';
+                                const widthInput = document.createElement('input');
+                                widthInput.type = 'number';
+                                widthInput.name = `imageWidth_${fieldName}`;
+                                widthInput.className = 'w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500';
+                                widthInput.min = '50';
+                                widthInput.max = '1000';
+                                widthInput.value = '300';
+                                widthInput.placeholder = '300';
+                                widthDiv.appendChild(widthLabel);
+                                widthDiv.appendChild(widthInput);
+                                
+                                const heightDiv = document.createElement('div');
+                                const heightLabel = document.createElement('label');
+                                heightLabel.className = 'block text-xs font-medium text-gray-600 mb-1';
+                                heightLabel.textContent = 'Height (px):';
+                                const heightInput = document.createElement('input');
+                                heightInput.type = 'number';
+                                heightInput.name = `imageHeight_${fieldName}`;
+                                heightInput.className = 'w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500';
+                                heightInput.min = '50';
+                                heightInput.max = '1000';
+                                heightInput.value = '200';
+                                heightInput.placeholder = '200';
+                                heightDiv.appendChild(heightLabel);
+                                heightDiv.appendChild(heightInput);
+                                
+                                sizeGrid.appendChild(widthDiv);
+                                sizeGrid.appendChild(heightDiv);
+                                sizeControlsDiv.appendChild(sizeGrid);
+                                
+                                const ratioDiv = document.createElement('div');
+                                ratioDiv.className = 'flex items-center';
+                                const ratioCheckbox = document.createElement('input');
+                                ratioCheckbox.type = 'checkbox';
+                                ratioCheckbox.name = `imageRatio_${fieldName}`;
+                                ratioCheckbox.className = 'mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded';
+                                ratioCheckbox.checked = true;
+                                const ratioLabel = document.createElement('label');
+                                ratioLabel.className = 'text-xs text-gray-600';
+                                ratioLabel.textContent = 'Maintain aspect ratio';
+                                ratioDiv.appendChild(ratioCheckbox);
+                                ratioDiv.appendChild(ratioLabel);
+                                sizeControlsDiv.appendChild(ratioDiv);
+                                
+                                imageDiv.appendChild(sizeControlsDiv);
+                                
+                                if (fieldValue && fieldValue.trim()) {
+                                    const currentImageSection = document.createElement('div');
+                                    currentImageSection.className = 'bg-white p-3 rounded border border-gray-200';
+                                    
+                                    const currentLabel = document.createElement('div');
+                                    currentLabel.className = 'text-sm font-medium text-gray-700 mb-2';
+                                    currentLabel.textContent = 'Current Image:';
+                                    currentImageSection.appendChild(currentLabel);
+                                    
+                                    const currentImagePreview = document.createElement('div');
+                                    currentImagePreview.className = 'mb-2';
+                                    
+                                    const currentImg = document.createElement('img');
+                                    currentImg.className = 'max-h-32 object-contain rounded border border-gray-200';
+                                    currentImg.style.maxWidth = '200px';
+                                    
+                                    const currentImageUrl = getImageUrl(fieldValue, currentSelectedFilledFile.id);
+                                    if (currentImageUrl) {
+                                        currentImg.src = currentImageUrl;
+                                        currentImg.alt = `Current: ${getImageDisplayName(fieldValue)}`;
+                                        
+                                        currentImg.onerror = function() {
+                                            currentImagePreview.innerHTML = `
+                                                <div class="text-center py-2 text-gray-500 bg-gray-100 rounded border-2 border-dashed border-gray-300">
+                                                    <i class="fas fa-image text-gray-400 mb-1"></i>
+                                                    <p class="text-xs">Preview not available</p>
+                                                </div>
+                                            `;
+                                        };
+                                        
+                                        currentImg.onload = function() {
+                                            currentImg.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                                        };
+                                        
+                                        currentImagePreview.appendChild(currentImg);
+                                    } else {
+                                        currentImagePreview.innerHTML = `
+                                            <div class="text-center py-2 text-gray-500 bg-gray-100 rounded border-2 border-dashed border-gray-300">
+                                                <i class="fas fa-image text-gray-400 mb-1"></i>
+                                                <p class="text-xs">Preview not available</p>
+                                            </div>
+                                        `;
+                                    }
+                                    
+                                    currentImageSection.appendChild(currentImagePreview);
+                                    
+                                    const currentImageName = document.createElement('div');
+                                    currentImageName.className = 'text-xs text-gray-600 font-mono bg-white px-2 py-1 rounded border';
+                                    currentImageName.textContent = getImageDisplayName(fieldValue);
+                                    currentImageSection.appendChild(currentImageName);
+                                    
+                                    imageDiv.appendChild(currentImageSection);
+                                }
+                                
+                                const uploadArea = document.createElement('div');
+                                uploadArea.className = 'image-upload-area';
+                                uploadArea.innerHTML = `
+                                    <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                                    <p class="text-gray-600">Click to upload or drag image here</p>
+                                `;
+                                
+                                const fileInput = document.createElement('input');
+                                fileInput.type = 'file';
+                                fileInput.name = `image_${fieldName}`;
+                                fileInput.accept = 'image/*';
+                                fileInput.className = 'hidden';
+                                
+                                uploadArea.addEventListener('click', () => fileInput.click());
+                                
+                                fileInput.addEventListener('change', function() {
+                                    if (this.files && this.files[0]) {
+                                        const file = this.files[0];
+                                        hiddenInput.setAttribute('data-has-new-file', 'true');
+                                        
+                                        const reader = new FileReader();
+                                        reader.onload = function(e) {
+                                            let previewArea = imageDiv.querySelector('.mt-2');
+                                            if (!previewArea) {
+                                                previewArea = document.createElement('div');
+                                                previewArea.className = 'mt-2';
+                                                imageDiv.appendChild(previewArea);
+                                            }
+                                            previewArea.innerHTML = `
+                                                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <span class="text-sm font-medium text-blue-700">New image selected:</span>
+                                                        <button type="button" onclick="clearImageSelection('${fieldName}')" class="text-red-500 hover:text-red-700">
+                                                            <i class="fas fa-times-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                    <img src="${e.target.result}" alt="Preview" class="max-h-32 object-contain rounded border border-gray-200 mx-auto block" style="max-width: 200px;">
+                                                    <div class="text-xs text-gray-600 mt-2 text-center">${file.name} (${(file.size / 1024).toFixed(1)} KB)</div>
+                                                </div>
+                                            `;
+                                            previewArea.classList.remove('hidden');
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                });
+                                
+                                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                                    uploadArea.addEventListener(eventName, function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    });
+                                });
+                                
+                                ['dragenter', 'dragover'].forEach(eventName => {
+                                    uploadArea.addEventListener(eventName, function() {
+                                        uploadArea.classList.add('dragover');
+                                    });
+                                });
+                                
+                                ['dragleave', 'drop'].forEach(eventName => {
+                                    uploadArea.addEventListener(eventName, function() {
+                                        uploadArea.classList.remove('dragover');
+                                    });
+                                });
+                                
+                                uploadArea.addEventListener('drop', function(e) {
+                                    const files = e.dataTransfer.files;
+                                    if (files.length > 0) {
+                                        fileInput.files = files;
+                                        fileInput.dispatchEvent(new Event('change'));
+                                    }
+                                });
+                                
+                                imageDiv.appendChild(hiddenInput);
+                                imageDiv.appendChild(uploadArea);
+                                imageDiv.appendChild(fileInput);
+                                
+                                return imageDiv;
+                            } else if (type === 'paragraph') {
+                                const textarea = document.createElement('textarea');
+                                textarea.name = fieldName;
+                                textarea.value = fieldValue || '';
+                                textarea.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                                textarea.rows = 4;
+                                return textarea;
+                            } else {
+                                const input = document.createElement('input');
+                                input.type = 'text';
+                                input.name = fieldName;
+                                input.value = fieldValue || '';
+                                input.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500';
+                                return input;
+                            }
+                        }
+                        
+                        const fieldInput = createFieldInput(fieldType, key, value);
+                        inputContainer.appendChild(fieldInput);
+                        item.appendChild(inputContainer);
+                        
+                        typeSelector.value = fieldType;
+                        
+                        typeSelector.addEventListener('change', function() {
+                            const newType = this.value;
+                            let currentValue = '';
+                            const existingInput = inputContainer.querySelector('input[name="' + key + '"]');
+                            if (existingInput) {
+                                currentValue = existingInput.value;
+                            } else {
+                                const existingTextarea = inputContainer.querySelector('textarea[name="' + key + '"]');
+                                if (existingTextarea) {
+                                    currentValue = existingTextarea.value;
+                                }
+                            }
+                            const newInput = createFieldInput(newType, key, currentValue || value);
+                            inputContainer.innerHTML = '';
+                            inputContainer.appendChild(newInput);
+                        });
+                        
                     } else {
-                        item.className = 'bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden';
+                        // View mode
+                        item.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-4';
                         
-                        const label = document.createElement('div');
-                        label.className = 'bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700 border-b border-gray-200';
-                        label.textContent = key;
-                        
+                        const keyEl = document.createElement('div');
+                        keyEl.className = 'text-sm font-medium text-gray-700 mb-2 flex items-center';
+                        keyEl.innerHTML = `<i class="fas fa-tag mr-2 text-gray-500"></i>${key}`;
+                        item.appendChild(keyEl);
+
                         const valueEl = document.createElement('div');
-                        valueEl.className = 'px-4 py-3 text-gray-800';
-                        valueEl.textContent = value;
                         
-                        item.appendChild(label);
+                        if (fieldType === 'image' && value && value.trim()) {
+                            valueEl.className = 'px-4 py-3 text-gray-800 space-y-3';
+                            
+                            const imageContainer = document.createElement('div');
+                            imageContainer.className = 'space-y-2';
+                            
+                            const imageInfo = document.createElement('div');
+                            imageInfo.className = 'flex items-center text-sm text-gray-600';
+                            imageInfo.innerHTML = `<i class="fas fa-image mr-2 text-purple-500"></i>Image: ${getImageDisplayName(value)}`;
+                            imageContainer.appendChild(imageInfo);
+                            
+                            const imagePreview = document.createElement('div');
+                            imagePreview.className = 'border border-gray-200 rounded-lg p-2 bg-gray-50';
+                            
+                            const img = document.createElement('img');
+                            img.className = 'max-w-full max-h-48 object-contain rounded mx-auto block';
+                            img.style.maxWidth = '300px';
+                            
+                            const imageUrl = getImageUrl(value, fileData.id);
+                            if (imageUrl) {
+                                img.src = imageUrl;
+                                img.alt = `Preview of ${getImageDisplayName(value)}`;
+                                
+                                img.onerror = function() {
+                                    imagePreview.innerHTML = `
+                                        <div class="text-center py-4 text-gray-500">
+                                            <i class="fas fa-image text-gray-400 text-2xl mb-2"></i>
+                                            <p class="text-sm">Image preview not available</p>
+                                            <p class="text-xs text-gray-400">${getImageDisplayName(value)}</p>
+                                        </div>
+                                    `;
+                                };
+                                
+                                img.onload = function() {
+                                    img.style.border = '1px solid #e5e7eb';
+                                    img.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                                };
+                                
+                                imagePreview.appendChild(img);
+                            } else {
+                                imagePreview.innerHTML = `
+                                    <div class="text-center py-4 text-gray-500">
+                                        <i class="fas fa-image text-gray-400 text-2xl mb-2"></i>
+                                        <p class="text-sm">Image preview not available</p>
+                                        <p class="text-xs text-gray-400">${getImageDisplayName(value)}</p>
+                                    </div>
+                                `;
+                            }
+                            
+                            imageContainer.appendChild(imagePreview);
+                            valueEl.appendChild(imageContainer);
+                        } else if (fieldType === 'paragraph') {
+                            valueEl.className = 'px-4 py-3 text-gray-800 whitespace-pre-wrap bg-gray-50 rounded border border-gray-200';
+                            valueEl.textContent = value || '';
+                        } else {
+                            valueEl.className = 'px-4 py-3 text-gray-800 bg-gray-50 rounded border border-gray-200';
+                            valueEl.textContent = value || '';
+                        }
+                        
                         item.appendChild(valueEl);
                     }
+                    
                     list.appendChild(item);
                 }
+                
                 fileDetails.appendChild(list);
-
+                
                 if (mode === 'edit') {
                     editButton.style.display = 'none';
-                    saveButton.style.display = 'block';
-                    cancelButton.style.display = 'block';
+                    saveButton.style.display = 'flex';
+                    cancelButton.style.display = 'flex';
+                    exportButtonGroup.style.display = 'none';
                     deleteFilledFileButton.style.display = 'none';
                     deleteTemplateButton.style.display = 'none';
-                    exportButtonGroup.style.display = 'none';
                 } else {
-                    editButton.style.display = Object.keys(fileData.filledData).length > 0 && userPermissions.canEditFilledFiles ? 'block' : 'none';
+                    editButton.style.display = 'flex';
                     saveButton.style.display = 'none';
                     cancelButton.style.display = 'none';
-                    deleteFilledFileButton.style.display = userPermissions.canDeleteFilledFiles ? 'block' : 'none';
-                    deleteTemplateButton.style.display = 'none';
-                    exportButtonGroup.style.display = Object.keys(fileData.filledData).length > 0 && userPermissions.canExportFilledFiles ? 'block' : 'none';
+                    exportButtonGroup.style.display = 'flex';
+                    
+                    if (currentSelectedFilledFile) {
+                        deleteFilledFileButton.style.display = 'flex';
+                        deleteTemplateButton.style.display = 'none';
+                    } else if (currentSelectedTemplate) {
+                        deleteFilledFileButton.style.display = 'none';
+                        deleteTemplateButton.style.display = 'flex';
+                    }
                 }
             }
 
@@ -1482,7 +1963,7 @@
                 
                 const fieldsHeading = document.createElement('h3');
                 fieldsHeading.className = 'text-lg font-semibold text-blue-800 flex items-center';
-                fieldsHeading.innerHTML = '<i class="fas fa-info-circle mr-2"></i>Template Information';
+                fieldsHeading.innerHTML = '<i class="fas fa-folder-open mr-2"></i>Template Information';
                 detailsHeader.appendChild(fieldsHeading);
                 detailsSection.appendChild(detailsHeader);
                 
@@ -1495,13 +1976,42 @@
                 detailsContent.appendChild(fieldsHeading2);
                 
                 const fieldsList = document.createElement('ul');
-                fieldsList.className = 'space-y-1 text-gray-700 mb-4';
+                fieldsList.className = 'space-y-2 text-gray-700 mb-4';
                 
                 if (template.templateFields && Array.isArray(template.templateFields) && template.templateFields.length > 0) {
                     template.templateFields.forEach(field => {
                         const fieldItem = document.createElement('li');
-                        fieldItem.className = 'flex items-center';
-                        fieldItem.innerHTML = `<i class="fas fa-tag text-blue-500 mr-2"></i> ${field}`;
+                        fieldItem.className = 'flex items-center justify-between bg-gray-50 p-3 rounded border';
+                        
+                        // Handle both string and object field formats
+                        const fieldName = typeof field === 'string' ? field : (field.name || field.field || field);
+                        const fieldType = typeof field === 'object' ? (field.type || 'text') : 'text';
+                        
+                        const leftContent = document.createElement('div');
+                        leftContent.className = 'flex items-center';
+                        
+                        const iconClass = fieldType === 'image' ? 'fa-image text-purple-500' : 
+                                         fieldType === 'paragraph' ? 'fa-paragraph text-green-500' : 
+                                         'fa-font text-blue-500';
+                        
+                        leftContent.innerHTML = `
+                            <i class="fas ${iconClass} mr-2"></i>
+                            <span class="font-medium">${fieldName}</span>
+                        `;
+                        
+                        const rightContent = document.createElement('div');
+                        rightContent.className = 'flex items-center space-x-2';
+                        
+                        const typeSpan = document.createElement('span');
+                                               typeSpan.className = 'text-xs px-2 py-1 rounded-full ' + 
+                            (fieldType === 'image' ? 'bg-purple-100 text-purple-700' :
+                             fieldType === 'paragraph' ? 'bg-green-100 text-green-700' :
+                             'bg-blue-100 text-blue-700');
+                        typeSpan.textContent = fieldType.charAt(0).toUpperCase() + fieldType.slice(1);
+                        rightContent.appendChild(typeSpan);
+                        
+                        fieldItem.appendChild(leftContent);
+                        fieldItem.appendChild(rightContent);
                         fieldsList.appendChild(fieldItem);
                     });
                 } else {
@@ -1671,55 +2181,18 @@
                                 targetTemplate.filledFiles = [];
                             }
                             targetTemplate.filledFiles.push(newFilledFile);
-
-                            const templateLi = fileHierarchy.querySelector(`.folder-item[data-template-id='${templateId}']`);
-                            if (templateLi) {
-                                let filesUl = templateLi.querySelector('ul');
-                                if (!filesUl) {
-                                    filesUl = document.createElement('ul');
-                                    filesUl.className = 'pl-6';
-                                    templateLi.appendChild(filesUl);
-                                }
-                                const noFilesLi = Array.from(filesUl.children).find(child => child.textContent.includes('No filled files'));
-                                if (noFilesLi) noFilesLi.remove();
-
-                                const newFileLiElement = document.createElement('li');
-                                newFileLiElement.className = 'file-item p-2 rounded-md hover:bg-green-50 cursor-pointer mb-1 flex items-center';
-                                newFileLiElement.dataset.id = newFilledFile.id;
-                                newFileLiElement.dataset.name = newFilledFile.name;
-                                newFileLiElement.dataset.templateId = templateId;
-                                
-                                const fileIcon = document.createElement('i');
-                                fileIcon.className = 'fas fa-edit text-green-500 mr-2';
-                                newFileLiElement.appendChild(fileIcon);
-                                
-                                const fileText = document.createTextNode(newFilledFile.name);
-                                newFileLiElement.appendChild(fileText);
-                                filesUl.appendChild(newFileLiElement);
-                                
-                                filesUl.style.display = 'block';
-                                
-                                const chevronIcon = templateLi.querySelector('.folder-chevron');
-                                if (chevronIcon) {
-                                    chevronIcon.style.transform = 'rotate(90deg)';
-                                }
-                            }
                         }
 
+                        refreshSidebar();
+                        
                         currentSelectedFilledFile = JSON.parse(JSON.stringify(newFilledFile));
+                        currentSelectedTemplate = null;
                         originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
-                        document.querySelectorAll('.file-item.bg-blue-100, .file-item.bg-green-100').forEach(item => item.classList.remove('bg-blue-100', 'bg-green-100'));
-                        document.querySelectorAll('.folder-item > span.bg-blue-100').forEach(span => span.classList.remove('bg-blue-100'));
-                            
-                        const newSidebarFileItem = fileHierarchy.querySelector(`.file-item[data-id='${newFilledFile.id}']`);
-                        if (newSidebarFileItem) newSidebarFileItem.classList.add('bg-green-100');
-                        
                         showModal('success', 'New file created successfully: ' + newFilledFile.name);
-                        renderTemplateOverview(targetTemplate);
                     } else {
-                        showModal('error', 'Failed to create file: ' + (result.message || 'Unknown error'));
+                        throw new Error(result.message || 'Unknown error');
                     }
                 } catch (error) {
                     console.error('Error creating file:', error);
@@ -1736,56 +2209,54 @@
                 }
 
                 showWizardStep('stepSavingTemplate');
-                finalizingStatusDiv.textContent = 'Saving...';
-
-                const payload = {
-                    tempFilePath: wizardState.tempFilePath,
-                    templateName: templateName,
-                    templateFields: wizardState.detectedFields,
-                    originalFileName: wizardState.originalFileName,
-                    fileMimeType: wizardState.fileMimeType,
-                    fileSizeKB: wizardState.fileSizeKB,
-                    '<?php echo csrf_token() ?>': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
-                };
+                finalizingStatusDiv.textContent = 'Saving template...';
 
                 try {
                     const response = await fetch('/file-explorer/finalize-template-upload', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
                         },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({
+                            tempFilePath: wizardState.tempFilePath,
+                            templateName: templateName,
+                            templateFields: wizardState.detectedFields.map(field => 
+                                typeof field === 'string' ? field : (field.name || field.field || field)
+                            ),
+                            originalFileName: wizardState.originalFileName
+                        })
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({
+                            message: 'Failed to finalize template. Server error.'
+                        }));
+                        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                    }
+
                     const result = await response.json();
 
-                    if (response.ok && result.success && result.newTemplate) {
+                    if (result.success) {
                         finalizingStatusDiv.textContent = 'Template saved successfully!';
-                        finalizingStatusDiv.style.color = 'green';
-
-                        if (typeof result.newTemplate.templateFields === 'string') {
-                            result.newTemplate.templateFields = JSON.parse(result.newTemplate.templateFields || '[]');
+                        
+                        if (result.newTemplate) {
+                            templatesData.push(result.newTemplate);
+                            refreshSidebar();
                         }
-                        result.newTemplate.filledFiles = result.newTemplate.filledFiles || [];
-                        templatesData.push(result.newTemplate);
-                        refreshSidebar();
-
+                        
                         setTimeout(() => {
+                            showModal('success', 'Template uploaded successfully!');
                             resetWizard();
-                            const newTemplateLi = fileHierarchy.querySelector(`.folder-item[data-template-id='${result.newTemplate.id}'] > span`);
-                            if (newTemplateLi) newTemplateLi.click();
-                        }, 1500);
-
+                        }, 1000);
                     } else {
-                        finalizingStatusDiv.textContent = `Save failed: ${result.message || 'Unknown error'}`;
-                        finalizingStatusDiv.style.color = 'red';
-                        cancelStepSavingTemplateButton.textContent = 'Close';
+                        throw new Error(result.message || 'Upload failed');
                     }
                 } catch (error) {
-                    console.error('Error finalizing template:', error);
-                    finalizingStatusDiv.textContent = `Save error: ${error.message}`;
-                    finalizingStatusDiv.style.color = 'red';
-                    cancelStepSavingTemplateButton.textContent = 'Close';
+                    console.error('Upload error:', error);
+                    showModal('error', 'Failed to save template: ' + error.message);
+                    showWizardStep('stepNameReview');
                 }
             });
 
@@ -1840,7 +2311,8 @@
                     if (selectedFile) {
                         currentSelectedFilledFile = JSON.parse(JSON.stringify(selectedFile));
                         currentSelectedFilledFile.template_id = templateIdForFile;
-                        currentSelectedTemplate = null;                         originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
+                        currentSelectedTemplate = null;
+                        originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
                         clickTarget.classList.add('bg-green-100');
                     } else {
@@ -1852,7 +2324,6 @@
             });
 
             fileDetails.addEventListener('click', function(event) {
-                // Find the closest element with template-overview-file-link class
                 const linkElement = event.target.closest('.template-overview-file-link');
                 
                 if (linkElement) {
@@ -1865,7 +2336,8 @@
                     if (selectedFile) {
                         currentSelectedFilledFile = JSON.parse(JSON.stringify(selectedFile));
                         currentSelectedFilledFile.template_id = templateId;
-                        currentSelectedTemplate = null;                         originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
+                        currentSelectedTemplate = null;
+                        originalFilledData = JSON.parse(JSON.stringify(selectedFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
                         document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
@@ -1895,22 +2367,76 @@
                 if (!currentSelectedFilledFile) return;
 
                 const updatedData = {};
-                const inputs = fileDetails.querySelectorAll('input[type="text"]');
+                const fieldTypes = {};
+                const imageSizes = {};
+                const formData = new FormData();
+                
+                formData.append('filledData', 'placeholder');
+                
+                const inputs = fileDetails.querySelectorAll('input[type="text"], textarea, input[type="hidden"]');
                 inputs.forEach(input => {
-                    updatedData[input.name] = input.value;
+                    if (!input.name.startsWith('fieldType_') && 
+                        !input.name.startsWith('image_') && 
+                        !input.name.startsWith('imageWidth_') && 
+                        !input.name.startsWith('imageHeight_') && 
+                        !input.name.startsWith('imageRatio_')) {
+                        updatedData[input.name] = input.value;
+                    }
                 });
+                
+                const typeSelectors = fileDetails.querySelectorAll('select[name^="fieldType_"]');
+                typeSelectors.forEach(select => {
+                    const fieldName = select.name.replace('fieldType_', '');
+                    fieldTypes[fieldName] = select.value;
+                });
+                
+                const widthInputs = fileDetails.querySelectorAll('input[name^="imageWidth_"]');
+                const heightInputs = fileDetails.querySelectorAll('input[name^="imageHeight_"]');
+                const ratioInputs = fileDetails.querySelectorAll('input[name^="imageRatio_"]');
+                
+                widthInputs.forEach(input => {
+                    const fieldName = input.name.replace('imageWidth_', '');
+                    if (!imageSizes[fieldName]) imageSizes[fieldName] = {};
+                    imageSizes[fieldName].width = parseInt(input.value) || 300;
+                });
+                
+                heightInputs.forEach(input => {
+                    const fieldName = input.name.replace('imageHeight_', '');
+                    if (!imageSizes[fieldName]) imageSizes[fieldName] = {};
+                    imageSizes[fieldName].height = parseInt(input.value) || 200;
+                });
+                
+                ratioInputs.forEach(input => {
+                    const fieldName = input.name.replace('imageRatio_', '');
+                    if (!imageSizes[fieldName]) imageSizes[fieldName] = {};
+                    imageSizes[fieldName].ratio = input.checked;
+                });
+                
+                const imageInputs = fileDetails.querySelectorAll('input[type="file"][name^="image_"]');
+                const fieldsWithNewImages = new Set();
+                
+                imageInputs.forEach(fileInput => {
+                    if (fileInput.files && fileInput.files.length > 0) {
+                        const fieldName = fileInput.name.replace('image_', '');
+                        formData.append(`image_${fieldName}`, fileInput.files[0]);
+                        fieldsWithNewImages.add(fieldName);
+                    }
+                });
+                
+                formData.append('fieldsWithNewImages', JSON.stringify(Array.from(fieldsWithNewImages)));
+                
+                formData.append('filledData', JSON.stringify(updatedData));
+                formData.append('fieldTypes', JSON.stringify(fieldTypes));
+                formData.append('imageSizes', JSON.stringify(imageSizes));
+                formData.append('_token', document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content'));
 
                 try {
                     const response = await fetch(`/file-explorer/update-filled-file/${currentSelectedFilledFile.id}`, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
-                        body: JSON.stringify({
-                            filledData: updatedData
-                        })
+                        body: formData
                     });
 
                     if (!response.ok) {
@@ -1923,16 +2449,26 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        currentSelectedFilledFile.filledData = updatedData;
-                        originalFilledData = JSON.parse(JSON.stringify(updatedData));
+                        if (result.updatedData) {
+                            currentSelectedFilledFile.filledData = result.updatedData;
+                            originalFilledData = JSON.parse(JSON.stringify(result.updatedData));
+                        }
+                        
+                        if (result.fieldTypes) {
+                            currentSelectedFilledFile.fieldTypes = result.fieldTypes;
+                        } else {
+                            currentSelectedFilledFile.fieldTypes = fieldTypes;
+                        }
 
                         const templateOfSavedFile = findTemplateById(currentSelectedFilledFile.template_id);
                         if (templateOfSavedFile && templateOfSavedFile.filledFiles) {
                             const fileIndex = templateOfSavedFile.filledFiles.findIndex(ff => ff.id.toString() === currentSelectedFilledFile.id.toString());
                             if (fileIndex > -1) {
-                                templateOfSavedFile.filledFiles[fileIndex].filledData = updatedData;
+                                templateOfSavedFile.filledFiles[fileIndex].filledData = currentSelectedFilledFile.filledData;
+                                templateOfSavedFile.filledFiles[fileIndex].fieldTypes = currentSelectedFilledFile.fieldTypes;
                             }
                         }
+                        
                         renderFileDetails(currentSelectedFilledFile, 'view');
                         showModal('success', 'File updated successfully!');
                     } else {
@@ -2199,6 +2735,93 @@
                         return;
                     }
                     
+                    const createMatch = hash.match(/^#create-filled-file-(\d+)$/);
+                    if (createMatch) {
+                        const templateId = createMatch[1];
+                        const template = findTemplateById(templateId);
+                        if (template) {
+                            history.replaceState(null, null, window.location.pathname + window.location.search);
+                            
+                            currentSelectedTemplate = template;
+                            currentSelectedFilledFile = null;
+                            renderTemplateOverview(template);
+                            
+                            document.querySelectorAll('.file-item, .folder-item > span').forEach(item => {
+                                item.classList.remove('bg-blue-100', 'bg-green-100');
+                            });
+                            
+                            const templateFolder = fileHierarchy.querySelector(`[data-template-id="${templateId}"]`);
+                            if (templateFolder) {
+                                const templateSpan = templateFolder.querySelector('span');
+                                if (templateSpan) templateSpan.classList.add('bg-blue-100');
+                                
+                                const folderList = templateFolder.querySelector('ul');
+                                const chevronIcon = templateFolder.querySelector('.folder-chevron');
+                                if (folderList && chevronIcon) {
+                                    folderList.style.display = 'block';
+                                    chevronIcon.style.transform = 'rotate(90deg)';
+                                }
+                            }
+                            
+                            setTimeout(async () => {
+                                const newFileName = await showInputModal(`Enter name for the new filled file (based on template: ${template.name}):`);
+                                if (newFileName && newFileName.trim()) {
+                                    try {
+                                        const response = await fetch(`/file-explorer/create-filled-file`, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-Requested-With': 'XMLHttpRequest',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                                            },
+                                            body: JSON.stringify({ template_id: templateId, name: newFileName.trim() })
+                                        });
+
+                                        if (!response.ok) {
+                                            throw new Error('Failed to create file');
+                                        }
+
+                                        const result = await response.json();
+                                        if (result.success && result.newFilledFile) {
+                                            const newFilledFile = result.newFilledFile;
+                                            if (typeof newFilledFile.filledData === 'string') {
+                                                try {
+                                                    newFilledFile.filledData = JSON.parse(newFilledFile.filledData || '{}');
+                                                } catch (e) {
+                                                    newFilledFile.filledData = {};
+                                                }
+                                            }
+                                            newFilledFile.template_id = templateId;
+
+                                            const targetTemplate = findTemplateById(templateId);
+                        if (targetTemplate) {
+                            if (!targetTemplate.filledFiles || !Array.isArray(targetTemplate.filledFiles)) {
+                                targetTemplate.filledFiles = [];
+                            }
+                            targetTemplate.filledFiles.push(newFilledFile);
+                        }
+
+                        refreshSidebar();
+                        
+                        currentSelectedFilledFile = JSON.parse(JSON.stringify(newFilledFile));
+                        currentSelectedTemplate = null;
+                        originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
+                        renderFileDetails(currentSelectedFilledFile, 'view');
+
+                        showModal('success', 'New file created successfully: ' + newFilledFile.name);
+                                        } else {
+                                            throw new Error(result.message || 'Unknown error');
+                                        }
+                                    } catch (error) {
+                                        console.error('Error creating file:', error);
+                                        showModal('error', 'Error creating file: ' + error.message);
+                                    }
+                                }
+                            }, 500);
+                        }
+                        return;
+                    }
+                    
                     const match = hash.match(/^#(template|filled-file)-(\d+)$/);
                     if (match) {
                         const [, type, id] = match;
@@ -2252,7 +2875,6 @@
                     element.classList.remove('fragment-highlight');
                 }, 3000);
             }
-            
             setTimeout(handleUrlFragment, 200);
             
             window.addEventListener('hashchange', handleUrlFragment);
@@ -2261,12 +2883,35 @@
                 setTimeout(initializeChevrons, 50);
             });
 
-            // Close button event listeners for modals
             document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
             document.getElementById('errorModalClose').addEventListener('click', () => hideModal('error'));
             document.getElementById('confirmCancel').addEventListener('click', () => hideModal('confirm'));
             document.getElementById('inputCancel').addEventListener('click', () => hideModal('input'));
             loadingModalClose.addEventListener('click', hideLoadingModal);
+            
+            function getImageDisplayName(imagePath) {
+                if (!imagePath || typeof imagePath !== 'string') {
+                    return 'Unknown';
+                }
+                return imagePath.split('/').pop() || imagePath;
+            }
+            
+            function getImageUrl(imagePath, filledFileId) {
+                if (!imagePath || !filledFileId || typeof imagePath !== 'string') {
+                    return null;
+                }
+                
+                const imageName = imagePath.split('/').pop();
+                if (!imageName) {
+                    return null;
+                }
+                
+                if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                    return imagePath;
+                }
+                
+                return `/file-explorer/serve-image/${filledFileId}/${encodeURIComponent(imageName)}`;
+            }
         });
     </script>
 <?php echo $this->endSection() ?>

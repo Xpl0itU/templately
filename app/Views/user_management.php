@@ -135,14 +135,14 @@
                         <i class="fas fa-code text-purple-500 mr-3"></i>
                         <div>
                             <div class="font-medium text-gray-900">Developer</div>
-                            <div class="text-sm text-gray-600">Create and edit templates, manage filled files</div>
+                            <div class="text-sm text-gray-600">Create and edit templates, manage filled files with custom field types</div>
                         </div>
                     </div>
                     <div class="flex items-center p-3 bg-blue-50 rounded-lg">
                         <i class="fas fa-flask text-blue-500 mr-3"></i>
                         <div>
                             <div class="font-medium text-gray-900">Beta</div>
-                            <div class="text-sm text-gray-600">View and create filled files only</div>
+                            <div class="text-sm text-gray-600">View and create filled files with field type selection</div>
                         </div>
                     </div>
                     <div class="flex items-center p-3 bg-gray-50 rounded-lg">
