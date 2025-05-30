@@ -979,23 +979,18 @@
                 
                 inputOk.addEventListener('click', handleInput);
                 inputCancel.addEventListener('click', handleInputCancel);
+                
+                // Focus on input field and clear it
+                inputValue.value = '';
+                inputValue.focus();
             }
+
+            // Show the modal
+            document.getElementById(type + 'Modal').classList.remove('hidden');
         }
 
         function hideModal(type) {
-            const modal = modals[type];
-            if (!modal) return;
-
-            if (currentModal === type) {
-                currentModal = null;
-                currentModalCallback = null;
-            }
-
-            modal.querySelector('.modal-content').classList.remove('scale-100');
-            modal.querySelector('.modal-content').classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 150);
+            document.getElementById(type + 'Modal').classList.add('hidden');
         }
 
         function showInputModal(message) {

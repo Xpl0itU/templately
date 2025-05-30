@@ -71,64 +71,102 @@ class UserManagement extends BaseController
 
         $json = $this->request->getJSON();
         
-        if (empty($json) || !isset($json->user_id) || !isset($json->group)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Invalid data received.']);
+        if (!$json || !isset($json->user_id, $json->group)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false, 
+                'message' => 'Missing user ID or group.'
+            ]);
         }
-        
-        $userModel = model('CodeIgniter\Shield\Models\UserModel');
-        $user = $userModel->find($json->user_id);
-        
-        if (!$user) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'User not found.']);
+
+        $userId = (int) $json->user_id;
+        $newGroup = $json->group;
+
+        if ($userId === auth()->user()->id && $newGroup !== 'superadmin') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false, 
+                'message' => 'You cannot change your own group.'
+            ]);
         }
-        
-        if ($user->id === auth()->user()->id && !in_array($json->group, ['superadmin', 'admin'])) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'You cannot remove your own admin privileges.']);
-        }
-        
+
         try {
-            $user->syncGroups();
+            $userModel = model('CodeIgniter\Shield\Models\UserModel');
+            $user = $userModel->find($userId);
             
-            $user->addGroup($json->group);
-            
-            return $this->response->setJSON(['success' => true, 'message' => 'User group updated successfully.']);
+            if (!$user) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'success' => false, 
+                    'message' => 'User not found.'
+                ]);
+            }
+
+            $user->syncGroups($newGroup);
+
+            return $this->response->setJSON([
+                'success' => true, 
+                'message' => 'User group updated successfully.'
+            ]);
+
         } catch (\Exception $e) {
             log_message('error', 'Error updating user group: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while updating the user group.']);
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false, 
+                'message' => 'An error occurred while updating the user group.'
+            ]);
         }
     }
-    
+
     public function deleteUser($id = null)
     {
         if (!auth()->user()->inGroup('superadmin')) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Only superadmins can delete users.']);
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false, 
+                'message' => 'You do not have permission to delete users.'
+            ]);
         }
-        
+
         if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Method Not Allowed']);
+            return $this->response->setStatusCode(405)->setJSON([
+                'success' => false, 
+                'message' => 'Method Not Allowed'
+            ]);
         }
-        
-        if (empty($id)) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'User ID is required.']);
+
+        if (!$id) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false, 
+                'message' => 'User ID is required.'
+            ]);
         }
-        
-        $userModel = model('CodeIgniter\Shield\Models\UserModel');
-        $user = $userModel->find($id);
-        
-        if (!$user) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'message' => 'User not found.']);
+
+        if ((int) $id === auth()->user()->id) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false, 
+                'message' => 'You cannot delete your own account.'
+            ]);
         }
-        
-        if ($user->id === auth()->user()->id) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'You cannot delete your own account.']);
-        }
-        
+
         try {
-            $userModel->delete($id);
-            return $this->response->setJSON(['success' => true, 'message' => 'User deleted successfully.']);
+            $userModel = model('CodeIgniter\Shield\Models\UserModel');
+            $success = $userModel->delete($id);
+
+            if ($success) {
+                return $this->response->setJSON([
+                    'success' => true, 
+                    'message' => 'User deleted successfully.'
+                ]);
+            } else {
+                return $this->response->setStatusCode(500)->setJSON([
+                    'success' => false, 
+                    'message' => 'Failed to delete user.'
+                ]);
+            }
+
         } catch (\Exception $e) {
             log_message('error', 'Error deleting user: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON(['success' => false, 'message' => 'An error occurred while deleting the user.']);
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false, 
+                'message' => 'An error occurred while deleting the user.'
+            ]);
         }
     }
 }

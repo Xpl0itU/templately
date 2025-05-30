@@ -8,7 +8,7 @@ class AddImageSizesToFilledFiles extends Migration
 {
     public function up()
     {
-        $this->forge->addColumn('filled_files', [
+        $this->forge->addColumn('filledFiles', [
             'imageSizes' => [
                 'type' => 'TEXT',
                 'null' => true,
@@ -19,6 +19,6 @@ class AddImageSizesToFilledFiles extends Migration
 
     public function down()
     {
-        $this->forge->dropColumn('filled_files', 'imageSizes');
+        $this->forge->dropColumn('filledFiles', 'imageSizes');
     }
 }

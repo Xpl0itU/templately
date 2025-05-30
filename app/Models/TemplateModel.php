@@ -128,19 +128,23 @@ class TemplateModel extends Model
             $filledFileModel = new FilledFilesModel();
             $filledFileModel->where('templateFileId', $templateId)->delete();
             
-            $this->delete($templateId);
-            
             if (!empty($template['path']) && file_exists($template['path'])) {
                 unlink($template['path']);
             }
             
-            $this->db->transCommit();
+            $this->delete($templateId);
+            
+            $this->db->transComplete();
+            
+            if ($this->db->transStatus() === false) {
+                throw new \Exception('Transaction failed');
+            }
+            
             return true;
             
         } catch (\Exception $e) {
             $this->db->transRollback();
-            log_message('error', 'Error deleting template: ' . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 }

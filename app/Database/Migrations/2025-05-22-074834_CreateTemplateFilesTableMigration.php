@@ -31,11 +31,6 @@ class CreateTemplateFilesTableMigration extends Migration
                 'unsigned'   => true,
                 'null'       => false,
             ],
-            'type'        => [
-                'type'       => 'VARCHAR',
-                'constraint' => 100,
-                'null'       => false,
-            ],
             'createdAt'  => [
                 'type'      => 'DATETIME',
                 'null'      => true,
