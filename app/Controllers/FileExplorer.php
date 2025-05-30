@@ -24,11 +24,13 @@ class FileExplorer extends BaseController
 
         $templates = $this->getTemplatesWithFilledFiles();
         
-        return view('file_explorer', [
+        return view(
+            'file_explorer', [
             'title' => 'File Explorer',
             'templates' => $templates,
             'userPermissions' => $this->getUserPermissions()
-        ]);
+            ]
+        );
     }
 
     private function getTemplatesWithFilledFiles(): array
@@ -60,13 +62,15 @@ class FileExplorer extends BaseController
 
     private function normalizeFilledFile(array $file): array
     {
-        $file = array_merge([
+        $file = array_merge(
+            [
             'id' => null,
             'name' => 'Unnamed File',
             'createdAt' => null,
             'updatedAt' => null,
             'filledData' => []
-        ], $file);
+            ], $file
+        );
 
         $file['filledData'] = $this->parseJsonField($file['filledData']);
         
@@ -95,10 +99,12 @@ class FileExplorer extends BaseController
 
     private function jsonError(int $statusCode, string $message): ResponseInterface
     {
-        return $this->response->setStatusCode($statusCode)->setJSON([
+        return $this->response->setStatusCode($statusCode)->setJSON(
+            [
             'success' => false,
             'message' => $message
-        ]);
+            ]
+        );
     }
 
     private function jsonSuccess(string $message, array $data = []): ResponseInterface
@@ -148,10 +154,12 @@ class FileExplorer extends BaseController
             $tempFilePath = $this->saveTemporaryFile($file);
             $templateFields = $this->extractTemplateFields($tempFilePath);
 
-            return $this->jsonSuccess('Template analyzed successfully', [
+            return $this->jsonSuccess(
+                'Template analyzed successfully', [
                 'tempFilePath' => $tempFilePath,
                 'templateFields' => $templateFields
-            ]);
+                ]
+            );
 
         } catch (\Exception $e) {
             log_message('error', 'Template analysis error: ' . $e->getMessage());
@@ -320,9 +328,8 @@ class FileExplorer extends BaseController
     private function processFilledFileCreation($json): array
     {
         // Check for duplicate name
-        if ($this->filledFileModel->where('templateFileId', $json->template_id)
-                                  ->where('name', trim($json->name))
-                                  ->first()) {
+        if ($this->filledFileModel->where('templateFileId', $json->template_id)            ->where('name', trim($json->name))            ->first()
+        ) {
             throw new \Exception('A file with this name already exists for this template');
         }
 
@@ -495,12 +502,14 @@ class FileExplorer extends BaseController
                     if (file_exists($imagePath)) {
                         $width = $imageSizes[$placeholder]['width'] ?? 200;
                         $height = $imageSizes[$placeholder]['height'] ?? 200;
-                        $templateProcessor->setImageValue($placeholder, [
+                        $templateProcessor->setImageValue(
+                            $placeholder, [
                             'path' => $imagePath,
                             'width' => $width,
                             'height' => $height,
                             'ratio' => false
-                        ]);
+                            ]
+                        );
                     } else {
                         $templateProcessor->setValue($placeholder, '[Image not found]');
                     }
@@ -526,10 +535,12 @@ class FileExplorer extends BaseController
 
         } catch (\Exception $e) {
             log_message('error', 'DOCX export error: ' . $e->getMessage());
-            return $this->response->setJSON([
+            return $this->response->setJSON(
+                [
                 'success' => false,
                 'message' => 'Error exporting DOCX: ' . $e->getMessage()
-            ]);
+                ]
+            );
         }
     }
 
@@ -590,12 +601,14 @@ class FileExplorer extends BaseController
                     if (file_exists($imagePath)) {
                         $width = $imageSizes[$placeholder]['width'] ?? 200;
                         $height = $imageSizes[$placeholder]['height'] ?? 200;
-                        $templateProcessor->setImageValue($placeholder, [
+                        $templateProcessor->setImageValue(
+                            $placeholder, [
                             'path' => $imagePath,
                             'width' => $width,
                             'height' => $height,
                             'ratio' => false
-                        ]);
+                            ]
+                        );
                     } else {
                         $templateProcessor->setValue($placeholder, '[Image not found]');
                     }
@@ -628,10 +641,12 @@ class FileExplorer extends BaseController
 
         } catch (\Exception $e) {
             log_message('error', 'PDF export error: ' . $e->getMessage());
-            return $this->response->setJSON([
+            return $this->response->setJSON(
+                [
                 'success' => false,
                 'message' => 'Error exporting PDF: ' . $e->getMessage()
-            ]);
+                ]
+            );
         }
     }
 
@@ -723,20 +738,24 @@ class FileExplorer extends BaseController
 
             $templateFields = $this->extractTemplateFields($tempFilePath);
 
-            return $this->response->setJSON([
+            return $this->response->setJSON(
+                [
                 'success' => true,
                 'message' => 'File analyzed successfully.',
                 'tempFilePath' => $tempFilePath,
                 'originalFileName' => $file->getClientName(),
                 'templateFields' => $templateFields
-            ]);
+                ]
+            );
 
         } catch (\Exception $e) {
             log_message('error', 'Template analysis error: ' . $e->getMessage());
-            return $this->response->setJSON([
+            return $this->response->setJSON(
+                [
                 'success' => false,
                 'message' => 'Error analyzing template: ' . $e->getMessage()
-            ]);
+                ]
+            );
         }
     }
 

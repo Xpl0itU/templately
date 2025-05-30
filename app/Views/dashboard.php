@@ -127,7 +127,7 @@
             <div class="text-center py-8">
                 <i class="fas fa-file-alt text-gray-300 text-4xl mb-3"></i>
                 <p class="text-gray-500">No templates available</p>
-                <?php if ($userPermissions['canCreateTemplates']): ?>
+                <?php if ($userPermissions['canCreateTemplates']) : ?>
                     <a href="/file-explorer/upload-template" class="inline-block mt-3 text-blue-600 hover:text-blue-700">
                         Upload your first template
                     </a>
@@ -162,7 +162,7 @@
             <div class="text-center py-8">
                 <i class="fas fa-edit text-gray-300 text-4xl mb-3"></i>
                 <p class="text-gray-500">No filled files available</p>
-                <?php if ($userPermissions['canCreateFilledFiles']): ?>
+                <?php if ($userPermissions['canCreateFilledFiles']) : ?>
                     <a href="/file-explorer/create-filled-file" class="inline-block mt-3 text-green-600 hover:text-green-700">
                         Create your first filled file
                     </a>

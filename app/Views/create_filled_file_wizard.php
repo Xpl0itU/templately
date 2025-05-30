@@ -35,7 +35,7 @@
                                 Created: <?php echo isset($template['createdAt']) && $template['createdAt'] ? date('M j, Y', strtotime($template['createdAt'])) : 'Unknown date' ?>
                             </p>
                             
-                            <?php if (!empty($template['templateFields']) && is_array($template['templateFields'])): ?>
+                            <?php if (!empty($template['templateFields']) && is_array($template['templateFields'])) : ?>
                                 <div class="mb-2">
                                     <p class="text-xs text-gray-500 mb-1">
                                         <i class="fas fa-list mr-1"></i>
@@ -60,7 +60,7 @@
                                                 'paragraph' => 'fa-paragraph text-green-500',
                                                 default => 'fa-font text-blue-500'
                                             };
-                                        ?>
+                                            ?>
                                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
                                                 <i class="fas <?php echo $iconClass ?> mr-1"></i>
                                                 <?php echo ucfirst($type) ?> (<?php echo $count ?>)
@@ -85,7 +85,7 @@
                     <h3 class="text-xl font-semibold text-gray-600 mb-2">No Templates Available</h3>
                     <p class="text-gray-500 mb-6">You need to upload templates before creating filled files.</p>
                     
-                    <?php if ($userPermissions['canCreateTemplates']): ?>
+                    <?php if ($userPermissions['canCreateTemplates']) : ?>
                         <a href="/file-explorer/upload-template" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200">
                             <i class="fas fa-upload mr-2"></i>
                             Upload Template First

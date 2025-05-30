@@ -72,20 +72,24 @@ class UserManagement extends BaseController
         $json = $this->request->getJSON();
         
         if (!$json || !isset($json->user_id, $json->group)) {
-            return $this->response->setStatusCode(400)->setJSON([
+            return $this->response->setStatusCode(400)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'Missing user ID or group.'
-            ]);
+                ]
+            );
         }
 
         $userId = (int) $json->user_id;
         $newGroup = $json->group;
 
         if ($userId === auth()->user()->id && $newGroup !== 'superadmin') {
-            return $this->response->setStatusCode(400)->setJSON([
+            return $this->response->setStatusCode(400)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'You cannot change your own group.'
-            ]);
+                ]
+            );
         }
 
         try {
@@ -93,56 +97,70 @@ class UserManagement extends BaseController
             $user = $userModel->find($userId);
             
             if (!$user) {
-                return $this->response->setStatusCode(404)->setJSON([
+                return $this->response->setStatusCode(404)->setJSON(
+                    [
                     'success' => false, 
                     'message' => 'User not found.'
-                ]);
+                    ]
+                );
             }
 
             $user->syncGroups($newGroup);
 
-            return $this->response->setJSON([
+            return $this->response->setJSON(
+                [
                 'success' => true, 
                 'message' => 'User group updated successfully.'
-            ]);
+                ]
+            );
 
         } catch (\Exception $e) {
             log_message('error', 'Error updating user group: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
+            return $this->response->setStatusCode(500)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'An error occurred while updating the user group.'
-            ]);
+                ]
+            );
         }
     }
 
     public function deleteUser($id = null)
     {
         if (!auth()->user()->inGroup('superadmin')) {
-            return $this->response->setStatusCode(403)->setJSON([
+            return $this->response->setStatusCode(403)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'You do not have permission to delete users.'
-            ]);
+                ]
+            );
         }
 
         if (!$this->request->isAJAX() || $this->request->getMethod(true) !== 'POST') {
-            return $this->response->setStatusCode(405)->setJSON([
+            return $this->response->setStatusCode(405)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'Method Not Allowed'
-            ]);
+                ]
+            );
         }
 
         if (!$id) {
-            return $this->response->setStatusCode(400)->setJSON([
+            return $this->response->setStatusCode(400)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'User ID is required.'
-            ]);
+                ]
+            );
         }
 
         if ((int) $id === auth()->user()->id) {
-            return $this->response->setStatusCode(400)->setJSON([
+            return $this->response->setStatusCode(400)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'You cannot delete your own account.'
-            ]);
+                ]
+            );
         }
 
         try {
@@ -150,23 +168,29 @@ class UserManagement extends BaseController
             $success = $userModel->delete($id);
 
             if ($success) {
-                return $this->response->setJSON([
+                return $this->response->setJSON(
+                    [
                     'success' => true, 
                     'message' => 'User deleted successfully.'
-                ]);
+                    ]
+                );
             } else {
-                return $this->response->setStatusCode(500)->setJSON([
+                return $this->response->setStatusCode(500)->setJSON(
+                    [
                     'success' => false, 
                     'message' => 'Failed to delete user.'
-                ]);
+                    ]
+                );
             }
 
         } catch (\Exception $e) {
             log_message('error', 'Error deleting user: ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
+            return $this->response->setStatusCode(500)->setJSON(
+                [
                 'success' => false, 
                 'message' => 'An error occurred while deleting the user.'
-            ]);
+                ]
+            );
         }
     }
 }
