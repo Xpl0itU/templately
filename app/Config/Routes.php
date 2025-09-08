@@ -7,6 +7,16 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Dashboard::index', ['filter' => 'sessionauth']);
 
+// Setup routes
+$routes->get('setup', 'Setup::index');
+$routes->post('setup', 'Setup::index'); // Handle both GET and POST for setup
+$routes->get('setup/check-requirements', 'Setup::checkRequirements');
+$routes->post('setup/check-requirements', 'Setup::checkRequirements');
+$routes->get('setup/success', 'Setup::success');
+// TODO: Add a flag to enable these on dev envs
+$routes->get('setup/cleanup', 'Setup::cleanup');
+$routes->get('setup/debug', 'Setup::debug');
+
 // Auth routes
 $routes->get('login', 'AuthController::loginView');
 $routes->post('login', 'AuthController::loginAction');
