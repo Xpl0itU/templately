@@ -29,7 +29,26 @@ class UpdateTemplatesTable extends Migration
 
     private function columnExists($table, $column)
     {
-        $query = $this->db->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
-        return $query->getNumRows() > 0;
+        $dbDriver = $this->db->getPlatform();
+        
+        if (stripos($dbDriver, 'mysql') !== false) {
+            // MySQL approach
+            $query = $this->db->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
+            return $query->getNumRows() > 0;
+        } else {
+            // Generic approach for other databases (including SQLite)
+            try {
+                $query = $this->db->query("SELECT * FROM pragma_table_info('{$table}') WHERE name = '{$column}'");
+                return $query->getNumRows() > 0;
+            } catch (\Exception $e) {
+                // Fallback approach
+                try {
+                    $this->db->query("SELECT {$column} FROM {$table} LIMIT 1");
+                    return true;
+                } catch (\Exception $e) {
+                    return false;
+                }
+            }
+        }
     }
 }
