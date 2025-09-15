@@ -31,17 +31,37 @@ class AuthController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $credentials             = $this->request->getPost(setting('Auth.validFields'));
-        $credentials             = array_filter($credentials);
+        // If user is already logged in, log them out first to prevent session conflicts
+        if (auth()->loggedIn()) {
+            auth()->logout();
+        }
+
+        // Get credentials properly for username-only authentication
+        $validFields = setting('Auth.validFields') ?? ['username'];
+        $credentials = [];
+        
+        // Extract only the valid fields from POST data
+        foreach ($validFields as $field) {
+            if ($this->request->getPost($field)) {
+                $credentials[$field] = $this->request->getPost($field);
+            }
+        }
+        
+        // Always include password
         $credentials['password'] = $this->request->getPost('password');
-        $remember                = (bool) $this->request->getPost('remember');
+        $remember = (bool) $this->request->getPost('remember');
 
         /**
- * @var Session $authenticator 
-*/
+         * @var Session $authenticator 
+         */
         $authenticator = auth('session')->getAuthenticator();
 
+        // Add debugging
+        log_message('debug', 'Login attempt with credentials: ' . json_encode($credentials));
+        
         $result = $authenticator->remember($remember)->attempt($credentials);
+        log_message('debug', 'Login result: ' . ($result->isOK() ? 'SUCCESS' : 'FAILED - ' . $result->reason()));
+        
         if (! $result->isOK()) {
             return redirect()->route('login')->withInput()->with('error', $result->reason());
         }
@@ -58,16 +78,22 @@ class AuthController extends BaseController
             return redirect()->route('login')->withInput()->with('error', lang('Auth.bannedUser'));
         }
 
+        // Ensure login is completed
         if ($result->extraInfo() !== null) {
             $authenticator->completeLogin($result->extraInfo());
+        } else {
+            // Make sure we have a user and complete login
+            $user = $authenticator->getUser();
+            if ($user !== null) {
+                $authenticator->completeLogin($user);
+            }
         }
-
 
         if (! $authenticator->hasAction()) {
-            return redirect()->to(config(\Config\Auth::class)->loginRedirect());
+            return redirect()->to(config(\Config\Auth::class)->loginRedirect())->withCookies();
         }
 
-        return redirect()->to((string) $authenticator->getAction());
+        return redirect()->to((string) $authenticator->getAction())->withCookies();
     }
 
     public function logoutAction()
@@ -104,9 +130,20 @@ class AuthController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        // Get the POST data
         $allowedPostFields = array_keys($rules);
-        $userEntity              = $this->getUserEntity();
-        $userEntity->fill($this->request->getPost($allowedPostFields));
+        $postData = $this->request->getPost($allowedPostFields);
+        
+        // If we're only using username for registration and no email field is provided,
+        // add a dummy email address to prevent TypeError in the User entity
+        $registrationFields = setting('Auth.registrationFields') ?? ['username', 'email'];
+        if (!in_array('email', $registrationFields, true) && !isset($postData['email'])) {
+            // Create a dummy email from the username
+            $postData['email'] = $postData['username'] . '@example.com';
+        }
+
+        $userEntity = $this->getUserEntity();
+        $userEntity->fill($postData);
 
         try {
             $users->save($userEntity);
@@ -143,7 +180,7 @@ class AuthController extends BaseController
     protected function getValidationRules(?string $type = null): array
     {
         if ($type === 'login') {
-            $validFields = setting('Auth.validFields') ?? ['email'];
+            $validFields = setting('Auth.validFields') ?? ['username'];
             $authConfig = config(\Config\Auth::class);
             $rules = [];
             

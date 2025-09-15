@@ -157,21 +157,6 @@
                 <p class="mt-1 text-sm text-gray-500">This will be your login username. Use 3-30 characters.</p>
             </div>
 
-            <!-- Email Field -->
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                    <i class="fas fa-envelope mr-2"></i>Email Address
-                </label>
-                <input type="email" 
-                       id="email" 
-                       name="email" 
-                       value="<?php echo old('email') ?>" 
-                       required
-                       class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition duration-200"
-                       placeholder="Enter your email address">
-                <p class="mt-1 text-sm text-gray-500">You can also use this email to sign in.</p>
-            </div>
-
             <!-- Password Field -->
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
@@ -256,7 +241,8 @@
 <?php echo $this->endSection() ?>
 
 <?php echo $this->section('pageScripts') ?>
-<script>
+    <script src="/assets/js/templately-utils.js"></script>
+    <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing setup wizard...');
     
@@ -301,12 +287,10 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        fetch('/setup/check-requirements', {
+        Templately.Http.fetch('/setup/check-requirements', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': '<?php echo csrf_hash() ?>'
+                'Content-Type': 'application/json'
             }
         })
         .then(response => response.json())

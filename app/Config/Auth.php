@@ -279,8 +279,8 @@ class Auth extends ShieldAuth
      * Fields that are available to be used as credentials for login.
      */
     public array $validFields = [
-        'email',
-        // 'username',
+        // 'email',
+        'username',
     ];
 
     /**
@@ -428,7 +428,7 @@ class Auth extends ShieldAuth
      *
      * @var class-string<UserModel>
      */
-    public string $userProvider = UserModel::class;
+    public string $userProvider = \App\Models\UserModel::class;
 
     /**
      * Returns the URL that a user should be redirected
@@ -525,4 +525,15 @@ class Auth extends ShieldAuth
 
         return $final_url;
     }
+
+    /**
+     * --------------------------------------------------------------------
+     * Registration Fields
+     * --------------------------------------------------------------------
+     * Fields that are available to be used during registration.
+     */
+    public array $registrationFields = [
+        'username',
+        // 'email',
+    ];
 }

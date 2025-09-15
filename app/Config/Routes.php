@@ -17,6 +17,9 @@ $routes->get('setup/success', 'Setup::success');
 $routes->get('setup/cleanup', 'Setup::cleanup');
 $routes->get('setup/debug', 'Setup::debug');
 
+// Test route for setup detection
+$routes->get('test-setup', 'TestSetup::index');
+
 // Auth routes
 $routes->get('login', 'AuthController::loginView');
 $routes->post('login', 'AuthController::loginAction');

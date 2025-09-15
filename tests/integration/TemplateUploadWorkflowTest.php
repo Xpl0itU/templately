@@ -27,7 +27,7 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
             'originalFileName' => 'test.docx',
             'path' => '/fake/path/test.docx',
             'size' => 1024,
-            'templateFields' => json_encode(['name', 'email', 'phone']),
+            'templateFields' => json_encode(['name', 'company', 'phone']),
         ];
 
         $id = $model->insert($templateData);
@@ -38,7 +38,7 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
         $this->assertEquals('test.docx', $template['originalFileName']);
         $this->assertEquals('/fake/path/test.docx', $template['path']);
         $this->assertEquals(1024, $template['size']);
-        $this->assertEquals(['name', 'email', 'phone'], $template['templateFields']);
+        $this->assertEquals(['name', 'company', 'phone'], $template['templateFields']);
     }
 
     public function testTemplateDeletionWithFiles(): void
@@ -52,7 +52,7 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
             'originalFileName' => 'test.docx',
             'path' => '/fake/path/test.docx',
             'size' => 1024,
-            'templateFields' => json_encode(['name', 'email']),
+            'templateFields' => json_encode(['name', 'company']),
         ];
         $templateId = $templateModel->insert($templateData);
 

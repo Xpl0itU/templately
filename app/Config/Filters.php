@@ -80,11 +80,11 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
-            'setup' => ['except' => ['setup', 'setup/*']],
+            'setup', // Apply setup filter before all other filters
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',
-            'sessionauth' => ['except' => ['login', 'login/*', 'register', 'auth/a/*', 'setup', 'setup/*']],
+            'sessionauth' => ['except' => ['login', 'login/*', 'register', 'auth/a/*', 'setup', 'setup/*', 'test-setup']],
         ],
         'after' => [
             'toolbar',

@@ -638,23 +638,37 @@
 <?php echo $this->endSection() ?>
 
 <?php echo $this->section('pageScripts') ?>
+    <script src="/assets/js/templately-utils.js"></script>
+    <script src="/assets/js/modules/file-explorer-main.js"></script>
+    <script src="/assets/js/modules/template-wizard.js"></script>
+    <script src="/assets/js/modules/filled-file-editor.js"></script>
+    <script src="/assets/js/app.js"></script>
     <script>
-        const modals = {
+        Templately.Modal.init({
             success: document.getElementById('successModal'),
             error: document.getElementById('errorModal'),
             confirm: document.getElementById('confirmModal'),
             input: document.getElementById('inputModal'),
             loading: document.getElementById('loadingModal')
-        };
+        });
 
         const uploadWizardModal = document.getElementById('uploadWizardModal');
         const loadingModal = document.getElementById('loadingModal');
+        
+        window.clearImageSelection = function(fieldName) {
+            Templately.FileExplorer.clearImageSelection(fieldName);
+        };
 
-        let currentModal = null;
-        let currentModalCallback = null;
+        function hideModal(type) {
+            Templately.Modal.hideModal(type);
+        }
+
+        function setModalFocus(type) {
+            Templately.Modal.setModalFocus(type);
+        }
 
         function handleGlobalKeydown(e) {
-            if (!currentModal) {
+            if (!Templately.Modal.currentModal) {
                 if (!uploadWizardModal.classList.contains('hidden')) {
                     if (e.key === 'Escape') {
                         e.preventDefault();
@@ -670,210 +684,8 @@
                 }
                 return;
             }
-
-            // ESC key - dismiss any modal
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                dismissCurrentModal();
-                return;
-            }
-
-            // Enter key - trigger primary action
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                triggerPrimaryAction();
-                return;
-            }
-
-            // Tab navigation within modal
-            if (e.key === 'Tab') {
-                trapFocus(e);
-            }
-        }
-
-        function dismissCurrentModal() {
-            if (!currentModal) return;
-
-            const modalType = currentModal;
             
-            if (modalType === 'confirm' && currentModalCallback) {
-                currentModalCallback(false);
-            } else if (modalType === 'input' && currentModalCallback) {
-                currentModalCallback(null);
-            }
-            
-            hideModal(modalType);
-        }
-
-        function triggerPrimaryAction() {
-            if (!currentModal) return;
-
-            switch (currentModal) {
-                case 'success':
-                    document.getElementById('successModalClose').click();
-                    break;
-                case 'error':
-                    document.getElementById('errorModalClose').click();
-                    break;
-                case 'confirm':
-                    document.getElementById('confirmOk').click();
-                    break;
-                case 'input':
-                    document.getElementById('inputOk').click();
-                    break;
-                case 'loading':
-                    hideLoadingModal();
-                    break;
-            }
-        }
-
-        function trapFocus(e) {
-            const modal = modals[currentModal];
-            if (!modal) return;
-
-            const focusableElements = modal.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            );
-            
-            if (focusableElements.length === 0) return;
-
-            const firstFocusable = focusableElements[0];
-            const lastFocusable = focusableElements[focusableElements.length - 1];
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstFocusable) {
-                    e.preventDefault();
-                    lastFocusable.focus();
-                }
-            } else {
-                if (document.activeElement === lastFocusable) {
-                    e.preventDefault();
-                    firstFocusable.focus();
-                }
-            }
-        }
-
-        function setModalFocus(type) {
-            const modal = modals[type];
-            if (!modal) return;
-
-            let focusTarget;
-            
-            if (type === 'input') {
-                focusTarget = document.getElementById('inputValue');
-            } else {
-                // Find the first button or focusable element
-                focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            }
-            
-            if (focusTarget) {
-                setTimeout(() => focusTarget.focus(), 100);
-            }
-        }
-
-        document.addEventListener('keydown', handleGlobalKeydown);
-        
-        window.clearImageSelection = function(fieldName) {
-            const container = document.querySelector(`#input_container_${fieldName}`);
-            if (container) {
-                const fileInput = container.querySelector('input[type="file"]');
-                const previewArea = container.querySelector('.mt-2');
-                const hiddenInput = container.querySelector('input[type="hidden"]');
-                const uploadArea = container.querySelector('.image-upload-area');
-                
-                if (fileInput) fileInput.value = '';
-                if (previewArea) {
-                    previewArea.classList.add('hidden');
-                    previewArea.innerHTML = '';
-                }
-                if (hiddenInput) hiddenInput.removeAttribute('data-has-new-file');
-                if (uploadArea) {
-                    uploadArea.innerHTML = `
-                        <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
-                        <p class="text-gray-600">Click to upload or drag image here</p>
-                    `;
-                }
-            }
-        };
-
-        function dismissCurrentModal() {
-            if (!currentModal) return;
-
-            const modalType = currentModal;
-            
-            if (modalType === 'confirm' && currentModalCallback) {
-                currentModalCallback(false);
-            } else if (modalType === 'input' && currentModalCallback) {
-                currentModalCallback(null);
-            }
-            
-            hideModal(modalType);
-        }
-
-        function triggerPrimaryAction() {
-            if (!currentModal) return;
-
-            switch (currentModal) {
-                case 'success':
-                    document.getElementById('successModalClose').click();
-                    break;
-                case 'error':
-                    document.getElementById('errorModalClose').click();
-                    break;
-                case 'confirm':
-                    document.getElementById('confirmOk').click();
-                    break;
-                case 'input':
-                    document.getElementById('inputOk').click();
-                    break;
-                case 'loading':
-                    hideLoadingModal();
-                    break;
-            }
-        }
-
-        function trapFocus(e) {
-            const modal = modals[currentModal];
-            if (!modal) return;
-
-            const focusableElements = modal.querySelectorAll(
-                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-            );
-            
-            if (focusableElements.length === 0) return;
-
-            const firstFocusable = focusableElements[0];
-            const lastFocusable = focusableElements[focusableElements.length - 1];
-
-            if (e.shiftKey) {
-                if (document.activeElement === firstFocusable) {
-                    e.preventDefault();
-                    lastFocusable.focus();
-                }
-            } else {
-                if (document.activeElement === lastFocusable) {
-                    e.preventDefault();
-                    firstFocusable.focus();
-                }
-            }
-        }
-
-        function setModalFocus(type) {
-            const modal = modals[type];
-            if (!modal) return;
-
-            let focusTarget;
-            
-            if (type === 'input') {
-                focusTarget = document.getElementById('inputValue');
-            } else {
-                // Find the first button or focusable element
-                focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            }
-            
-            if (focusTarget) {
-                setTimeout(() => focusTarget.focus(), 100);
-            }
+            Templately.Modal.handleGlobalKeydown(e);
         }
 
         document.addEventListener('keydown', handleGlobalKeydown);
@@ -908,114 +720,40 @@
 
         document.addEventListener('keydown', handleWizardKeydown);
 
-        function showModal(type, message, callback = null) {
-            const modal = modals[type];
-            if (!modal) return;
-
-            currentModal = type;
-            currentModalCallback = callback;
-
-            if (type === 'success') {
-                document.getElementById('successMessage').textContent = message;
-            } else if (type === 'error') {
-                document.getElementById('errorMessage').textContent = message;
-            } else if (type === 'confirm') {
-                document.getElementById('confirmMessage').textContent = message;
-            } else if (type === 'input') {
-                document.getElementById('inputMessage').textContent = message;
-                document.getElementById('inputValue').value = '';
-            }
-
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.querySelector('.modal-content').classList.remove('scale-95');
-                modal.querySelector('.modal-content').classList.add('scale-100');
-                setModalFocus(type);
-            }, 10);
-
-            if (type === 'confirm' && callback) {
-                const confirmOk = document.getElementById('confirmOk');
-                const confirmCancel = document.getElementById('confirmCancel');
-                
-                const handleConfirm = () => {
-                    hideModal('confirm');
-                    callback(true);
-                    confirmOk.removeEventListener('click', handleConfirm);
-                    confirmCancel.removeEventListener('click', handleCancel);
-                };
-                
-                const handleCancel = () => {
-                    hideModal('confirm');
-                    callback(false);
-                    confirmOk.removeEventListener('click', handleConfirm);
-                    confirmCancel.removeEventListener('click', handleCancel);
-                };
-                
-                confirmOk.addEventListener('click', handleConfirm);
-                confirmCancel.addEventListener('click', handleCancel);
-            }
-
-            if (type === 'input' && callback) {
-                const inputOk = document.getElementById('inputOk');
-                const inputCancel = document.getElementById('inputCancel');
-                const inputValue = document.getElementById('inputValue');
-                
-                const handleInput = () => {
-                    const value = inputValue.value.trim();
-                    if (value) {
-                        hideModal('input');
-                        callback(value);
-                        inputOk.removeEventListener('click', handleInput);
-                        inputCancel.removeEventListener('click', handleInputCancel);
-                    }
-                };
-                
-                const handleInputCancel = () => {
-                    hideModal('input');
-                    callback(null);
-                    inputOk.removeEventListener('click', handleInput);
-                    inputCancel.removeEventListener('click', handleInputCancel);
-                };
-                
-                inputOk.addEventListener('click', handleInput);
-                inputCancel.addEventListener('click', handleInputCancel);
-                
-                // Focus on input field and clear it
-                inputValue.value = '';
-                inputValue.focus();
-            }
-
-            // Show the modal
-            document.getElementById(type + 'Modal').classList.remove('hidden');
+        function hideModal(type) {
+            Templately.Modal.hideModal(type);
         }
 
-        function hideModal(type) {
-            document.getElementById(type + 'Modal').classList.add('hidden');
+        function setModalFocus(type) {
+            Templately.Modal.setModalFocus(type);
         }
 
         function showInputModal(message) {
+            document.getElementById('inputMessage').textContent = message;
             return new Promise((resolve) => {
-                showModal('input', message, resolve);
+                Templately.Modal.showModal('input', resolve);
             });
         }
 
         function showConfirmModal(message) {
+            document.getElementById('confirmMessage').textContent = message;
             return new Promise((resolve) => {
-                showModal('confirm', message, resolve);
+                Templately.Modal.showModal('confirm', resolve);
             });
+        }
+
+        function showSuccessModal(message) {
+            document.getElementById('successMessage').textContent = message;
+            Templately.Modal.showModal('success');
+        }
+
+        function showErrorModal(message) {
+            document.getElementById('errorMessage').textContent = message;
+            Templately.Modal.showModal('error');
         }
 
         document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
         document.getElementById('errorModalClose').addEventListener('click', () => hideModal('error'));
-
-        Object.values(modals).forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    const modalType = Object.keys(modals).find(key => modals[key] === modal);
-                    hideModal(modalType);
-                }
-            });
-        });
 
         function updateFileLabel() {
             const input = document.getElementById('templateFileWizard');
@@ -2128,13 +1866,13 @@
                 const templateId = event.target.dataset.templateId;
                 const template = findTemplateById(templateId);
                 if (!template) {
-                    showModal('error', 'Template not found.');
+                    showErrorModal('Template not found.');
                     return;
                 }
 
                 const newFileName = await showInputModal(`Enter name for the new filled file (based on template: ${template.name}):`);
                 if (!newFileName || newFileName.trim() === '') {
-                    if (newFileName !== null) showModal('error', 'File name cannot be empty.');
+                    if (newFileName !== null) showErrorModal('File name cannot be empty.');
                     return;
                 }
 
@@ -2185,13 +1923,13 @@
                         originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
-                        showModal('success', 'New file created successfully: ' + newFilledFile.name);
-                    } else {
+                        showSuccessModal('New file created successfully: ' + newFilledFile.name);
+                                    } else {
                         throw new Error(result.message || 'Unknown error');
                     }
                 } catch (error) {
                     console.error('Error creating file:', error);
-                    showModal('error', 'Error creating file: ' + error.message);
+                    showErrorModal('Error creating file: ' + error.message);
                 }
             }
 
@@ -2199,7 +1937,7 @@
                 event.preventDefault();
                 const templateName = templateNameWizardInput.value.trim();
                 if (!templateName) {
-                    showModal('error', 'Please enter a template name.');
+                    showErrorModal('Please enter a template name.');
                     return;
                 }
 
@@ -2242,7 +1980,7 @@
                         }
                         
                         setTimeout(() => {
-                            showModal('success', 'Template uploaded successfully!');
+                            showSuccessModal('Template uploaded successfully!');
                             resetWizard();
                         }, 1000);
                     } else {
@@ -2250,7 +1988,7 @@
                     }
                 } catch (error) {
                     console.error('Upload error:', error);
-                    showModal('error', 'Failed to save template: ' + error.message);
+                    showErrorModal('Failed to save template: ' + error.message);
                     showWizardStep('stepNameReview');
                 }
             });
@@ -2465,13 +2203,13 @@
                         }
                         
                         renderFileDetails(currentSelectedFilledFile, 'view');
-                        showModal('success', 'File updated successfully!');
+                        showSuccessModal('File updated successfully!');
                     } else {
-                        showModal('error', 'Failed to update file: ' + (result.message || 'Unknown error'));
+                        showErrorModal('Failed to update file: ' + (result.message || 'Unknown error'));
                     }
                 } catch (error) {
                     console.error('Error saving file:', error);
-                    showModal('error', 'Error saving file: ' + error.message);
+                    showErrorModal('Error saving file: ' + error.message);
                 }
             });
 
@@ -2520,13 +2258,13 @@
                         currentSelectedFilledFile = null;
                         originalFilledData = null;
 
-                        showModal('success', 'File deleted successfully!');
+                        showSuccessModal('File deleted successfully!');
                     } else {
-                        showModal('error', 'Failed to delete file: ' + (result.message || 'Unknown error'));
+                        showErrorModal('Failed to delete file: ' + (result.message || 'Unknown error'));
                     }
                 } catch (error) {
                     console.error('Error deleting file:', error);
-                    showModal('error', 'Error deleting file: ' + error.message);
+                    showErrorModal('Error deleting file: ' + error.message);
                 } finally {
                     deleteFilledFileButton.disabled = false;
                     deleteFilledFileButton.textContent = 'Delete File';
@@ -2576,13 +2314,13 @@
                         currentSelectedTemplate = null;
                         originalFilledData = null;
 
-                        showModal('success', 'Template deleted successfully!');
+                        showSuccessModal('Template deleted successfully!');
                     } else {
-                        showModal('error', 'Failed to delete template: ' + (result.message || 'Unknown error'));
+                        showErrorModal('Failed to delete template: ' + (result.message || 'Unknown error'));
                     }
                 } catch (error) {
                     console.error('Error deleting template:', error);
-                    showModal('error', 'Error deleting template: ' + error.message);
+                    showErrorModal('Error deleting template: ' + error.message);
                 } finally {
                     deleteTemplateButton.disabled = false;
                     deleteTemplateButton.textContent = 'Delete Template';
@@ -2636,12 +2374,12 @@
                     document.body.removeChild(a);
 
                     hideLoadingModal();
-                    showModal('success', 'DOCX file downloaded successfully!');
+                    showSuccessModal('DOCX file downloaded successfully!');
 
                 } catch (error) {
                     hideLoadingModal();
                     console.error('Error exporting DOCX:', error);
-                    showModal('error', 'Error exporting DOCX: ' + error.message);
+                    showErrorModal('Error exporting DOCX: ' + error.message);
                 }
             });
 
@@ -2681,12 +2419,12 @@
                     document.body.removeChild(a);
 
                     hideLoadingModal();
-                    showModal('success', 'PDF file downloaded successfully!');
+                    showSuccessModal('PDF file downloaded successfully!');
 
                 } catch (error) {
                     hideLoadingModal();
                     console.error('Error exporting PDF:', error);
-                    showModal('error', 'Error exporting PDF: ' + error.message);
+                    showErrorModal('Error exporting PDF: ' + error.message);
                 }
             });
 
@@ -2803,13 +2541,13 @@
                         originalFilledData = JSON.parse(JSON.stringify(newFilledFile.filledData));
                         renderFileDetails(currentSelectedFilledFile, 'view');
 
-                        showModal('success', 'New file created successfully: ' + newFilledFile.name);
+                        showSuccessModal('New file created successfully: ' + newFilledFile.name);
                                         } else {
                                             throw new Error(result.message || 'Unknown error');
                                         }
                                     } catch (error) {
                                         console.error('Error creating file:', error);
-                                        showModal('error', 'Error creating file: ' + error.message);
+                                        showErrorModal('Error creating file: ' + error.message);
                                     }
                                 }
                             }, 500);

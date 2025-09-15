@@ -88,16 +88,40 @@ class FilledFilesModel extends Model
             return $record;
         }
         
+        // Parse filledData with caching
         if (isset($record['filledData']) && is_string($record['filledData'])) {
-            $decoded = json_decode($record['filledData'], true);
-            $record['filledData'] = is_array($decoded) ? $decoded : [];
+            $cacheKey = 'filled_data_' . md5($record['filledData']);
+            $cached = cache($cacheKey);
+            
+            if ($cached !== null) {
+                $record['filledData'] = $cached;
+            } else {
+                $decoded = json_decode($record['filledData'], true);
+                $parsed = is_array($decoded) ? $decoded : [];
+                $record['filledData'] = $parsed;
+                
+                // Cache for 1 hour
+                cache()->save($cacheKey, $parsed, 3600);
+            }
         } elseif (!isset($record['filledData'])) {
             $record['filledData'] = [];
         }
 
+        // Parse fieldTypes with caching
         if (isset($record['fieldTypes']) && is_string($record['fieldTypes'])) {
-            $decoded = json_decode($record['fieldTypes'], true);
-            $record['fieldTypes'] = is_array($decoded) ? $decoded : [];
+            $cacheKey = 'field_types_' . md5($record['fieldTypes']);
+            $cached = cache($cacheKey);
+            
+            if ($cached !== null) {
+                $record['fieldTypes'] = $cached;
+            } else {
+                $decoded = json_decode($record['fieldTypes'], true);
+                $parsed = is_array($decoded) ? $decoded : [];
+                $record['fieldTypes'] = $parsed;
+                
+                // Cache for 1 hour
+                cache()->save($cacheKey, $parsed, 3600);
+            }
         } elseif (!isset($record['fieldTypes'])) {
             $record['fieldTypes'] = [];
         }

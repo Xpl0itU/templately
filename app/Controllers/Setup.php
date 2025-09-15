@@ -63,14 +63,12 @@ class Setup extends BaseController
             // For AJAX requests that might not have JSON body
             $data = [
                 'username' => $this->request->getPost('username'),
-                'email' => $this->request->getPost('email'),
                 'password' => $this->request->getPost('password'),
                 'password_confirm' => $this->request->getPost('password_confirm'),
             ];
         } else {
             $data = [
                 'username' => $this->request->getPost('username'),
-                'email' => $this->request->getPost('email'),
                 'password' => $this->request->getPost('password'),
                 'password_confirm' => $this->request->getPost('password_confirm'),
             ];
@@ -80,10 +78,6 @@ class Setup extends BaseController
             'username' => [
                 'label' => 'Username',
                 'rules' => 'required|min_length[3]|max_length[30]|alpha_numeric_punct|is_unique[users.username]',
-            ],
-            'email' => [
-                'label' => 'Email',
-                'rules' => 'required|max_length[254]|valid_email|is_unique[auth_identities.secret]',
             ],
             'password' => [
                 'label' => 'Password',
@@ -114,13 +108,15 @@ class Setup extends BaseController
             $db = \Config\Database::connect();
             $db->transBegin();
             
-            // Create the user entity
+            // Create the user entity with password
             $userEntity = new User([
                 'username' => $data['username'],
-                'email'    => $data['email'],
+                'email'    => $data['email'] ?? $data['username'] . '@templately.local',
+                'password' => $data['password'], // Set password during creation
                 'active'   => true,
             ]);
 
+            // Save the user - this should create the identity properly
             $users->save($userEntity);
             $insertId = $users->getInsertID();
             
@@ -128,23 +124,6 @@ class Setup extends BaseController
             
             if ($user === null) {
                 throw new \Exception('Failed to create user account.');
-            }
-
-            // Check if email identity already exists for this user
-            $identityModel = model('CodeIgniter\Shield\Models\UserIdentityModel');
-            $existingIdentity = $identityModel->where('user_id', $user->id)
-                                             ->where('type', 'email_password')
-                                             ->where('secret', $data['email'])
-                                             ->first();
-            
-            if (!$existingIdentity) {
-                // Set the password only if identity doesn't exist
-                $user->createEmailIdentity([
-                    'email'    => $data['email'],
-                    'password' => $data['password'],
-                ]);
-            } else {
-                log_message('debug', 'Email identity already exists for user: ' . $user->id);
             }
 
             // Add user to superadmin group
@@ -165,17 +144,15 @@ class Setup extends BaseController
                     'message' => 'Setup completed successfully!',
                     'redirect' => '/setup/success',
                     'user' => [
-                        'username' => $data['username'],
-                        'email' => $data['email']
+                        'id' => $user->id,
+                        'username' => $user->username,
                     ]
                 ]);
             }
 
-            // Redirect to success page with user data
+            // For non-AJAX requests, redirect to success page
             return redirect()->to('/setup/success')
-                            ->with('message', 'Welcome to Templately! Your superadmin account has been created successfully.')
-                            ->with('username', $data['username'])
-                            ->with('email', $data['email']);
+                ->with('username', $user->username);
 
         } catch (\Exception $e) {
             // Rollback transaction if it was started
@@ -212,7 +189,6 @@ class Setup extends BaseController
         if (auth()->loggedIn()) {
             $data = [
                 'username' => session('username') ?? auth()->user()->username,
-                'email' => session('email') ?? auth()->user()->email
             ];
             return view('setup/success', $data);
         }
@@ -222,7 +198,6 @@ class Setup extends BaseController
         // Show a simple success message and redirect to login
         return view('setup/success', [
             'username' => session('username') ?? 'Admin',
-            'email' => session('email') ?? '',
             'session_expired' => true
         ]);
     }
@@ -244,13 +219,27 @@ class Setup extends BaseController
     private function isSetupCompleted(): bool
     {
         try {
+            // Check if the users table exists
+            $db = \Config\Database::connect();
+            $tables = $db->listTables();
+            
+            // Get the users table name from the Shield configuration
+            $usersModel = model('CodeIgniter\Shield\Models\UserModel');
+            $usersTable = $usersModel->table;
+            
+            // If users table doesn't exist, setup is not completed
+            if (!in_array($usersTable, $tables, true)) {
+                return false;
+            }
+            
             // Check if there are any users in the system
-            $users = model('CodeIgniter\Shield\Models\UserModel');
-            $userCount = $users->countAll();
+            $userCount = $usersModel->countAll();
             
             return $userCount > 0;
         } catch (\Exception $e) {
-            // If there's an error checking users, assume setup is not completed
+            // If there's an error checking users (e.g., table doesn't exist), 
+            // assume setup is not completed
+            log_message('debug', 'Setup not completed due to exception: ' . $e->getMessage());
             return false;
         }
     }
@@ -402,7 +391,6 @@ class Setup extends BaseController
                 $userDetails[] = [
                     'id' => $user->id,
                     'username' => $user->username,
-                    'email' => $user->email,
                     'active' => $user->active
                 ];
             }

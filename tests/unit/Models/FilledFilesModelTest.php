@@ -67,7 +67,7 @@ final class FilledFilesModelTest extends CIUnitTestCase
         $data = [
             'templateFileId' => $templateId,
             'name' => 'Test Filled File',
-            'filledData' => json_encode(['name' => 'John Doe', 'email' => 'john@example.com']),
+            'filledData' => json_encode(['name' => 'John Doe', 'company' => 'Example Inc']),
         ];
 
         $id = $this->model->insert($data);
@@ -75,7 +75,7 @@ final class FilledFilesModelTest extends CIUnitTestCase
 
         $this->assertIsArray($filledFile['filledData']);
         $this->assertArrayHasKey('name', $filledFile['filledData']);
-        $this->assertArrayHasKey('email', $filledFile['filledData']);
+        $this->assertArrayHasKey('company', $filledFile['filledData']);
         $this->assertEquals('John Doe', $filledFile['filledData']['name']);
     }
 

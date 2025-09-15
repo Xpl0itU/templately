@@ -2,6 +2,13 @@
 
 <?php echo $this->section('title') ?>Register<?php echo $this->endSection() ?>
 
+<?php 
+// If user is already logged in, redirect to dashboard
+if (auth()->loggedIn()) {
+    return redirect()->to(config(\Config\Auth::class)->loginRedirect());
+}
+?>
+
 <?php echo $this->section('main') ?>
 
 <div class="glass-effect rounded-xl shadow-2xl p-8">
@@ -37,22 +44,6 @@
 
     <form action="<?php echo url_to('register') ?>" method="post" class="space-y-6">
         <?php echo csrf_field() ?>
-
-        
-        <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                <i class="fas fa-envelope mr-2"></i>Email Address
-            </label>
-            <input type="email" 
-                   id="email" 
-                   name="email" 
-                   inputmode="email" 
-                   autocomplete="email" 
-                   value="<?php echo old('email') ?>" 
-                   required
-                   class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition duration-200"
-                   placeholder="Enter your email">
-        </div>
 
         
         <div>

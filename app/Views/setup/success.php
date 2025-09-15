@@ -51,7 +51,6 @@
                         <p class="mb-2">Your superadmin account has been successfully created with the following details:</p>
                         <ul class="list-disc pl-5 space-y-1">
                             <li><strong>Username:</strong> <?php echo esc($username ?? 'N/A') ?></li>
-                            <li><strong>Email:</strong> <?php echo esc($email ?? 'N/A') ?></li>
                             <li><strong>Role:</strong> Superadmin (Full Access)</li>
                         </ul>
                     </div>

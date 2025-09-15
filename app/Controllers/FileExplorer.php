@@ -35,29 +35,15 @@ class FileExplorer extends BaseController
 
     private function getTemplatesWithFilledFiles(): array
     {
-        $templates = $this->templateModel->findAll();
-        $filledFiles = $this->filledFileModel->findAll();
-
+        // Use the optimized method from TemplateModel that eliminates N+1 queries
+        $templates = $this->templateModel->getTemplatesWithFilledFilesOptimized();
+        
+        // Process template fields for each template
         foreach ($templates as &$template) {
             $template['templateFields'] = $this->parseJsonField($template['templateFields']);
-            $template['filledFiles'] = $this->getFilledFilesForTemplate($template['id'], $filledFiles);
         }
 
         return $templates;
-    }
-
-    private function getFilledFilesForTemplate(int $templateId, array $allFilledFiles): array
-    {
-        $filledFiles = [];
-        
-        foreach ($allFilledFiles as $file) {
-            if (isset($file['templateFileId']) && $file['templateFileId'] == $templateId) {
-                $file = $this->normalizeFilledFile($file);
-                $filledFiles[] = $file;
-            }
-        }
-        
-        return $filledFiles;
     }
 
     private function normalizeFilledFile(array $file): array
@@ -89,7 +75,21 @@ class FileExplorer extends BaseController
 
     private function checkPermission(string $permission): bool
     {
-        return auth()->user()->can($permission);
+        // Cache permission checks for the current user session
+        $userId = auth()->id();
+        $cacheKey = 'user_permission_' . $userId . '_' . $permission;
+        $cached = cache($cacheKey);
+        
+        if ($cached !== null) {
+            return $cached;
+        }
+        
+        $result = auth()->user()->can($permission);
+        
+        // Cache for 5 minutes
+        cache()->save($cacheKey, $result, 300);
+        
+        return $result;
     }
 
     private function redirectWithError(string $url, string $message)
@@ -120,8 +120,16 @@ class FileExplorer extends BaseController
 
     protected function getUserPermissions()
     {
+        $userId = auth()->id();
+        $cacheKey = 'user_permissions_' . $userId;
+        $cached = cache($cacheKey);
+        
+        if ($cached !== null) {
+            return $cached;
+        }
+        
         $user = auth()->user();
-        return [
+        $permissions = [
             'canViewTemplates' => $user->can('templates.view'),
             'canCreateTemplates' => $user->can('templates.create'),
             'canEditTemplates' => $user->can('templates.edit'),
@@ -132,6 +140,11 @@ class FileExplorer extends BaseController
             'canDeleteFilledFiles' => $user->can('filled-files.delete'),
             'canExportFilledFiles' => $user->can('filled-files.view'),
         ];
+        
+        // Cache for 5 minutes
+        cache()->save($cacheKey, $permissions, 300);
+        
+        return $permissions;
     }
 
     public function analyzeTemplate()
@@ -175,15 +188,17 @@ class FileExplorer extends BaseController
     private function saveTemporaryFile($file): string
     {
         $tempDir = WRITEPATH . 'uploads/temp/';
-        if (!is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
+        $this->ensureDirectoryExists($tempDir);
 
         $tempFileName = uniqid('template_') . '.docx';
         $tempFilePath = $tempDir . $tempFileName;
         
+        if (!$file->isValid()) {
+            throw new \Exception('Invalid uploaded file');
+        }
+        
         if (!$file->move($tempDir, $tempFileName)) {
-            throw new \Exception('Failed to save uploaded file');
+            throw new \Exception('Failed to save uploaded file: ' . $file->getErrorString());
         }
 
         return $tempFilePath;
@@ -239,50 +254,69 @@ class FileExplorer extends BaseController
         $templateFields = $json['templateFields'] ?? [];
         $originalFileName = $json['originalFileName'] ?? 'template.docx';
 
+        // Verify temporary file exists
         if (!file_exists($tempFilePath)) {
-            throw new \Exception('Temporary file not found');
+            throw new \Exception('Temporary file not found: ' . $tempFilePath);
         }
 
-        $permanentFilePath = $this->moveToStorageDirectory($tempFilePath);
-        
-        $templateData = [
-            'name' => $templateName,
-            'originalFileName' => $originalFileName,
-            'path' => $permanentFilePath,
-            'templateFields' => json_encode($templateFields),
-            'createdAt' => date('Y-m-d H:i:s'),
-            'updatedAt' => date('Y-m-d H:i:s')
-        ];
+        try {
+            // Move file to permanent storage
+            $permanentFilePath = $this->moveToStorageDirectory($tempFilePath);
+            
+            // Get file size for the template record
+            $fileSize = file_exists($permanentFilePath) ? filesize($permanentFilePath) : 0;
+            
+            $templateData = [
+                'name' => $templateName,
+                'originalFileName' => $originalFileName,
+                'path' => $permanentFilePath,
+                'size' => $fileSize,
+                'templateFields' => json_encode($templateFields),
+                'createdAt' => date('Y-m-d H:i:s'),
+                'updatedAt' => date('Y-m-d H:i:s')
+            ];
 
-        $templateId = $this->templateModel->insert($templateData);
-        
-        if (!$templateId) {
-            if (file_exists($permanentFilePath)) {
-                unlink($permanentFilePath);
+            $templateId = $this->templateModel->insert($templateData);
+            
+            if (!$templateId) {
+                // Cleanup the file if database insert fails
+                if (file_exists($permanentFilePath)) {
+                    try {
+                        unlink($permanentFilePath);
+                    } catch (\Exception $e) {
+                        log_message('error', 'Failed to cleanup file after database insert failure: ' . $e->getMessage());
+                    }
+                }
+                throw new \Exception('Failed to save template to database');
             }
-            throw new \Exception('Failed to save template to database');
+
+            $newTemplate = $this->templateModel->find($templateId);
+            $newTemplate['templateFields'] = $this->parseJsonField($newTemplate['templateFields']);
+            $newTemplate['filledFiles'] = [];
+
+            return $newTemplate;
+        } catch (\Exception $e) {
+            // Ensure cleanup on any error
+            if (file_exists($tempFilePath)) {
+                try {
+                    unlink($tempFilePath);
+                } catch (\Exception $cleanupException) {
+                    log_message('error', 'Failed to cleanup temporary file: ' . $cleanupException->getMessage());
+                }
+            }
+            throw $e;
         }
-
-        $newTemplate = $this->templateModel->find($templateId);
-        $newTemplate['templateFields'] = $this->parseJsonField($newTemplate['templateFields']);
-        $newTemplate['filledFiles'] = [];
-
-        return $newTemplate;
     }
 
     private function moveToStorageDirectory(string $tempFilePath): string
     {
         $storageDir = WRITEPATH . 'uploads/templates/';
-        if (!is_dir($storageDir)) {
-            mkdir($storageDir, 0755, true);
-        }
+        $this->ensureDirectoryExists($storageDir);
 
         $permanentFileName = uniqid('template_') . '.docx';
         $permanentFilePath = $storageDir . $permanentFileName;
 
-        if (!rename($tempFilePath, $permanentFilePath)) {
-            throw new \Exception('Failed to save template file');
-        }
+        $this->moveFileSafely($tempFilePath, $permanentFilePath);
 
         return $permanentFilePath;
     }
@@ -290,7 +324,67 @@ class FileExplorer extends BaseController
     private function cleanupTempFile(?string $tempFilePath): void
     {
         if ($tempFilePath && file_exists($tempFilePath)) {
-            unlink($tempFilePath);
+            try {
+                unlink($tempFilePath);
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to cleanup temporary file: ' . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Ensures a directory exists and is writable
+     * 
+     * @param string $dirPath
+     * @param int $permissions
+     * @throws \Exception
+     */
+    private function ensureDirectoryExists(string $dirPath, int $permissions = 0755): void
+    {
+        if (!is_dir($dirPath)) {
+            if (!mkdir($dirPath, $permissions, true)) {
+                throw new \Exception('Failed to create directory: ' . $dirPath);
+            }
+        }
+        
+        if (!is_writable($dirPath)) {
+            throw new \Exception('Directory is not writable: ' . $dirPath);
+        }
+    }
+
+    /**
+     * Safely moves a file from source to destination
+     * 
+     * @param string $source
+     * @param string $destination
+     * @throws \Exception
+     */
+    private function moveFileSafely(string $source, string $destination): void
+    {
+        if (!file_exists($source)) {
+            throw new \Exception('Source file does not exist: ' . $source);
+        }
+        
+        if (!rename($source, $destination)) {
+            throw new \Exception('Failed to move file from ' . $source . ' to ' . $destination);
+        }
+    }
+
+    /**
+     * Safely copies a file from source to destination
+     * 
+     * @param string $source
+     * @param string $destination
+     * @throws \Exception
+     */
+    private function copyFileSafely(string $source, string $destination): void
+    {
+        if (!file_exists($source)) {
+            throw new \Exception('Source file does not exist: ' . $source);
+        }
+        
+        if (!copy($source, $destination)) {
+            throw new \Exception('Failed to copy file from ' . $source . ' to ' . $destination);
         }
     }
 
@@ -447,15 +541,35 @@ class FileExplorer extends BaseController
 
     public function exportDocx($id = null)
     {
+        return $this->exportFile($id, 'docx');
+    }
+
+    public function exportPdf($id = null)
+    {
+        return $this->exportFile($id, 'pdf');
+    }
+
+    /**
+     * Generic file export method that handles both DOCX and PDF exports
+     * 
+     * @param int|null $id The filled file ID to export
+     * @param string $format The export format ('docx' or 'pdf')
+     * @return ResponseInterface
+     */
+    private function exportFile($id, $format)
+    {
+        // Validate permissions
         if (!auth()->user()->can('filled-files.view')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to export filled files.']);
         }
 
+        // Validate file ID
         if (!$id) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'File ID is required.']);
         }
 
         try {
+            // Load filled file
             $filledFile = $this->filledFileModel->find($id);
             if (!$filledFile) {
                 throw new \Exception('Filled file not found');
@@ -465,6 +579,7 @@ class FileExplorer extends BaseController
                 throw new \Exception('Template file ID not found in filled file record');
             }
 
+            // Load template
             $template = $this->templateModel->find($filledFile['templateFileId']);
             if (!$template) {
                 throw new \Exception('Template not found');
@@ -474,180 +589,134 @@ class FileExplorer extends BaseController
                 throw new \Exception('Template file not found');
             }
 
+            // Process template with filled data
             $templateProcessor = new TemplateProcessor($template['path']);
+            $this->processTemplateWithData($templateProcessor, $filledFile);
 
-            $filledData = is_string($filledFile['filledData']) ?
-                json_decode($filledFile['filledData'], true) :
-                $filledFile['filledData'];
-            
-            $fieldTypes = [];
-            if (!empty($filledFile['fieldTypes'])) {
-                $fieldTypes = is_string($filledFile['fieldTypes']) ? 
-                    json_decode($filledFile['fieldTypes'], true) : 
-                    $filledFile['fieldTypes'];
+            // Generate output
+            if ($format === 'docx') {
+                return $this->generateDocxOutput($templateProcessor, $filledFile);
+            } else {
+                return $this->generatePdfOutput($templateProcessor, $filledFile);
             }
-            
-            $imageSizes = [];
-            if (!empty($filledFile['imageSizes'])) {
-                $imageSizes = is_string($filledFile['imageSizes']) ? 
-                    json_decode($filledFile['imageSizes'], true) : 
-                    $filledFile['imageSizes'];
-            }
-            
-            foreach ($filledData as $placeholder => $value) {
-                $fieldType = $fieldTypes[$placeholder] ?? 'text';
-
-                if ($fieldType === 'image' && !empty($value)) {
-                    $imagePath = WRITEPATH . 'uploads/images/filled_files/' . $filledFile['id'] . '/' . $value;
-                    if (file_exists($imagePath)) {
-                        $width = $imageSizes[$placeholder]['width'] ?? 200;
-                        $height = $imageSizes[$placeholder]['height'] ?? 200;
-                        $templateProcessor->setImageValue(
-                            $placeholder, [
-                            'path' => $imagePath,
-                            'width' => $width,
-                            'height' => $height,
-                            'ratio' => false
-                            ]
-                        );
-                    } else {
-                        $templateProcessor->setValue($placeholder, '[Image not found]');
-                    }
-                } else {
-                    $templateProcessor->setValue($placeholder, $value ?: '');
-                }
-            }
-
-            $outputFileName = $filledFile['name'] . '.docx';
-            
-            $tempOutputPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
-            $templateProcessor->saveAs($tempOutputPath);
-
-            $this->response->setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-            $this->response->setHeader('Content-Disposition', 'attachment; filename="' . $outputFileName . '"');
-            $this->response->setHeader('Content-Length', filesize($tempOutputPath));
-
-            $fileContent = file_get_contents($tempOutputPath);
-            
-            unlink($tempOutputPath);
-
-            return $this->response->setBody($fileContent);
 
         } catch (\Exception $e) {
-            log_message('error', 'DOCX export error: ' . $e->getMessage());
+            log_message('error', ucfirst($format) . ' export error: ' . $e->getMessage());
             return $this->response->setJSON(
                 [
                 'success' => false,
-                'message' => 'Error exporting DOCX: ' . $e->getMessage()
+                'message' => 'Error exporting ' . strtoupper($format) . ': ' . $e->getMessage()
                 ]
             );
         }
     }
 
-    public function exportPdf($id = null)
+    /**
+     * Process template with filled data including images
+     * 
+     * @param TemplateProcessor $templateProcessor
+     * @param array $filledFile
+     */
+    private function processTemplateWithData($templateProcessor, $filledFile)
     {
-        if (!auth()->user()->can('filled-files.view')) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'You do not have permission to export filled files.']);
+        // Parse data
+        $filledData = is_string($filledFile['filledData']) ?
+            json_decode($filledFile['filledData'], true) :
+            $filledFile['filledData'];
+        
+        $fieldTypes = [];
+        if (!empty($filledFile['fieldTypes'])) {
+            $fieldTypes = is_string($filledFile['fieldTypes']) ? 
+                json_decode($filledFile['fieldTypes'], true) : 
+                $filledFile['fieldTypes'];
         }
-
-        if (!$id) {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'File ID is required.']);
+        
+        $imageSizes = [];
+        if (!empty($filledFile['imageSizes'])) {
+            $imageSizes = is_string($filledFile['imageSizes']) ? 
+                json_decode($filledFile['imageSizes'], true) : 
+                $filledFile['imageSizes'];
         }
+        
+        // Fill template with data
+        foreach ($filledData as $placeholder => $value) {
+            $fieldType = $fieldTypes[$placeholder] ?? 'text';
 
-        try {
-            $filledFile = $this->filledFileModel->find($id);
-            if (!$filledFile) {
-                throw new \Exception('Filled file not found');
-            }
-
-            if (!isset($filledFile['templateFileId'])) {
-                throw new \Exception('Template file ID not found in filled file record');
-            }
-
-            $template = $this->templateModel->find($filledFile['templateFileId']);
-            if (!$template) {
-                throw new \Exception('Template not found');
-            }
-
-            if (!file_exists($template['path'])) {
-                throw new \Exception('Template file not found');
-            }
-
-            $templateProcessor = new TemplateProcessor($template['path']);
-
-            $filledData = is_string($filledFile['filledData']) ?
-                json_decode($filledFile['filledData'], true) :
-                $filledFile['filledData'];
-            
-            $fieldTypes = [];
-            if (!empty($filledFile['fieldTypes'])) {
-                $fieldTypes = is_string($filledFile['fieldTypes']) ? 
-                    json_decode($filledFile['fieldTypes'], true) : 
-                    $filledFile['fieldTypes'];
-            }
-            
-            $imageSizes = [];
-            if (!empty($filledFile['imageSizes'])) {
-                $imageSizes = is_string($filledFile['imageSizes']) ? 
-                    json_decode($filledFile['imageSizes'], true) : 
-                    $filledFile['imageSizes'];
-            }
-            
-            foreach ($filledData as $placeholder => $value) {
-                $fieldType = $fieldTypes[$placeholder] ?? 'text';
-
-                if ($fieldType === 'image' && !empty($value)) {
-                    $imagePath = WRITEPATH . 'uploads/images/filled_files/' . $filledFile['id'] . '/' . $value;
-                    if (file_exists($imagePath)) {
-                        $width = $imageSizes[$placeholder]['width'] ?? 200;
-                        $height = $imageSizes[$placeholder]['height'] ?? 200;
-                        $templateProcessor->setImageValue(
-                            $placeholder, [
-                            'path' => $imagePath,
-                            'width' => $width,
-                            'height' => $height,
-                            'ratio' => false
-                            ]
-                        );
-                    } else {
-                        $templateProcessor->setValue($placeholder, '[Image not found]');
-                    }
+            if ($fieldType === 'image' && !empty($value)) {
+                $imagePath = WRITEPATH . 'uploads/images/filled_files/' . $filledFile['id'] . '/' . $value;
+                if (file_exists($imagePath)) {
+                    $width = $imageSizes[$placeholder]['width'] ?? 200;
+                    $height = $imageSizes[$placeholder]['height'] ?? 200;
+                    $templateProcessor->setImageValue(
+                        $placeholder, [
+                        'path' => $imagePath,
+                        'width' => $width,
+                        'height' => $height,
+                        'ratio' => false
+                        ]
+                    );
                 } else {
-                    $templateProcessor->setValue($placeholder, $value ?: '');
+                    $templateProcessor->setValue($placeholder, '[Image not found]');
                 }
+            } else {
+                $templateProcessor->setValue($placeholder, $value ?: '');
             }
-
-            $tempDocxPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
-            $templateProcessor->saveAs($tempDocxPath);
-
-            $tempPdfPath = $this->convertDocxToPdf($tempDocxPath);
-            
-            if (!$tempPdfPath || !file_exists($tempPdfPath)) {
-                throw new \Exception('PDF conversion failed. Please ensure LibreOffice is installed.');
-            }
-
-            $outputFileName = $filledFile['name'] . '.pdf';
-
-            $this->response->setHeader('Content-Type', 'application/pdf');
-            $this->response->setHeader('Content-Disposition', 'attachment; filename="' . $outputFileName . '"');
-            $this->response->setHeader('Content-Length', filesize($tempPdfPath));
-
-            $fileContent = file_get_contents($tempPdfPath);
-            
-            unlink($tempDocxPath);
-            unlink($tempPdfPath);
-
-            return $this->response->setBody($fileContent);
-
-        } catch (\Exception $e) {
-            log_message('error', 'PDF export error: ' . $e->getMessage());
-            return $this->response->setJSON(
-                [
-                'success' => false,
-                'message' => 'Error exporting PDF: ' . $e->getMessage()
-                ]
-            );
         }
+    }
+
+    /**
+     * Generate DOCX output
+     * 
+     * @param TemplateProcessor $templateProcessor
+     * @param array $filledFile
+     * @return ResponseInterface
+     */
+    private function generateDocxOutput($templateProcessor, $filledFile)
+    {
+        $outputFileName = $filledFile['name'] . '.docx';
+        $tempOutputPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
+        $templateProcessor->saveAs($tempOutputPath);
+
+        $this->response->setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        $this->response->setHeader('Content-Disposition', 'attachment; filename="' . $outputFileName . '"');
+        $this->response->setHeader('Content-Length', filesize($tempOutputPath));
+
+        $fileContent = file_get_contents($tempOutputPath);
+        unlink($tempOutputPath);
+
+        return $this->response->setBody($fileContent);
+    }
+
+    /**
+     * Generate PDF output by converting DOCX to PDF
+     * 
+     * @param TemplateProcessor $templateProcessor
+     * @param array $filledFile
+     * @return ResponseInterface
+     */
+    private function generatePdfOutput($templateProcessor, $filledFile)
+    {
+        $tempDocxPath = tempnam(sys_get_temp_dir(), 'export_') . '.docx';
+        $templateProcessor->saveAs($tempDocxPath);
+
+        $tempPdfPath = $this->convertDocxToPdf($tempDocxPath);
+        
+        if (!$tempPdfPath || !file_exists($tempPdfPath)) {
+            unlink($tempDocxPath);
+            throw new \Exception('PDF conversion failed. Please ensure LibreOffice is installed.');
+        }
+
+        $outputFileName = $filledFile['name'] . '.pdf';
+
+        $this->response->setHeader('Content-Type', 'application/pdf');
+        $this->response->setHeader('Content-Disposition', 'attachment; filename="' . $outputFileName . '"');
+        $this->response->setHeader('Content-Length', filesize($tempPdfPath));
+
+        $fileContent = file_get_contents($tempPdfPath);
+        unlink($tempDocxPath);
+        unlink($tempPdfPath);
+
+        return $this->response->setBody($fileContent);
     }
 
     protected function convertDocxToPdf($docxPath)
@@ -829,14 +898,19 @@ class FileExplorer extends BaseController
         }
 
         $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-        if (!in_array($imageFile->getMimeType(), $allowedTypes)) {
-            throw new \Exception('Invalid image type. Only JPEG, PNG, GIF, and WebP are allowed.');
+        $mimeType = $imageFile->getMimeType();
+        if (!in_array($mimeType, $allowedTypes)) {
+            throw new \Exception('Invalid image type. Only JPEG, PNG, GIF, and WebP are allowed. Received: ' . $mimeType);
+        }
+
+        // Validate file size (max 10MB)
+        $maxFileSize = 10 * 1024 * 1024; // 10MB
+        if ($imageFile->getSize() > $maxFileSize) {
+            throw new \Exception('Image file is too large. Maximum size is 10MB.');
         }
 
         $uploadDir = WRITEPATH . 'uploads/images/filled_files/' . $filledFileId . '/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+        $this->ensureDirectoryExists($uploadDir);
 
         // Generate unique filename
         $extension = $imageFile->getClientExtension();
@@ -844,7 +918,7 @@ class FileExplorer extends BaseController
         $fullPath = $uploadDir . $fileName;
 
         if (!$imageFile->move($uploadDir, $fileName)) {
-            throw new \Exception('Failed to save image for field: ' . $fieldName);
+            throw new \Exception('Failed to save image for field: ' . $fieldName . ' - ' . $imageFile->getErrorString());
         }
 
         return $fullPath;

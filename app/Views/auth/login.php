@@ -2,6 +2,13 @@
 
 <?php echo $this->section('title') ?>Login<?php echo $this->endSection() ?>
 
+<?php 
+// If user is already logged in, redirect to dashboard
+if (auth()->loggedIn()) {
+    return redirect()->to(config(\Config\Auth::class)->loginRedirect());
+}
+?>
+
 <?php echo $this->section('main') ?>
 
 <div class="glass-effect rounded-xl shadow-2xl p-8">
@@ -50,18 +57,18 @@
 
         
         <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                <i class="fas fa-envelope mr-2"></i>Email Address
+            <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-user mr-2"></i>Username
             </label>
-            <input type="email" 
-                   id="email" 
-                   name="email" 
-                   inputmode="email" 
-                   autocomplete="email" 
-                   value="<?php echo old('email') ?>" 
+            <input type="text" 
+                   id="username" 
+                   name="username" 
+                   inputmode="text" 
+                   autocomplete="username" 
+                   value="<?php echo old('username') ?>" 
                    required
                    class="appearance-none rounded-lg relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm transition duration-200"
-                   placeholder="Enter your email">
+                   placeholder="Enter your username">
         </div>
 
         

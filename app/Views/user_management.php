@@ -33,9 +33,6 @@
                                 User
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Email
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Current Group
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -53,7 +50,7 @@
                                 <div class="flex items-center">
                                     <div class="flex-shrink-0 h-10 w-10">
                                         <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                                            <?php echo strtoupper(substr($user['username'] ?? $user['email'], 0, 1)) ?>
+                                            <?php echo strtoupper(substr($user['username'], 0, 1)) ?>
                                         </div>
                                     </div>
                                     <div class="ml-4">
@@ -65,9 +62,6 @@
                                         </div>
                                     </div>
                                 </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <?php echo esc($user['email']) ?>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
@@ -186,39 +180,40 @@
 <?php echo $this->endSection() ?>
 
 <?php echo $this->section('pageScripts') ?>
+    <script src="/assets/js/templately-utils.js"></script>
     <script>
-        document.querySelectorAll('.group-select').forEach(select => {
-            select.addEventListener('change', async function() {
-                const userId = this.dataset.userId;
-                const newGroup = this.value;
-                
-                try {
-                    const response = await fetch('/user-management/update-group', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({
-                            user_id: userId,
-                            group: newGroup
-                        })
-                    });
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.group-select').forEach(select => {
+                select.addEventListener('change', async function() {
+                    const userId = this.dataset.userId;
+                    const newGroup = this.value;
+                    
+                    try {
+                        const response = await Templately.Http.fetch('/user-management/update-group', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                user_id: userId,
+                                group: newGroup
+                            })
+                        });
 
-                    const result = await response.json();
+                        const result = await response.json();
 
-                    if (result.success) {
-                        showAlert(result.message, 'success');
-                        updateGroupBadge(userId, newGroup);
-                    } else {
-                        showAlert(result.message, 'error');
+                        if (result.success) {
+                            Templately.Alert.showAlert(result.message, 'success');
+                            updateGroupBadge(userId, newGroup);
+                        } else {
+                            Templately.Alert.showAlert(result.message, 'error');
+                            location.reload();
+                        }
+                    } catch (error) {
+                        Templately.Alert.showAlert('An error occurred while updating the user group.', 'error');
                         location.reload();
                     }
-                } catch (error) {
-                    showAlert('An error occurred while updating the user group.', 'error');
-                    location.reload();
-                }
+                });
             });
         });
 
@@ -247,37 +242,24 @@
             }
 
             try {
-                const response = await fetch(`/user-management/delete/${userId}`, {
+                const response = await Templately.Http.fetch(`/user-management/delete/${userId}`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content')
+                        'Content-Type': 'application/json'
                     }
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    showAlert(result.message, 'success');
+                    Templately.Alert.showAlert(result.message, 'success');
                     document.querySelector(`tr[data-user-id="${userId}"]`).remove();
                 } else {
-                    showAlert(result.message, 'error');
+                    Templately.Alert.showAlert(result.message, 'error');
                 }
             } catch (error) {
-                showAlert('An error occurred while deleting the user.', 'error');
+                Templately.Alert.showAlert('An error occurred while deleting the user.', 'error');
             }
-        }
-
-        function showAlert(message, type) {
-            const alertDiv = document.getElementById('alertMessage');
-            alertDiv.className = `mb-6 p-4 rounded-lg ${type === 'success' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}`;
-            alertDiv.textContent = message;
-            alertDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                alertDiv.classList.add('hidden');
-            }, 5000);
         }
     </script>
 <?php echo $this->endSection() ?>

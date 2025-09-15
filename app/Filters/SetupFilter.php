@@ -13,37 +13,47 @@ class SetupFilter implements FilterInterface
         // Get the current path
         $currentPath = $request->getUri()->getPath();
         
-        // Skip setup check for setup routes, auth routes, and static assets
+        log_message('debug', 'SetupFilter: Checking path ' . $currentPath);
+        
+        // Skip setup check for setup routes and API routes
         $skipPatterns = [
             '/setup',
-            '/login',
-            '/register',
-            '/logout',
-            '/auth/',
-            '/api/'
+            '/index.php/setup',
+            '/api/',
+            '/index.php/api/'
         ];
         
         // Check if current path should be skipped
         foreach ($skipPatterns as $pattern) {
             if (strpos($currentPath, $pattern) === 0) {
+                log_message('debug', 'SetupFilter: Skipping path ' . $currentPath);
                 return;
             }
         }
         
         // Skip for AJAX requests
         if ($request->hasHeader('X-Requested-With') && $request->getHeaderLine('X-Requested-With') === 'XMLHttpRequest') {
+            log_message('debug', 'SetupFilter: Skipping AJAX request');
             return;
         }
         
         // Skip for static assets
         if (preg_match('/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/i', $currentPath)) {
+            log_message('debug', 'SetupFilter: Skipping static asset');
             return;
         }
 
         // Check if setup is needed
-        if ($this->isSetupRequired()) {
+        $setupRequired = $this->isSetupRequired();
+        log_message('debug', 'SetupFilter: Setup required = ' . ($setupRequired ? 'true' : 'false'));
+        
+        if ($setupRequired) {
+            log_message('debug', 'SetupFilter: Redirecting to setup page');
+            // Redirect to setup page regardless of current path
             return redirect()->to('/setup');
         }
+        
+        log_message('debug', 'SetupFilter: Not redirecting, setup not required or already on setup page');
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
@@ -52,19 +62,51 @@ class SetupFilter implements FilterInterface
     }
 
     /**
-     * Check if setup is required (no users exist)
+     * Check if setup is required (no users exist or users table doesn't exist)
      */
     private function isSetupRequired(): bool
     {
         try {
-            // Check if there are any users in the system
-            $users = model('CodeIgniter\Shield\Models\UserModel');
-            $userCount = $users->countAll();
+            log_message('debug', 'SetupFilter: Checking if setup is required');
             
-            return $userCount === 0;
+            // First check if we have a cache entry indicating setup is completed
+            $cacheEntry = cache('app_setup_completed');
+            if ($cacheEntry === true) {
+                log_message('debug', 'SetupFilter: Cache indicates setup completed');
+                return false;
+            }
+            
+            // Check if the users table exists
+            $db = \Config\Database::connect();
+            $tables = $db->listTables();
+            
+            log_message('debug', 'SetupFilter: Database tables: ' . implode(', ', $tables));
+            
+            // Get the users table name from the Shield configuration
+            $usersModel = model('CodeIgniter\Shield\Models\UserModel');
+            $usersTable = $usersModel->table;
+            
+            log_message('debug', 'SetupFilter: Users table name: ' . $usersTable);
+            
+            // If users table doesn't exist, setup is required
+            if (!in_array($usersTable, $tables, true)) {
+                log_message('debug', 'SetupFilter: Users table does not exist, setup required');
+                return true;
+            }
+            
+            // Check if there are any users in the system
+            $userCount = $usersModel->countAll();
+            
+            log_message('debug', 'SetupFilter: User count: ' . $userCount);
+            
+            $setupRequired = $userCount === 0;
+            log_message('debug', 'SetupFilter: Setup required based on user count: ' . ($setupRequired ? 'true' : 'false'));
+            
+            return $setupRequired;
         } catch (\Exception $e) {
-            // If there's an error checking users (e.g., database not set up),
+            // If there's an error checking users (e.g., database not set up or table doesn't exist),
             // assume setup is required
+            log_message('debug', 'SetupFilter: Exception occurred - ' . $e->getMessage());
             return true;
         }
     }

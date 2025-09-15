@@ -16,6 +16,7 @@ class TemplateModel extends Model
         'name',
         'originalFileName',
         'path',
+        'size',
         'templateFields',
         'createdAt',
         'updatedAt'
@@ -85,8 +86,20 @@ class TemplateModel extends Model
         }
         
         if (isset($record['templateFields']) && is_string($record['templateFields'])) {
-            $decoded = json_decode($record['templateFields'], true);
-            $record['templateFields'] = is_array($decoded) ? $decoded : [];
+            // Check if we have a cached version
+            $cacheKey = 'template_fields_' . md5($record['templateFields']);
+            $cached = cache($cacheKey);
+            
+            if ($cached !== null) {
+                $record['templateFields'] = $cached;
+            } else {
+                $decoded = json_decode($record['templateFields'], true);
+                $parsed = is_array($decoded) ? $decoded : [];
+                $record['templateFields'] = $parsed;
+                
+                // Cache for 1 hour
+                cache()->save($cacheKey, $parsed, 3600);
+            }
         } elseif (!isset($record['templateFields'])) {
             $record['templateFields'] = [];
         }
@@ -105,7 +118,59 @@ class TemplateModel extends Model
         return $templates;
     }
 
+    /**
+     * Optimized version that uses JOIN to fetch templates with filled files in a single query
+     * This eliminates the N+1 query problem
+     */
+    public function getTemplatesWithFilledFilesOptimized()
+    {
+        // First, get all templates
+        $templates = $this->findAll();
+        
+        // Create a map of template IDs for efficient lookup
+        $templateIds = array_column($templates, 'id');
+        
+        if (empty($templateIds)) {
+            return $templates;
+        }
+        
+        // Get all filled files for these templates in a single query
+        $filledFileModel = new FilledFilesModel();
+        $filledFiles = $filledFileModel->whereIn('templateFileId', $templateIds)->findAll();
+        
+        // Group filled files by template ID
+        $filledFilesByTemplate = [];
+        foreach ($filledFiles as $file) {
+            $templateId = $file['templateFileId'];
+            if (!isset($filledFilesByTemplate[$templateId])) {
+                $filledFilesByTemplate[$templateId] = [];
+            }
+            $filledFilesByTemplate[$templateId][] = $file;
+        }
+        
+        // Attach filled files to templates
+        foreach ($templates as &$template) {
+            $templateId = $template['id'];
+            $template['filledFiles'] = $filledFilesByTemplate[$templateId] ?? [];
+        }
+        
+        return $templates;
+    }
+
     public function getTemplateWithFilledFiles($templateId)
+    {
+        $template = $this->find($templateId);
+        if ($template) {
+            $filledFileModel = new FilledFilesModel();
+            $template['filledFiles'] = $filledFileModel->where('templateFileId', $templateId)->findAll();
+        }
+        return $template;
+    }
+
+    /**
+     * Optimized version that uses a single query to fetch template with filled files
+     */
+    public function getTemplateWithFilledFilesOptimized($templateId)
     {
         $template = $this->find($templateId);
         if ($template) {

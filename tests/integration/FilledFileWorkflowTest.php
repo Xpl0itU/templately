@@ -25,7 +25,7 @@ final class FilledFileWorkflowTest extends CIUnitTestCase
             'originalFileName' => 'test.docx',
             'path' => '/fake/path/test.docx',
             'size' => 1024,
-            'templateFields' => json_encode(['name', 'email', 'phone']),
+            'templateFields' => json_encode(['name', 'company', 'phone']),
         ];
         $templateId = $templateModel->insert($templateData);
 
@@ -36,12 +36,12 @@ final class FilledFileWorkflowTest extends CIUnitTestCase
             'name' => 'Test Filled File',
             'filledData' => json_encode([
                 'name' => 'John Doe',
-                'email' => 'john@example.com',
+                'company' => 'Example Inc',
                 'phone' => '123-456-7890'
             ]),
             'fieldTypes' => json_encode([
                 'name' => 'text',
-                'email' => 'text',
+                'company' => 'text',
                 'phone' => 'text'
             ]),
         ];
@@ -54,12 +54,12 @@ final class FilledFileWorkflowTest extends CIUnitTestCase
         $this->assertEquals('Test Filled File', $filledFile['name']);
         $this->assertEquals([
             'name' => 'John Doe',
-            'email' => 'john@example.com',
+            'company' => 'Example Inc',
             'phone' => '123-456-7890'
         ], $filledFile['filledData']);
         $this->assertEquals([
             'name' => 'text',
-            'email' => 'text',
+            'company' => 'text',
             'phone' => 'text'
         ], $filledFile['fieldTypes']);
     }
