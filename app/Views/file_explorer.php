@@ -1018,6 +1018,11 @@
 
             const dropZone = document.querySelector('.border-dashed');
             
+            // Add click event to trigger file input
+            dropZone.addEventListener('click', () => {
+                document.getElementById('templateFileWizard').click();
+            });
+            
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, preventDefaults, false);
             });
