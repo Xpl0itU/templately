@@ -114,14 +114,6 @@ if (auth()->loggedIn()) {
 
         
         <div class="text-center space-y-2">
-            <?php if (setting('Auth.allowMagicLinkLogins')) : ?>
-                <p class="text-sm">
-                    <a href="<?php echo url_to('magic-link') ?>" class="text-indigo-600 hover:text-indigo-500 transition duration-200">
-                        <i class="fas fa-magic mr-1"></i>Forgot your password?
-                    </a>
-                </p>
-            <?php endif ?>
-
             <?php if (setting('Auth.allowRegistration')) : ?>
                 <p class="text-sm">
                     Don't have an account? 
