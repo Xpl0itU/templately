@@ -324,17 +324,4 @@ class AclEntryModel extends Model
         
         return $principalPermissions;
     }
-    
-    /**
-     * Get all permissions for a user on a resource (deprecated - use getPrincipalResourcePermissions instead)
-     * 
-     * @param int $userId ID of the user
-     * @param string $resourceType Type of resource
-     * @param int $resourceId ID of the specific resource
-     * @return array Array of permissions
-     */
-    public function getUserResourcePermissions(int $userId, string $resourceType, int $resourceId): array
-    {
-        return $this->getPrincipalResourcePermissions($userId, 'user', $resourceType, $resourceId);
-    }
 }

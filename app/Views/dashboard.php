@@ -102,7 +102,7 @@
                 <?php endif; ?>
                 
                 <?php if ($user->inGroup('superadmin', 'admin')) : ?>
-                <a href="/user-management" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-indigo-50 hover:border-indigo-200 border-2 border-transparent transition-all duration-200">
+                <a href="/users" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-indigo-50 hover:border-indigo-200 border-2 border-transparent transition-all duration-200">
                     <div class="w-14 h-14 bg-white rounded-lg flex items-center justify-center mb-3 shadow-sm group-hover:shadow-md transition-shadow">
                         <i class="fas fa-users-cog text-gray-600 text-2xl group-hover:text-indigo-600 transition-colors"></i>
                     </div>

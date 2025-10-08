@@ -6,8 +6,8 @@ use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Database\BaseBuilder;
 use App\Models\AclEntryModel;
 use App\Models\ResourceOwnerModel;
-use App\Models\AclSettingModel;
-use App\Models\AclPermissionModel;
+use App\Models\AclSettingsModel;
+use App\Models\AclPermissionsModel;
 
 class PermissionManager
 {
@@ -27,8 +27,8 @@ class PermissionManager
         $this->auditLogger = service('auditLogger');
         $this->aclEntryModel = model('App\Models\AclEntryModel');
         $this->resourceOwnerModel = model('App\Models\ResourceOwnerModel');
-        $this->aclSettingModel = model('App\Models\AclSettingModel');
-        $this->aclPermissionModel = model('App\Models\AclPermissionModel');
+        $this->aclSettingModel = model('App\Models\AclSettingsModel');
+        $this->aclPermissionModel = model('App\Models\AclPermissionsModel');
         $this->resourcePermissionModel = model('App\Models\ResourcePermissionModel');
     }
 

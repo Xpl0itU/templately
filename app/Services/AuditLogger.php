@@ -299,7 +299,7 @@ class AuditLogger
      */
     protected function isAuditLogEnabled(): bool
     {
-        $aclSettingModel = model('App\Models\AclSettingModel');
+        $aclSettingModel = model('App\Models\AclSettingsModel');
         return $aclSettingModel->getSetting('audit_log_enabled', true);
     }
 }
