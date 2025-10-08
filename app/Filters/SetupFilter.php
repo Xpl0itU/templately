@@ -79,9 +79,9 @@ class SetupFilter implements FilterInterface
             // Check if the users table exists
             $db = \Config\Database::connect();
             $tables = $db->listTables();
-            
+
             log_message('debug', 'SetupFilter: Database tables: ' . implode(', ', $tables));
-            
+
             // Get the users table name from the Shield configuration
             $usersModel = model('CodeIgniter\Shield\Models\UserModel');
             $usersTable = $usersModel->table;
@@ -89,13 +89,13 @@ class SetupFilter implements FilterInterface
             log_message('debug', 'SetupFilter: Users table name: ' . $usersTable);
             
             // If users table doesn't exist, setup is required
-            if (!in_array($usersTable, $tables, true)) {
+            if (! $db->tableExists($usersTable)) {
                 log_message('debug', 'SetupFilter: Users table does not exist, setup required');
                 return true;
             }
             
             // Check if there are any users in the system
-            $userCount = $usersModel->countAll();
+            $userCount = $db->table($usersTable)->countAll();
             
             log_message('debug', 'SetupFilter: User count: ' . $userCount);
             

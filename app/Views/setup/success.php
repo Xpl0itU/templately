@@ -2,34 +2,14 @@
 
 <?php echo $this->section('title') ?>Setup Complete<?php echo $this->endSection() ?>
 
-<?php echo $this->section('pageStyles') ?>
-<style>
-.celebration-animation {
-    animation: bounce 0.5s ease-in-out infinite alternate;
-}
-@keyframes bounce {
-    0% { transform: translateY(0px); }
-    100% { transform: translateY(-10px); }
-}
-.success-check {
-    animation: checkmark 0.6s ease-in-out;
-}
-@keyframes checkmark {
-    0% { stroke-dashoffset: 100; }
-    100% { stroke-dashoffset: 0; }
-}
-</style>
-<?php echo $this->endSection() ?>
-
 <?php echo $this->section('main') ?>
 
-<div class="glass-effect rounded-xl shadow-2xl p-8">
+<div class="rounded-xl shadow-2xl p-8 bg-white/20 backdrop-blur-lg border border-white/20">
     <div class="text-center mb-8">
         <!-- Success Animation -->
-        <div class="mx-auto w-24 h-24 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mb-6 celebration-animation">
-            <svg class="w-12 h-12 text-white success-check" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" 
-                      stroke-dasharray="100" stroke-dashoffset="100" style="animation: checkmark 0.6s ease-in-out forwards;"></path>
+        <div class="mx-auto w-24 h-24 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mb-6 animate-bounce">
+            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" stroke-dasharray="100" stroke-dashoffset="0"></path>
             </svg>
         </div>
         
@@ -165,16 +145,3 @@
 
 <?php echo $this->endSection() ?>
 
-<?php echo $this->section('pageScripts') ?>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        // Simple celebration effect - could be enhanced with a library like confetti.js
-        const celebration = document.querySelector('.celebration-animation');
-        if (celebration) {
-            celebration.style.animation = 'bounce 0.3s ease-in-out 3';
-        }
-    }, 500);
-});
-</script>
-<?php echo $this->endSection() ?>

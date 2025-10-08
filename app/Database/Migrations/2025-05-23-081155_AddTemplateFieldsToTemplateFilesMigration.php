@@ -18,6 +18,12 @@ class AddTemplateFieldsToTemplateFilesMigration extends Migration
 
     public function down()
     {
+        $db = \Config\Database::connect();
+
+        if ($db->DBDriver === 'SQLite3') {
+            return;
+        }
+
         $this->forge->dropColumn('templateFiles', 'templateFields');
     }
 }

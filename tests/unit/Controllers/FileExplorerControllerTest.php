@@ -15,7 +15,7 @@ final class FileExplorerControllerTest extends CIUnitTestCase
     use ControllerTestTrait;
     use DatabaseTestTrait;
 
-    protected $namespace = 'App';
+    protected $namespace = ['App'];
     private TemplateModel $templateModel;
     private FilledFilesModel $filledFilesModel;
 

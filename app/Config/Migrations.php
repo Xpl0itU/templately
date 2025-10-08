@@ -47,4 +47,13 @@ class Migrations extends BaseConfig
      * - Y_m_d_His_
      */
     public string $timestampFormat = 'Y-m-d-His_';
+
+    /**
+     * Namespaces that migrations can be found in.
+     * Include Shield so its auth tables are available during tests.
+     */
+    public array $enabledNamespaces = [
+        'App'                  => APPPATH,
+        'CodeIgniter\Shield'  => ROOTPATH . 'vendor/codeigniter4/shield/src',
+    ];
 }

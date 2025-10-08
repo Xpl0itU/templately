@@ -5,86 +5,120 @@
 // Global utility object
 window.Templately = window.Templately || {};
 
+const TEMPLATELY_CONFIRM_INTENT_CLASSES = {
+    danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+    primary: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500',
+    success: 'bg-green-600 hover:bg-green-700 focus:ring-green-500',
+};
+
+const TEMPLATELY_CONFIRM_OK_BASE = 'inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150';
+const TEMPLATELY_CONFIRM_CANCEL_BASE = 'inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-150';
+
 // Modal handling utilities
 Templately.Modal = {
     modals: {},
     currentModal: null,
     currentModalCallback: null,
-    
-    init: function(modalElements) {
-        this.modals = modalElements;
-        document.addEventListener('keydown', this.handleGlobalKeydown.bind(this));
+    _keydownHandler: null,
+
+    init: function(modalElements = {}) {
+        this.modals = Object.assign({}, this.modals, modalElements);
+        this._ensureGlobalHandlers();
+
+        if (this.modals.confirm) {
+            this._prepareConfirmModal(this.modals.confirm);
+        }
     },
-    
+
+    registerModal: function(type, element) {
+        if (!type || !element) {
+            return;
+        }
+
+        this.modals[type] = element;
+        this._ensureGlobalHandlers();
+
+        if (type === 'confirm') {
+            this._prepareConfirmModal(element);
+        }
+    },
+
+    _ensureGlobalHandlers: function() {
+        if (!this._keydownHandler) {
+            this._keydownHandler = this.handleGlobalKeydown.bind(this);
+            document.addEventListener('keydown', this._keydownHandler);
+        }
+    },
+
     handleGlobalKeydown: function(e) {
         if (!this.currentModal) return;
-        
+
         // ESC key - dismiss any modal
         if (e.key === 'Escape') {
             e.preventDefault();
             this.dismissCurrentModal();
             return;
         }
-        
+
         // Enter key - trigger primary action
         if (e.key === 'Enter') {
             e.preventDefault();
             this.triggerPrimaryAction();
             return;
         }
-        
+
         // Tab navigation within modal
         if (e.key === 'Tab') {
             this.trapFocus(e);
         }
     },
-    
+
     dismissCurrentModal: function() {
         if (!this.currentModal) return;
-        
+
         const modalType = this.currentModal;
-        
+
         if (modalType === 'confirm' && this.currentModalCallback) {
             this.currentModalCallback(false);
         } else if (modalType === 'input' && this.currentModalCallback) {
             this.currentModalCallback(null);
         }
-        
+
         this.hideModal(modalType);
     },
-    
+
     triggerPrimaryAction: function() {
         if (!this.currentModal) return;
-        
+
         switch (this.currentModal) {
             case 'success':
-                document.getElementById('successModalClose').click();
+                document.getElementById('successModalClose')?.click();
                 break;
             case 'error':
-                document.getElementById('errorModalClose').click();
+                document.getElementById('errorModalClose')?.click();
                 break;
             case 'confirm':
-                document.getElementById('confirmOk').click();
+                document.getElementById('confirmOk')?.click();
                 break;
             case 'input':
-                document.getElementById('inputOk').click();
+                document.getElementById('inputOk')?.click();
                 break;
         }
     },
-    
+
     trapFocus: function(e) {
         const modal = this.modals[this.currentModal];
         if (!modal) return;
-        
+
         const focusableElements = modal.querySelectorAll(
             'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
-        
+
         if (focusableElements.length === 0) return;
-        
+
         const firstFocusable = focusableElements[0];
         const lastFocusable = focusableElements[focusableElements.length - 1];
-        
+
         if (e.shiftKey) {
             if (document.activeElement === firstFocusable) {
                 e.preventDefault();
@@ -97,42 +131,160 @@ Templately.Modal = {
             }
         }
     },
-    
+
     setModalFocus: function(type) {
         const modal = this.modals[type];
         if (!modal) return;
-        
+
         let focusTarget;
-        
+
         if (type === 'input') {
             focusTarget = document.getElementById('inputValue');
         } else {
             // Find the first button or focusable element
             focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         }
-        
+
         if (focusTarget) {
             setTimeout(() => focusTarget.focus(), 100);
         }
     },
-    
+
     showModal: function(type, callback = null) {
         const modal = this.modals[type];
         if (!modal) return;
-        
+
         this.currentModal = type;
         this.currentModalCallback = callback;
         modal.classList.remove('hidden');
         this.setModalFocus(type);
     },
-    
+
     hideModal: function(type) {
         const modal = this.modals[type];
         if (!modal) return;
-        
+
         modal.classList.add('hidden');
         this.currentModal = null;
         this.currentModalCallback = null;
+    },
+
+    _prepareConfirmModal: function(modal) {
+        if (!modal || modal.dataset.templatelyConfirmBound === 'true') {
+            return;
+        }
+
+        modal.dataset.templatelyConfirmBound = 'true';
+
+        const okBtn = modal.querySelector('[data-templately-confirm="ok"], #confirmOk');
+        const cancelBtn = modal.querySelector('[data-templately-confirm="cancel"], #confirmCancel');
+
+        const handleResult = (result) => {
+            if (typeof this.currentModalCallback === 'function') {
+                this.currentModalCallback(result);
+            }
+            this.hideModal('confirm');
+        };
+
+        if (okBtn) {
+            okBtn.addEventListener('click', () => handleResult(true));
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => handleResult(false));
+        }
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                handleResult(false);
+            }
+        });
+    },
+
+    _createConfirmModal: function() {
+        const overlay = document.createElement('div');
+        overlay.id = 'confirmModal';
+        overlay.className = 'modal-overlay hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+
+        overlay.innerHTML = `
+            <div class="modal-content bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex items-start space-x-3 mb-4">
+                    <div class="flex-shrink-0">
+                        <div class="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                            <i class="fas fa-question text-yellow-500 text-2xl"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" data-templately-confirm-title>Confirm Action</h3>
+                        <p class="mt-2 text-sm text-gray-600" data-templately-confirm-message>Are you sure you want to continue?</p>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="confirmCancel" data-templately-confirm="cancel" class="${TEMPLATELY_CONFIRM_CANCEL_BASE}">Cancel</button>
+                    <button type="button" id="confirmOk" data-templately-confirm="ok" class="${TEMPLATELY_CONFIRM_OK_BASE} ${TEMPLATELY_CONFIRM_INTENT_CLASSES.danger}">Confirm</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        this.registerModal('confirm', overlay);
+
+        return overlay;
+    },
+
+    ensureConfirmModal: function() {
+        let modal = this.modals.confirm;
+
+        if (!modal) {
+            modal = this._createConfirmModal();
+        } else {
+            this._prepareConfirmModal(modal);
+        }
+
+        return modal;
+    },
+
+    _setConfirmContent: function(modal, message, options) {
+        const {
+            title = 'Confirm Action',
+            confirmText = 'Confirm',
+            cancelText = 'Cancel',
+            intent = 'danger',
+        } = options || {};
+
+        const titleEl = modal.querySelector('[data-templately-confirm-title]');
+        if (titleEl) {
+            titleEl.textContent = title;
+        }
+
+        const messageEl = modal.querySelector('[data-templately-confirm-message]');
+        if (messageEl) {
+            messageEl.textContent = message;
+        }
+
+        const okBtn = modal.querySelector('[data-templately-confirm="ok"], #confirmOk');
+        if (okBtn) {
+            const intentClass = TEMPLATELY_CONFIRM_INTENT_CLASSES[intent] || TEMPLATELY_CONFIRM_INTENT_CLASSES.danger;
+            okBtn.textContent = confirmText;
+            okBtn.className = `${TEMPLATELY_CONFIRM_OK_BASE} ${intentClass}`;
+        }
+
+        const cancelBtn = modal.querySelector('[data-templately-confirm="cancel"], #confirmCancel');
+        if (cancelBtn) {
+            cancelBtn.textContent = cancelText;
+            cancelBtn.className = TEMPLATELY_CONFIRM_CANCEL_BASE;
+        }
+    },
+
+    confirm: function(message, options = {}) {
+        const modal = this.ensureConfirmModal();
+        this._setConfirmContent(modal, message, options);
+
+        return new Promise((resolve) => {
+            this.showModal('confirm', (result) => {
+                resolve(Boolean(result));
+            });
+        });
     }
 };
 

@@ -2,30 +2,9 @@
 
 <?php echo $this->section('title') ?>Setup - Create Superadmin<?php echo $this->endSection() ?>
 
-<?php echo $this->section('pageStyles') ?>
-<style>
-.requirement-item {
-    transition: all 0.3s ease;
-}
-.requirement-item:hover {
-    transform: translateY(-1px);
-}
-.setup-step {
-    opacity: 0.5;
-    transition: all 0.3s ease;
-}
-.setup-step.active {
-    opacity: 1;
-}
-.setup-step.completed {
-    opacity: 1;
-}
-</style>
-<?php echo $this->endSection() ?>
-
 <?php echo $this->section('main') ?>
 
-<div class="glass-effect rounded-xl shadow-2xl p-8">
+<div class="rounded-xl shadow-2xl p-8 bg-white/20 backdrop-blur-lg border border-white/20">
     <div class="text-center mb-8">
         <div class="mx-auto w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
             <i class="fas fa-magic text-white text-2xl"></i>
@@ -37,7 +16,7 @@
     <!-- Progress Indicator -->
     <div class="mb-8">
         <div class="flex items-center justify-center space-x-4">
-            <div class="setup-step active flex items-center text-indigo-600" id="step-requirements">
+            <div class="setup-step active flex items-center text-indigo-600 transition-opacity duration-300 opacity-100" id="step-requirements">
                 <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                     <i class="fas fa-check hidden step-check"></i>
                     <span class="step-number">1</span>
@@ -45,7 +24,7 @@
                 <span class="ml-2 text-sm font-medium">Requirements</span>
             </div>
             <div class="w-12 h-1 bg-gray-200 rounded step-connector"></div>
-            <div class="setup-step flex items-center text-gray-400" id="step-account">
+            <div class="setup-step flex items-center text-gray-400 transition-opacity duration-300 opacity-50" id="step-account">
                 <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-sm font-semibold">
                     <i class="fas fa-check hidden step-check"></i>
                     <span class="step-number">2</span>
@@ -53,7 +32,7 @@
                 <span class="ml-2 text-sm font-medium">Create Admin</span>
             </div>
             <div class="w-12 h-1 bg-gray-200 rounded step-connector"></div>
-            <div class="setup-step flex items-center text-gray-400" id="step-complete">
+            <div class="setup-step flex items-center text-gray-400 transition-opacity duration-300 opacity-50" id="step-complete">
                 <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 text-sm font-semibold">
                     <i class="fas fa-check hidden step-check"></i>
                     <span class="step-number">3</span>
@@ -319,18 +298,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // System requirements
         html += '<div class="mb-6"><h4 class="font-semibold text-gray-800 mb-3">System Requirements</h4>';
-        for (const [key, requirement] of Object.entries(data.systemCheck)) {
+        for (const [, requirement] of Object.entries(data.systemCheck)) {
             const statusIcon = requirement.status ? 
                 '<i class="fas fa-check-circle text-green-500"></i>' : 
                 '<i class="fas fa-times-circle text-red-500"></i>';
-            const statusClass = requirement.status ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50';
-            
+            const statusClass = requirement.status ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700';
+            const baseClasses = 'border rounded-lg p-3 mb-2 transition-all duration-300 hover:-translate-y-[1px] hover:shadow-sm bg-white/10 backdrop-blur';
+
             html += `
-                <div class="requirement-item ${statusClass} border rounded-lg p-3 mb-2">
+                <div class="${baseClasses} ${statusClass}">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center">
+                        <div class="flex items-center text-gray-800">
                             ${statusIcon}
-                            <span class="ml-3 font-medium text-gray-800">${requirement.name}</span>
+                            <span class="ml-3 font-medium">${requirement.name}</span>
                         </div>
                         <div class="text-sm text-gray-600">
                             ${requirement.current}
@@ -347,10 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const dbStatusIcon = data.dbCheck.status ? 
             '<i class="fas fa-check-circle text-green-500"></i>' : 
             '<i class="fas fa-times-circle text-red-500"></i>';
-        const dbStatusClass = data.dbCheck.status ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50';
-        
+        const dbStatusClass = data.dbCheck.status ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700';
+        const dbBaseClasses = 'border rounded-lg p-3 transition-all duration-300 hover:-translate-y-[1px] hover:shadow-sm bg-white/10 backdrop-blur';
+
         html += `
-            <div class="requirement-item ${dbStatusClass} border rounded-lg p-3">
+            <div class="${dbBaseClasses} ${dbStatusClass}">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
                         ${dbStatusIcon}
@@ -404,12 +385,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const stepElement = document.getElementById(`step-${step}`);
         if (completed) {
             stepElement.classList.add('completed');
-            stepElement.classList.remove('text-gray-400');
-            stepElement.classList.add('text-green-600');
+            stepElement.classList.remove('text-gray-400', 'opacity-50');
+            stepElement.classList.add('text-green-600', 'opacity-100');
             stepElement.querySelector('.step-check').classList.remove('hidden');
             stepElement.querySelector('.step-number').classList.add('hidden');
             stepElement.querySelector('.w-8').classList.remove('bg-gray-200', 'bg-indigo-600');
             stepElement.querySelector('.w-8').classList.add('bg-green-600');
+        } else {
+            stepElement.classList.remove('text-green-600', 'opacity-100');
+            stepElement.classList.add('text-gray-400', 'opacity-50');
+            stepElement.querySelector('.step-check').classList.add('hidden');
+            stepElement.querySelector('.step-number').classList.remove('hidden');
+            stepElement.querySelector('.w-8').classList.remove('bg-green-600');
+            stepElement.querySelector('.w-8').classList.add('bg-gray-200');
         }
     }
 
@@ -422,8 +410,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update step indicators
         updateStepStatus('account', false);
         document.getElementById('step-account').classList.add('active');
-        document.getElementById('step-account').classList.remove('text-gray-400');
-        document.getElementById('step-account').classList.add('text-indigo-600');
+        document.getElementById('step-account').classList.remove('text-gray-400', 'opacity-50');
+        document.getElementById('step-account').classList.add('text-indigo-600', 'opacity-100');
         document.getElementById('step-account').querySelector('.w-8').classList.remove('bg-gray-200');
         document.getElementById('step-account').querySelector('.w-8').classList.add('bg-indigo-600');
     }
@@ -434,8 +422,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Reset step indicators
         document.getElementById('step-account').classList.remove('active');
-        document.getElementById('step-account').classList.add('text-gray-400');
-        document.getElementById('step-account').classList.remove('text-indigo-600');
+        document.getElementById('step-account').classList.add('text-gray-400', 'opacity-50');
+        document.getElementById('step-account').classList.remove('text-indigo-600', 'opacity-100');
         document.getElementById('step-account').querySelector('.w-8').classList.add('bg-gray-200');
         document.getElementById('step-account').querySelector('.w-8').classList.remove('bg-indigo-600');
     }

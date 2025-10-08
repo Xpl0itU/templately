@@ -13,7 +13,7 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
     use DatabaseTestTrait;
     use FeatureTestTrait;
 
-    protected $namespace = 'App';
+    protected $namespace = ['App'];
 
     public function testTemplateUploadWorkflow(): void
     {

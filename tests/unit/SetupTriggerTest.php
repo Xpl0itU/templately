@@ -1,7 +1,7 @@
 <?php
 
 use CodeIgniter\Test\CIUnitTestCase;
-use CodeIgniter\Test\ControllerTestTrait;
+use CodeIgniter\Test\FeatureTestTrait;
 use CodeIgniter\Test\DatabaseTestTrait;
 
 /**
@@ -9,8 +9,11 @@ use CodeIgniter\Test\DatabaseTestTrait;
  */
 final class SetupTriggerTest extends CIUnitTestCase
 {
-    use ControllerTestTrait;
+    use FeatureTestTrait;
     use DatabaseTestTrait;
+
+    protected $namespace = ['App'];
+    protected $refresh   = true;
 
     protected function setUp(): void
     {
@@ -33,19 +36,20 @@ final class SetupTriggerTest extends CIUnitTestCase
         
         // Clear any existing users
         $db->table('users')->truncate();
+
+    // Ensure setup completion cache is cleared
+    cache()->delete('app_setup_completed');
         
         // Count users to confirm table is empty
         $userCount = $db->table('users')->countAllResults();
         $this->assertEquals(0, $userCount, 'Users table should be empty');
         
         // Try to access a protected route
-        $result = $this->withURI('http://example.com/dashboard')
-            ->controller(\App\Controllers\Dashboard::class)
-            ->execute('index');
-            
+        $result = $this->get('/dashboard');
+
         // Should redirect to setup
-        $this->assertTrue($result->isRedirect(), 'Should redirect to setup when no users exist');
-        $this->assertEquals('http://example.com/setup', $result->getRedirectUrl(), 'Should redirect to setup page');
+        $result->assertRedirect();
+    $result->assertHeader('Location', 'http://example.com/index.php/setup');
     }
 
     public function testSetupTriggeredWhenUsersTableDoesNotExist(): void

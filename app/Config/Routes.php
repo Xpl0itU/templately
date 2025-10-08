@@ -27,13 +27,58 @@ $routes->get('logout', 'AuthController::logoutAction');
 $routes->get('register', 'AuthController::registerView');
 $routes->post('register', 'AuthController::registerAction');
 
+// Advanced permissions routes
+$routes->get('advanced-permissions', 'AdvancedPermissions::index', ['filter' => 'sessionauth']);
+$routes->post('advanced-permissions/grant-resource-permission', 'AdvancedPermissions::grantResourcePermission', ['filter' => 'sessionauth']);
+$routes->post('advanced-permissions/revoke-resource-permission', 'AdvancedPermissions::revokeResourcePermission', ['filter' => 'sessionauth']);
+$routes->get('advanced-permissions/user-resource-permissions', 'AdvancedPermissions::getUserResourcePermissions', ['filter' => 'sessionauth']);
+
+// Simple permissions routes
+$routes->group('permissions', static function (RouteCollection $routes) {
+    $routes->get('/', 'SimplePermissions::index');
+    $routes->post('get-user-details/(:num)', 'SimplePermissions::getUserDetails/$1');
+    $routes->post('get-template-details/(:num)', 'SimplePermissions::getTemplateDetails/$1');
+    $routes->post('get-file-details/(:num)', 'SimplePermissions::getFileDetails/$1');
+    $routes->post('save-user-role', 'SimplePermissions::saveUserRole');
+    $routes->post('save-user-groups', 'SimplePermissions::saveUserGroups');
+    $routes->post('save-user-permissions', 'SimplePermissions::saveUserPermissions');
+    $routes->post('reset-user-permissions', 'SimplePermissions::resetUserPermissions');
+    $routes->post('save-template-permissions', 'SimplePermissions::saveTemplatePermissions');
+    $routes->post('save-file-permissions', 'SimplePermissions::saveFilePermissions');
+    $routes->post('get-audit-log', 'SimplePermissions::getAuditLog');
+});
+
+// Advanced ACL routes
+$routes->group('acl', static function (RouteCollection $routes) {
+    $routes->get('/', 'Acl::index');
+    $routes->get('manage/(:any)', 'Acl::manageList/$1');
+    $routes->get('manage/(:any)/(:num)', 'Acl::manageResource/$1/$2');
+    $routes->post('update/(:any)/(:num)', 'Acl::updateResource/$1/$2');
+    $routes->post('change-owner/(:any)/(:num)', 'Acl::changeOwner/$1/$2');
+    $routes->post('settings/update', 'Acl::updateSettings');
+    $routes->post('settings/reset', 'Acl::resetSettings');
+    $routes->post('inherit-permissions/(:num)', 'Acl::inheritPermissions/$1');
+    $routes->get('audit', 'Acl::auditLog');
+});
+
 // Dashboard route
 $routes->get('dashboard', 'Dashboard::index', ['filter' => 'sessionauth']);
 
-// User management routes (admin only)
-$routes->get('user-management', 'UserManagement::index', ['filter' => 'sessionauth']);
-$routes->post('user-management/update-group', 'UserManagement::updateUserGroup', ['filter' => 'sessionauth']);
-$routes->post('user-management/delete/(:num)', 'UserManagement::deleteUser/$1', ['filter' => 'sessionauth']);
+// Profile routes
+$routes->group('profile', ['filter' => 'sessionauth'], static function (RouteCollection $routes) {
+    $routes->get('/', 'Profile::index');
+    $routes->post('update-email', 'Profile::updateEmail');
+    $routes->post('update-password', 'Profile::updatePassword');
+});
+
+// Unified user management routes (replaces user-groups, user-management, and advanced-permissions)
+$routes->group('users', ['filter' => 'sessionauth'], static function (RouteCollection $routes) {
+    $routes->get('/', 'Users::index');
+    $routes->post('create', 'Users::create');
+    $routes->get('get/(:num)', 'Users::getUser/$1');
+    $routes->post('update', 'Users::update');
+    $routes->post('delete/(:num)', 'Users::delete/$1');
+});
 
 // File explorer routes
 $routes->get('/file-explorer', 'FileExplorer::index', ['filter' => 'sessionauth']);

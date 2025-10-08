@@ -3,82 +3,28 @@
 <head>
     <meta charset="utf-8">
     <title><?php echo lang('Errors.pageNotFound') ?></title>
-
-    <style>
-        div.logo {
-            height: 200px;
-            width: 155px;
-            display: inline-block;
-            opacity: 0.08;
-            position: absolute;
-            top: 2rem;
-            left: 50%;
-            margin-left: -73px;
-        }
-        body {
-            height: 100%;
-            background: #fafafa;
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            color: #777;
-            font-weight: 300;
-        }
-        h1 {
-            font-weight: lighter;
-            letter-spacing: normal;
-            font-size: 3rem;
-            margin-top: 0;
-            margin-bottom: 0;
-            color: #222;
-        }
-        .wrap {
-            max-width: 1024px;
-            margin: 5rem auto;
-            padding: 2rem;
-            background: #fff;
-            text-align: center;
-            border: 1px solid #efefef;
-            border-radius: 0.5rem;
-            position: relative;
-        }
-        pre {
-            white-space: normal;
-            margin-top: 1.5rem;
-        }
-        code {
-            background: #fafafa;
-            border: 1px solid #efefef;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            display: block;
-        }
-        p {
-            margin-top: 1.5rem;
-        }
-        .footer {
-            margin-top: 2rem;
-            border-top: 1px solid #efefef;
-            padding: 1em 2em 0 2em;
-            font-size: 85%;
-            color: #999;
-        }
-        a:active,
-        a:link,
-        a:visited {
-            color: #dd4814;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="wrap">
-        <h1>404</h1>
-
-        <p>
+<body class="min-h-screen bg-gray-100 text-gray-700 flex items-center justify-center py-16">
+    <div class="max-w-xl w-full mx-auto bg-white shadow-2xl rounded-2xl p-10 text-center">
+        <p class="text-6xl font-extrabold text-indigo-600 mb-4">404</p>
+        <h1 class="text-2xl font-semibold text-gray-900 mb-3"><?php echo lang('Errors.pageNotFound') ?></h1>
+        <p class="text-gray-600 mb-8">
             <?php if (ENVIRONMENT !== 'production') : ?>
                 <?php echo nl2br(esc($message)) ?>
             <?php else : ?>
                 <?php echo lang('Errors.sorryCannotFind') ?>
             <?php endif; ?>
         </p>
+        <div class="flex items-center justify-center gap-3">
+            <a href="<?php echo base_url('/') ?>" class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <span class="mr-2">&#8592;</span>
+                Go Back Home
+            </a>
+            <a href="javascript:history.back()" class="inline-flex items-center px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Go Back
+            </a>
+        </div>
     </div>
 </body>
 </html>

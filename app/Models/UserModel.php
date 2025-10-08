@@ -31,10 +31,19 @@ class UserModel extends ShieldUserModel
         }
 
         // Now get the password hash from the identities table
+        // Use ID_TYPE_USERNAME for username-only authentication
         $identity = model('UserIdentityModel')
             ->where('user_id', $userData['id'])
-            ->where('type', Session::ID_TYPE_EMAIL_PASSWORD) // Still using email_password because that's what we create
+            ->where('type', Session::ID_TYPE_USERNAME)
             ->first();
+
+        // If we don't find ID_TYPE_USERNAME, try ID_TYPE_EMAIL_PASSWORD as fallback
+        if ($identity === null) {
+            $identity = model('UserIdentityModel')
+                ->where('user_id', $userData['id'])
+                ->where('type', Session::ID_TYPE_EMAIL_PASSWORD)
+                ->first();
+        }
 
         if ($identity === null) {
             return null;
@@ -42,7 +51,7 @@ class UserModel extends ShieldUserModel
 
         // Set the password hash on the user data
         $userData['password_hash'] = $identity->secret2;
-        // Set email from identity if it exists
+        // Set email/username from identity if it exists
         $userData['email'] = $identity->secret ?? null;
 
         // Create user object - we need to handle this carefully to avoid the private method call

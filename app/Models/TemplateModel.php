@@ -47,13 +47,13 @@ class TemplateModel extends Model
 
     protected $allowCallbacks = true;
     protected $beforeInsert = [];
-    protected $afterInsert = [];
+    protected $afterInsert = ['assignOwnership'];
     protected $beforeUpdate = [];
     protected $afterUpdate = [];
     protected $beforeFind = [];
     protected $afterFind = ['parseTemplateFields'];
     protected $beforeDelete = [];
-    protected $afterDelete = [];
+    protected $afterDelete = ['removeOwnership'];
 
     protected function parseTemplateFields(array $data)
     {
@@ -104,6 +104,57 @@ class TemplateModel extends Model
             $record['templateFields'] = [];
         }
         return $record;
+    }
+    
+    /**
+     * Assign ownership to the currently authenticated user after template is created
+     */
+    protected function assignOwnership(array $data)
+    {
+        if (isset($data['id']) && $data['id']) {
+            $currentUserId = null;
+            
+            // Get the current user ID from the session
+            $auth = service('auth');
+            if ($auth && $auth->user()) {
+                $currentUserId = $auth->user()->id;
+            }
+            
+            if ($currentUserId) {
+                // Create resource ownership
+                $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
+                $resourceOwnerModel->setOwner('template', $data['id'], $currentUserId);
+                
+                // Set default permissions for the owner
+                $aclEntryModel = model('App\Models\AclEntryModel');
+                $aclEntryModel->grantPermission(
+                    'template',
+                    $data['id'],
+                    'user',
+                    $currentUserId,
+                    'full_control',
+                    $currentUserId, // Granted by owner
+                    false // Not inherited
+                );
+            }
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Remove ownership when template is deleted
+     */
+    protected function removeOwnership(array $data)
+    {
+        if (isset($data['id']) && $data['id']) {
+            $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
+            $resourceOwnerModel->where('resource_type', 'template')
+                              ->where('resource_id', $data['id'])
+                              ->delete();
+        }
+        
+        return $data;
     }
 
     public function getTemplatesWithFilledFiles()

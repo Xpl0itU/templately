@@ -50,13 +50,13 @@ class FilledFilesModel extends Model
 
     protected $allowCallbacks = true;
     protected $beforeInsert = [];
-    protected $afterInsert = [];
+    protected $afterInsert = ['assignOwnershipAndInheritPermissions'];
     protected $beforeUpdate = [];
     protected $afterUpdate = [];
     protected $beforeFind = [];
     protected $afterFind = ['parseFilledData'];
     protected $beforeDelete = [];
-    protected $afterDelete = [];
+    protected $afterDelete = ['removeOwnership'];
 
     protected function parseFilledData(array $data)
     {
@@ -127,5 +127,101 @@ class FilledFilesModel extends Model
         }
 
         return $record;
+    }
+    
+    /**
+     * Assign ownership to the currently authenticated user and inherit permissions from template after filled file is created
+     */
+    protected function assignOwnershipAndInheritPermissions(array $data)
+    {
+        if (isset($data['id']) && $data['id']) {
+            $currentUserId = null;
+            
+            // Get the current user ID from the session
+            $auth = service('auth');
+            if ($auth && $auth->user()) {
+                $currentUserId = $auth->user()->id;
+            }
+            
+            if ($currentUserId) {
+                // Create resource ownership
+                $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
+                $resourceOwnerModel->setOwner('filled_file', $data['id'], $currentUserId);
+                
+                // Set default permissions for the owner
+                $aclEntryModel = model('App\Models\AclEntryModel');
+                $aclEntryModel->grantPermission(
+                    'filled_file',
+                    $data['id'],
+                    'user',
+                    $currentUserId,
+                    'full_control',
+                    $currentUserId, // Granted by owner
+                    false // Not inherited
+                );
+                
+                // Check if permission inheritance is enabled
+                $aclSettingModel = model('App\Models\AclSettingModel');
+                if ($aclSettingModel->getSetting('inheritance_enabled', true)) {
+                    // Get the template ID to inherit permissions from
+                    $templateId = $data['data']['templateFileId'] ?? $data['templateFileId'] ?? null;
+                    
+                    if ($templateId) {
+                        // Inherit permissions from the template
+                        $templateAclEntries = $aclEntryModel->getResourceAclEntries('template', $templateId);
+                        
+                        foreach ($templateAclEntries as $entry) {
+                            $aclEntryModel->grantPermission(
+                                'filled_file',
+                                $data['id'],
+                                $entry['principal_type'],
+                                $entry['principal_id'],
+                                $entry['permission']['name'], // Need to get the permission name
+                                $entry['granted_by'],
+                                true, // Inherited
+                                'template', // Inheritance source
+                                $templateId // Inheritance source ID
+                            );
+                        }
+                        
+                        // Also apply the template's owner as an owner of the filled file
+                        $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
+                        $templateOwner = $resourceOwnerModel->getOwner('template', $templateId);
+                        
+                        if ($templateOwner && $templateOwner !== $currentUserId) {
+                            // Grant read/execute permission to template owner on the filled file
+                            $aclEntryModel->grantPermission(
+                                'filled_file',
+                                $data['id'],
+                                'user',
+                                $templateOwner,
+                                'read_execute', // Template owner gets read permission
+                                $templateOwner,
+                                true, // Inherited
+                                'template', // Inheritance source
+                                $templateId // Inheritance source ID
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Remove ownership when filled file is deleted
+     */
+    protected function removeOwnership(array $data)
+    {
+        if (isset($data['id']) && $data['id']) {
+            $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
+            $resourceOwnerModel->where('resource_type', 'filled_file')
+                              ->where('resource_id', $data['id'])
+                              ->delete();
+        }
+        
+        return $data;
     }
 }

@@ -2109,18 +2109,21 @@
                 const imageSizes = {};
                 const formData = new FormData();
                 
-                formData.append('filledData', 'placeholder');
-                
                 const inputs = fileDetails.querySelectorAll('input[type="text"], textarea, input[type="hidden"]');
                 inputs.forEach(input => {
-                    if (!input.name.startsWith('fieldType_') && 
-                        !input.name.startsWith('image_') && 
-                        !input.name.startsWith('imageWidth_') && 
-                        !input.name.startsWith('imageHeight_') && 
-                        !input.name.startsWith('imageRatio_')) {
-                        updatedData[input.name] = input.value;
+                    // Skip special fields and fields without names
+                    if (!input.name || 
+                        input.name.startsWith('fieldType_') || 
+                        input.name.startsWith('image_') || 
+                        input.name.startsWith('imageWidth_') || 
+                        input.name.startsWith('imageHeight_') || 
+                        input.name.startsWith('imageRatio_')) {
+                        return;
                     }
+                    updatedData[input.name] = input.value || '';
                 });
+                
+                console.log('Updated data:', updatedData);
                 
                 const typeSelectors = fileDetails.querySelectorAll('select[name^="fieldType_"]');
                 typeSelectors.forEach(select => {
@@ -2163,10 +2166,26 @@
                 
                 formData.append('fieldsWithNewImages', JSON.stringify(Array.from(fieldsWithNewImages)));
                 
-                formData.append('filledData', JSON.stringify(updatedData));
+                formData.append('name', currentSelectedFilledFile.name || 'Unnamed File');
+                
+                const filledDataJSON = JSON.stringify(updatedData);
+                console.log('FilledData JSON:', filledDataJSON);
+                console.log('FilledData JSON length:', filledDataJSON.length);
+                
+                formData.append('filledData', filledDataJSON);
                 formData.append('fieldTypes', JSON.stringify(fieldTypes));
                 formData.append('imageSizes', JSON.stringify(imageSizes));
                 formData.append('_token', document.querySelector('meta[name="X-CSRF-TOKEN"]').getAttribute('content'));
+                
+                // Debug: log all FormData entries
+                console.log('FormData entries:');
+                for (let [key, value] of formData.entries()) {
+                    if (typeof value === 'string') {
+                        console.log(`${key}: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}`);
+                    } else {
+                        console.log(`${key}: [File object]`);
+                    }
+                }
 
                 try {
                     const response = await fetch(`/file-explorer/update-filled-file/${currentSelectedFilledFile.id}`, {
@@ -2181,10 +2200,15 @@
                         const errorData = await response.json().catch(() => ({
                             message: 'Failed to save. Server error.'
                         }));
+                        console.error('Server error response:', errorData);
+                        if (errorData.debug) {
+                            console.error('Debug info:', errorData.debug);
+                        }
                         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
                     }
 
                     const result = await response.json();
+                    console.log('Save successful:', result);
 
                     if (result.success) {
                         if (result.updatedData) {

@@ -12,7 +12,7 @@ final class TemplateModelTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $refresh = true;
-    protected $namespace = 'App';
+    protected $namespace = ['App'];
 
     private TemplateModel $model;
 

@@ -23,6 +23,13 @@
                     <i class="fas fa-users mr-2 text-blue-500"></i>System Users
                 </h2>
                 <p class="text-gray-600 mt-1">Manage user accounts and permissions</p>
+                <div class="mt-4">
+                    <a href="<?php echo base_url('advanced-permissions') ?>" 
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Advanced Permissions
+                    </a>
+                </div>
             </div>
             
             <div class="overflow-x-auto">

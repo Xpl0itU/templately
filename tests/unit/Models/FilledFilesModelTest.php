@@ -13,7 +13,7 @@ final class FilledFilesModelTest extends CIUnitTestCase
     use DatabaseTestTrait;
 
     protected $refresh = true;
-    protected $namespace = 'App';
+    protected $namespace = ['App'];
 
     private FilledFilesModel $model;
     private TemplateModel $templateModel;
