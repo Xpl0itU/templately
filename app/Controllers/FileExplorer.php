@@ -157,13 +157,16 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Validate filled data
-        $filledData = $data['filledData'] ?? [];
-        if (empty($filledData)) {
-            return [
-                'success' => false,
-                'message' => 'Filled data is required.'
-            ];
+        // Validate filled data - allow empty object for templates with no fields
+        $filledData = $data['filledData'] ?? $data['filled_data'] ?? [];
+        
+        // filledData can be empty for templates with no fields or new files
+        // Convert to array if it's not already
+        if (is_string($filledData)) {
+            $filledData = json_decode($filledData, true) ?? [];
+        }
+        if (!is_array($filledData)) {
+            $filledData = [];
         }
 
         // Validate filled file name
@@ -236,11 +239,11 @@ class FileExplorer extends BaseController
         return [
             'success' => true,
             'message' => 'Filled file created successfully.',
-            'data' => [
-                'filledFileId' => $filledFileId,
+            'newFilledFile' => [
+                'id' => $filledFileId,
                 'name' => $name,
-                'templateId' => $templateId,
-                'filledData' => $filledDataWithImages,
+                'templateFileId' => $templateId,
+                'filledData' => json_encode($filledDataWithImages),
                 'createdAt' => $insertData['createdAt'],
                 'updatedAt' => $insertData['updatedAt']
             ]
@@ -708,6 +711,22 @@ class FileExplorer extends BaseController
         ]);
     }
     
+    public function createFilledFileWizard()
+    {
+        if (!$this->permissionManager->can(auth()->user(), 'filled_files.create')) {
+            return $this->redirectWithError('/dashboard', 'You do not have permission to create filled files.');
+        }
+        
+        // Get all available templates for the user to select
+        $templates = $this->templateModel->findAll();
+        
+        return view('create_filled_file_wizard', [
+            'title' => 'Create Filled File',
+            'templates' => $templates,
+            'userPermissions' => $this->getUserPermissions()
+        ]);
+    }
+    
     public function analyzeTemplate()
     {
         if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
@@ -989,17 +1008,86 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(404)->setBody('Filled file not found');
         }
 
-        // TODO: Implement DOCX generation using PHPWord or similar library
-        // This would involve:
-        // 1. Loading the template file
-        // 2. Replacing placeholders with filled data
-        // 3. Handling images
-        // 4. Generating the output DOCX
+        // Get the template
+        $template = $this->templateModel->find($filledFile['templateFileId']);
+        if (!$template) {
+            return $this->response->setStatusCode(404)->setBody('Template not found');
+        }
 
-        return $this->response->setJSON([
-            'success' => false,
-            'message' => 'DOCX export is not yet implemented.'
-        ]);
+        try {
+            // Load the template file - path is already absolute
+            $templatePath = $template['path'];
+            
+            log_message('debug', 'Export: Template path: ' . $templatePath);
+            
+            if (!file_exists($templatePath)) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Template file not found on disk.'
+                ]);
+            }
+
+            // Create template processor
+            $templateProcessor = new TemplateProcessor($templatePath);
+
+            // Get filled data - check if already decoded
+            $filledData = is_array($filledFile['filledData']) ? $filledFile['filledData'] : json_decode($filledFile['filledData'], true);
+            $fieldTypes = is_array($filledFile['fieldTypes']) ? $filledFile['fieldTypes'] : json_decode($filledFile['fieldTypes'], true);
+            $imageSizes = is_array($filledFile['imageSizes']) ? $filledFile['imageSizes'] : json_decode($filledFile['imageSizes'], true);
+
+            // Process each field
+            foreach ($filledData as $field => $value) {
+                $fieldType = $fieldTypes[$field] ?? 'text';
+                
+                if ($fieldType === 'image' && !empty($value)) {
+                    // Handle image fields
+                    $imagePath = WRITEPATH . 'uploads/images/' . $value;
+                    if (file_exists($imagePath)) {
+                        $width = $imageSizes[$field]['width'] ?? 300;
+                        $height = $imageSizes[$field]['height'] ?? 200;
+                        $ratio = $imageSizes[$field]['ratio'] ?? true;
+                        
+                        $templateProcessor->setImageValue(
+                            $field,
+                            [
+                                'path' => $imagePath,
+                                'width' => $width,
+                                'height' => $height,
+                                'ratio' => $ratio
+                            ]
+                        );
+                    } else {
+                        // Image not found, replace with placeholder text
+                        $templateProcessor->setValue($field, '[Image not found]');
+                    }
+                } else {
+                    // Handle text/paragraph fields
+                    $templateProcessor->setValue($field, $value ?? '');
+                }
+            }
+
+            // Generate output filename
+            $outputFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filledFile['name']) . '_' . date('Y-m-d_His') . '.docx';
+            $outputPath = WRITEPATH . 'uploads/exports/' . $outputFilename;
+
+            // Ensure exports directory exists
+            if (!is_dir(WRITEPATH . 'uploads/exports/')) {
+                mkdir(WRITEPATH . 'uploads/exports/', 0755, true);
+            }
+
+            // Save the generated file
+            $templateProcessor->saveAs($outputPath);
+
+            // Return file for download
+            return $this->response->download($outputPath, null)->setFileName($outputFilename);
+
+        } catch (\Exception $e) {
+            log_message('error', 'DOCX export error: ' . $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error generating DOCX: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function exportPdf(int $filledFileId)

@@ -99,7 +99,7 @@ class AclEntryModel extends Model
     public function principalHasPermission(int $principalId, string $principalType, string $resourceType, int $resourceId, string $permission): bool
     {
         // Get the permission ID
-        $permissionModel = model('App\\Models\\AclPermissionModel');
+        $permissionModel = model('App\\Models\\AclPermissionsModel');
         $permissionRecord = $permissionModel->getPermissionByName($permission);
         
         if (!$permissionRecord) {
@@ -169,7 +169,7 @@ class AclEntryModel extends Model
     ): bool {
         try {
             // Get the permission ID
-            $permissionModel = model('App\Models\AclPermissionModel');
+            $permissionModel = model('App\Models\AclPermissionsModel');
             $permissionRecord = $permissionModel->getPermissionByName($permission);
             
             if (!$permissionRecord) {
@@ -242,7 +242,7 @@ class AclEntryModel extends Model
     ): bool {
         try {
             // Get the permission ID
-            $permissionModel = model('App\Models\AclPermissionModel');
+            $permissionModel = model('App\Models\AclPermissionsModel');
             $permissionRecord = $permissionModel->getPermissionByName($permission);
             
             if (!$permissionRecord) {

@@ -655,7 +655,7 @@ class PermissionManager
     public function can(User $user, string $permission, ?string $resourceType = null, ?int $resourceId = null, array $context = []): bool
     {
         $cacheKey = $this->buildCacheKey('user', $user->id, $permission, $resourceType, $resourceId, $context);
-        $auditEnabled = $this->aclSettingModel->getSetting('audit_log_enabled', true);
+        $auditEnabled = $this->aclSettingModel && $this->aclSettingModel->getSetting('audit_log_enabled', true);
 
         if (method_exists($user, 'inGroup') && $user->inGroup('superadmin')) {
             if ($auditEnabled) {
@@ -793,7 +793,7 @@ class PermissionManager
                 }
             }
 
-            $aclPermissionExists = $this->aclPermissionModel->getPermissionByName($permission) !== null;
+            $aclPermissionExists = $this->aclPermissionModel && $this->aclPermissionModel->getPermissionByName($permission) !== null;
             $aclResult = true;
 
             if ($aclPermissionExists) {
@@ -884,7 +884,7 @@ class PermissionManager
                 );
             }
 
-            $aclPermissionExists = $this->aclPermissionModel->getPermissionByName($permission) !== null;
+            $aclPermissionExists = $this->aclPermissionModel && $this->aclPermissionModel->getPermissionByName($permission) !== null;
             $aclResult = true;
 
             if ($aclPermissionExists) {
@@ -1171,6 +1171,9 @@ class PermissionManager
      */
     public function getSetting(string $key, $default = null)
     {
+        if (!$this->aclSettingModel) {
+            return $default;
+        }
         return $this->aclSettingModel->getSetting($key, $default);
     }
 
@@ -1263,6 +1266,9 @@ class PermissionManager
      */
     public function getPermissionByName(string $name): ?array
     {
+        if (!$this->aclPermissionModel) {
+            return null;
+        }
         return $this->aclPermissionModel->getPermissionByName($name);
     }
 

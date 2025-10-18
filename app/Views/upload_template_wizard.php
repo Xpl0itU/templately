@@ -31,7 +31,9 @@
                     </div>
                     
                     <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6">
-                        <i class="fas fa-cloud-upload-alt text-gray-400 text-4xl mb-4"></i>
+                        <div class="mb-4">
+                            <i class="fas fa-cloud-upload-alt text-gray-400 text-4xl"></i>
+                        </div>
                         <h4 class="text-lg font-medium text-gray-900 mb-2">Upload Template</h4>
                         <p class="text-gray-500 mb-4">Drag and drop your Word document here, or click to browse files</p>
                         <input type="file" id="templateFileInput" accept=".docx" class="hidden">

@@ -161,8 +161,8 @@ class FilledFilesModel extends Model
                 );
                 
                 // Check if permission inheritance is enabled
-                $aclSettingModel = model('App\Models\AclSettingModel');
-                if ($aclSettingModel->getSetting('inheritance_enabled', true)) {
+                $aclSettingModel = model('App\Models\AclSettingsModel');
+                if ($aclSettingModel && $aclSettingModel->getSetting('inheritance_enabled', true)) {
                     // Get the template ID to inherit permissions from
                     $templateId = $data['data']['templateFileId'] ?? $data['templateFileId'] ?? null;
                     
@@ -176,7 +176,7 @@ class FilledFilesModel extends Model
                                 $data['id'],
                                 $entry['principal_type'],
                                 $entry['principal_id'],
-                                $entry['permission']['name'], // Need to get the permission name
+                                $entry['permission_name'], // Permission name is flattened from the join
                                 $entry['granted_by'],
                                 true, // Inherited
                                 'template', // Inheritance source
