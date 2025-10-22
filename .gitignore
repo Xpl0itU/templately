@@ -42,6 +42,7 @@ $RECYCLE.BIN/
 # These should never be under version control,
 # as it poses a security risk.
 .env
+.env.docker
 .vagrant
 Vagrantfile
 
@@ -125,4 +126,14 @@ _modules/*
 /results/
 /phpunit*.xml
 
+writable/
+public/uploads/
+
 .playwright-mcp
+
+#-------------------------
+# Docker
+#-------------------------
+docker/mysql/data/*
+!docker/mysql/init/
+.docker/

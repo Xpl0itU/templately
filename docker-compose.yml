@@ -1,0 +1,79 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: templately_app
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/var/www/html
+      - ./writable:/var/www/html/writable
+    environment:
+      - CI_ENVIRONMENT=development
+      - database_default_hostname=mysql
+      - database_default_database=${DB_NAME:-templately}
+      - database_default_username=${DB_USER:-admin}
+      - database_default_password=${DB_PASSWORD:-secret}
+      - database_default_DBDriver=MySQLi
+      - database_default_port=3306
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - templately-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: templately_mysql
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secret}
+      MYSQL_DATABASE: ${DB_NAME:-templately}
+      MYSQL_USER: ${DB_USER:-admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER:-admin}", "-p${DB_PASSWORD:-secret}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - templately-network
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: templately_phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+      # Use IP address to avoid hostname conflicts
+      PMA_ABSOLUTE_URI: "http://127.0.0.1:8081/"
+      APACHE_PORT: 80
+      UPLOAD_LIMIT: 100M
+      # Disable HTTP redirect detection
+      PMA_NO_RELATION_DISABLE_WARNING: 1
+      # Force phpMyAdmin to use its own config
+      HIDE_PHP_VERSION: 1
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - templately-network
+
+networks:
+  templately-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

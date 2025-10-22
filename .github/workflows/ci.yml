@@ -1,0 +1,101 @@
+name: CI Tests
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ci4_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: intl, json, mbstring, xml, mysqlnd, gd, zip
+        coverage: xdebug
+        tools: composer:v2
+
+    - name: Get composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Install dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+    - name: Copy environment file
+      run: cp env .env
+
+    - name: Setup database configuration
+      run: |
+        cat >> .env << EOF
+        database.default.hostname = 127.0.0.1
+        database.default.database = ci4_test
+        database.default.username = root
+        database.default.password = root
+        database.default.DBDriver = MySQLi
+        database.default.port = 3306
+        
+        database.tests.hostname = 127.0.0.1
+        database.tests.database = ci4_test
+        database.tests.username = root
+        database.tests.password = root
+        database.tests.DBDriver = MySQLi
+        database.tests.port = 3306
+        EOF
+
+    - name: Generate encryption key
+      run: php spark key:generate
+
+    - name: Wait for MySQL
+      run: |
+        for i in {1..30}; do
+          if mysqladmin ping -h"127.0.0.1" -P"3306" -uroot -proot --silent; then
+            echo "MySQL is ready"
+            break
+          fi
+          echo "Waiting for MySQL... ($i/30)"
+          sleep 2
+        done
+
+    - name: Run database migrations
+      run: php spark migrate --all
+
+    - name: Run PHPUnit tests
+      run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        fail_ci_if_error: false
+        verbose: true
+
+    - name: Run PHP CodeSniffer
+      run: vendor/bin/phpcs --standard=PSR12 app/
+      continue-on-error: true

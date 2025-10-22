@@ -1103,7 +1103,7 @@
 
                     if (response.ok && result.success) {
                         wizardState.tempFilePath = result.tempFilePath;
-                        wizardState.detectedFields = result.templateFields || [];
+                        wizardState.detectedFields = result.detectedFields || result.templateFields || [];
 
                         originalFileNameReviewSpan.textContent = wizardState.originalFileName;
                         fileSizeReviewSpan.textContent = wizardState.fileSizeKB + ' KB';
