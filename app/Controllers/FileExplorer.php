@@ -797,20 +797,71 @@ class FileExplorer extends BaseController
     }
 
     /**
-     * Get variable fields from template processor using reflection
+     * Get variable fields from template processor
      *
      * @param TemplateProcessor $templateProcessor Template processor instance
      * @return array Variable fields extracted from template
      */
     private function getTemplateVariableFields(TemplateProcessor $templateProcessor): array
     {
-        if (method_exists($templateProcessor, 'getVariableFields')) {
-            $method = 'getVariableFields';
+        try {
+            // TemplateProcessor has a getVariables() method that returns all placeholders
+            if (method_exists($templateProcessor, 'getVariables')) {
+                return $templateProcessor->getVariables();
+            }
 
-            return (array) $templateProcessor->$method();
+            // Fallback: use reflection if getVariables doesn't exist
+            log_message('warning', 'TemplateProcessor::getVariables() not found, using reflection fallback');
+            
+            $reflection = new \ReflectionClass($templateProcessor);
+            $fields = [];
+
+            // Try to access getVariablesForPart if it exists
+            if ($reflection->hasMethod('getVariablesForPart')) {
+                $method = $reflection->getMethod('getVariablesForPart');
+                $method->setAccessible(true);
+
+                if ($reflection->hasProperty('tempDocumentMainPart')) {
+                    $property = $reflection->getProperty('tempDocumentMainPart');
+                    $property->setAccessible(true);
+                    $mainPart = $property->getValue($templateProcessor);
+                    
+                    $fields = array_merge($fields, $method->invoke($templateProcessor, $mainPart));
+                }
+
+                // Check headers
+                if ($reflection->hasProperty('tempDocumentHeaders')) {
+                    $property = $reflection->getProperty('tempDocumentHeaders');
+                    $property->setAccessible(true);
+                    $headers = $property->getValue($templateProcessor);
+                    
+                    if (is_array($headers)) {
+                        foreach ($headers as $header) {
+                            $fields = array_merge($fields, $method->invoke($templateProcessor, $header));
+                        }
+                    }
+                }
+
+                // Check footers
+                if ($reflection->hasProperty('tempDocumentFooters')) {
+                    $property = $reflection->getProperty('tempDocumentFooters');
+                    $property->setAccessible(true);
+                    $footers = $property->getValue($templateProcessor);
+                    
+                    if (is_array($footers)) {
+                        foreach ($footers as $footer) {
+                            $fields = array_merge($fields, $method->invoke($templateProcessor, $footer));
+                        }
+                    }
+                }
+            }
+
+            return array_values(array_unique(array_filter($fields)));
+        } catch (\Exception $e) {
+            log_message('error', 'Failed to extract template variables: ' . $e->getMessage());
+
+            return [];
         }
-
-        return [];
     }
 
     /**
@@ -919,9 +970,16 @@ class FileExplorer extends BaseController
             ]);
         }
         
-        // Create a temporary file path
-        $tempPath = WRITEPATH . 'uploads/' . $file->getRandomName();
-        $file->move(WRITEPATH . 'uploads', $file->getRandomName());
+        // Create a temporary file path using a single generated random name
+        $tempFileName = $file->getRandomName();
+        $tempPath     = WRITEPATH . 'uploads/' . $tempFileName;
+
+        if (!$file->move(WRITEPATH . 'uploads', $tempFileName)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Unable to store the uploaded template temporarily.'
+            ]);
+        }
         
         // Analyze the template file to find field names
         try {
@@ -948,7 +1006,8 @@ class FileExplorer extends BaseController
                 'success' => true,
                 'tempFilePath' => $tempPath,
                 'originalFileName' => $file->getName(),
-                'detectedFields' => $cleanedFields
+                'detectedFields' => $cleanedFields,
+                'rawFields' => $fields  // Add raw fields for debugging
             ]);
         } catch (\Exception $e) {
             // Clean up the file if analysis failed
@@ -980,10 +1039,23 @@ class FileExplorer extends BaseController
         
         $postData = $this->request->getJSON(true);
         
+        // Log the received data for debugging
+        log_message('debug', 'Finalize template upload - raw postData: ' . json_encode($postData));
+        
         $tempFilePath = $postData['tempFilePath'] ?? '';
         $templateName = trim($postData['templateName'] ?? '');
-        $templateFields = $postData['templateFields'] ?? [];
+        $templateFieldsRaw = $postData['templateFields'] ?? [];
+        
+        // Handle templateFields - could be array or JSON string
+        if (is_string($templateFieldsRaw)) {
+            $templateFields = json_decode($templateFieldsRaw, true) ?? [];
+        } else {
+            $templateFields = is_array($templateFieldsRaw) ? $templateFieldsRaw : [];
+        }
+        
         $originalFileName = $postData['originalFileName'] ?? '';
+        
+        log_message('debug', 'Finalize template - templateFields type: ' . gettype($templateFieldsRaw) . ', count: ' . count($templateFields));
         
         if (empty($tempFilePath) || !file_exists($tempFilePath)) {
             return $this->response->setJSON([
@@ -1019,13 +1091,27 @@ class FileExplorer extends BaseController
         $fileSize = filesize($finalPath);
         
         // Prepare data for the template model
+        // Ensure templateFields is an array before encoding
+        if (!is_array($templateFields)) {
+            log_message('error', 'templateFields is not an array: ' . gettype($templateFields));
+            $templateFields = [];
+        }
+        
+        $templateFieldsJson = json_encode($templateFields);
+        if ($templateFieldsJson === false) {
+            log_message('error', 'Failed to encode templateFields: ' . json_last_error_msg());
+            $templateFieldsJson = '[]';
+        }
+        
         $templateData = [
             'name' => $templateName,
             'originalFileName' => $originalFileName,
             'path' => 'uploads/templates/' . $newFileName,
             'size' => $fileSize,
-            'templateFields' => json_encode($templateFields)
+            'templateFields' => $templateFieldsJson
         ];
+        
+        log_message('debug', 'Template data prepared: ' . json_encode($templateData));
         
         // Insert the template
         $templateId = $this->templateModel->insert($templateData);
@@ -1071,9 +1157,6 @@ class FileExplorer extends BaseController
         
         // Return the new template details
         $newTemplate = $this->templateModel->find($templateId);
-        if ($newTemplate) {
-            $newTemplate['templateFields'] = json_decode($newTemplate['templateFields'], true) ?: [];
-        }
         
         return $this->response->setJSON([
             'success' => true,
@@ -1385,9 +1468,16 @@ class FileExplorer extends BaseController
             }
 
             // Execute LibreOffice conversion command
+            // Use custom user profile directory to avoid permission issues
+            $userProfile = WRITEPATH . 'cache/libreoffice';
+            if (!is_dir($userProfile)) {
+                mkdir($userProfile, 0755, true);
+            }
+            
             $command = sprintf(
-                '%s --headless --convert-to pdf:writer_pdf_Export --outdir %s %s 2>&1',
+                '%s -env:UserInstallation=file://%s --headless --convert-to pdf:writer_pdf_Export --outdir %s %s 2>&1',
                 escapeshellarg($libreOfficePath),
+                escapeshellarg($userProfile),
                 escapeshellarg($exportsDir),
                 escapeshellarg($docxPath)
             );

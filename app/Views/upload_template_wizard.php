@@ -205,7 +205,7 @@ async function analyzeTemplate() {
         if (result.success) {
             wizardState.tempFilePath = result.tempFilePath;
             wizardState.originalFileName = result.originalFileName;
-            wizardState.detectedFields = result.detectedFields;
+            wizardState.detectedFields = result.detectedFields || [];
             
             // Move to next step after a short delay to show analysis is complete
             setTimeout(() => {
@@ -232,11 +232,12 @@ async function analyzeTemplate() {
 function populateFieldsList() {
     const fieldsList = document.getElementById('fieldsList');
     
-    if (wizardState.detectedFields.length === 0) {
+    if (!wizardState.detectedFields || wizardState.detectedFields.length === 0) {
         fieldsList.innerHTML = `
             <div class="text-center py-4">
-                <i class="fas fa-info-circle text-gray-400 text-xl mb-2"></i>
-                <p class="text-gray-600">No fields detected automatically. You can still create filled documents manually.</p>
+                <i class="fas fa-exclamation-triangle text-yellow-400 text-xl mb-2"></i>
+                <p class="text-gray-600 font-medium">No placeholder fields detected.</p>
+                <p class="text-gray-500 text-sm mt-2">Make sure your template uses the format \${field_name}</p>
             </div>
         `;
         return;
