@@ -63,6 +63,8 @@ class FileExplorer extends BaseController
             if (isset($template['filledFiles']) && is_array($template['filledFiles'])) {
                 foreach ($template['filledFiles'] as &$filledFile) {
                     $filledFile['filledData'] = $this->parseJsonField($filledFile['filledData']);
+                    $filledFile['fieldTypes'] = $this->parseJsonField($filledFile['fieldTypes']);
+                    $filledFile['imageSizes'] = $this->parseJsonField($filledFile['imageSizes']);
                     
                     // If filledData is empty or is an empty array, initialize with template fields
                     if (empty($filledFile['filledData']) || (is_array($filledFile['filledData']) && count($filledFile['filledData']) === 0)) {
@@ -551,6 +553,26 @@ class FileExplorer extends BaseController
 
         // Merge processed images with filled data
         $filledDataWithImages = array_merge($filledData, $processedImages);
+        
+        // Extract and update fieldTypes and imageSizes if provided
+        $fieldTypes = null;
+        $imageSizes = null;
+        
+        if (isset($data['fieldTypes'])) {
+            if (is_string($data['fieldTypes'])) {
+                $fieldTypes = json_decode($data['fieldTypes'], true);
+            } else {
+                $fieldTypes = $data['fieldTypes'];
+            }
+        }
+        
+        if (isset($data['imageSizes'])) {
+            if (is_string($data['imageSizes'])) {
+                $imageSizes = json_decode($data['imageSizes'], true);
+            } else {
+                $imageSizes = $data['imageSizes'];
+            }
+        }
 
         // Prepare data for update
         $updateData = [
@@ -558,6 +580,15 @@ class FileExplorer extends BaseController
             'filledData' => json_encode($filledDataWithImages),
             'updatedAt' => date('Y-m-d H:i:s')
         ];
+        
+        // Add fieldTypes and imageSizes to update if provided
+        if ($fieldTypes !== null) {
+            $updateData['fieldTypes'] = json_encode($fieldTypes);
+        }
+        
+        if ($imageSizes !== null) {
+            $updateData['imageSizes'] = json_encode($imageSizes);
+        }
 
         // Update the filled file
         $result = $this->filledFileModel->update($filledFileId, $updateData);
@@ -569,16 +600,27 @@ class FileExplorer extends BaseController
                 'errors' => $this->filledFileModel->errors()
             ];
         }
+        
+        // Prepare response data
+        $responseData = [
+            'filledFileId' => $filledFileId,
+            'name' => $name,
+            'filledData' => $filledDataWithImages,
+            'updatedAt' => $updateData['updatedAt']
+        ];
+        
+        if ($fieldTypes !== null) {
+            $responseData['fieldTypes'] = $fieldTypes;
+        }
+        
+        if ($imageSizes !== null) {
+            $responseData['imageSizes'] = $imageSizes;
+        }
 
         return [
             'success' => true,
             'message' => 'Filled file updated successfully.',
-            'data' => [
-                'filledFileId' => $filledFileId,
-                'name' => $name,
-                'filledData' => $filledDataWithImages,
-                'updatedAt' => $updateData['updatedAt']
-            ]
+            'data' => $responseData
         ];
     }
 
@@ -1174,20 +1216,24 @@ class FileExplorer extends BaseController
 
             $templateProcessor = new TemplateProcessor($templatePath);
 
-            $filledData = is_array($filledFile['filledData']) ? $filledFile['filledData'] : json_decode($filledFile['filledData'], true);
-            $fieldTypes = is_array($filledFile['fieldTypes']) ? $filledFile['fieldTypes'] : json_decode($filledFile['fieldTypes'], true);
-            $imageSizes = is_array($filledFile['imageSizes']) ? $filledFile['imageSizes'] : json_decode($filledFile['imageSizes'], true);
+            $filledData = is_array($filledFile['filledData']) ? $filledFile['filledData'] : json_decode($filledFile['filledData'] ?? '{}', true);
+            $fieldTypes = is_array($filledFile['fieldTypes']) ? $filledFile['fieldTypes'] : json_decode($filledFile['fieldTypes'] ?? '{}', true);
+            $imageSizes = is_array($filledFile['imageSizes']) ? $filledFile['imageSizes'] : json_decode($filledFile['imageSizes'] ?? '{}', true);
 
             // Process each field based on type
             foreach ($filledData as $field => $value) {
                 $fieldType = $fieldTypes[$field] ?? 'text';
                 
                 if ($fieldType === 'image' && !empty($value)) {
-                    $imagePath = WRITEPATH . 'uploads/images/' . $value;
+                    // Image path is stored relative to filled_files directory with filledFileId subdirectory
+                    $imagePath = WRITEPATH . 'uploads/filled_files/' . $filledFileId . '/' . $value;
+                    
                     if (file_exists($imagePath)) {
                         $width = $imageSizes[$field]['width'] ?? 300;
                         $height = $imageSizes[$field]['height'] ?? 200;
                         $ratio = $imageSizes[$field]['ratio'] ?? true;
+                        
+                        log_message('debug', 'Export DOCX: Setting image for field ' . $field . ' from path: ' . $imagePath);
                         
                         $templateProcessor->setImageValue(
                             $field,
@@ -1199,6 +1245,7 @@ class FileExplorer extends BaseController
                             ]
                         );
                     } else {
+                        log_message('warning', 'Export DOCX: Image not found for field ' . $field . ' at path: ' . $imagePath);
                         $templateProcessor->setValue($field, '[Image not found]');
                     }
                 } else {
@@ -1231,7 +1278,7 @@ class FileExplorer extends BaseController
 
     /**
      * Export a filled file as a PDF document
-     * Currently not implemented - placeholder for future PDF generation
+     * Uses LibreOffice to convert generated DOCX to PDF
      *
      * @param int $filledFileId Filled file ID to export
      * @return ResponseInterface PDF file download or error response
@@ -1247,15 +1294,206 @@ class FileExplorer extends BaseController
             return $this->response->setStatusCode(404)->setBody('Filled file not found');
         }
 
-        // TODO: Implement PDF generation
-        // This would involve:
-        // 1. Loading the template file
-        // 2. Replacing placeholders with filled data
-        // 3. Converting to PDF (possibly via DOCX first)
+        $template = $this->templateModel->find($filledFile['templateFileId']);
+        if (!$template) {
+            return $this->response->setStatusCode(404)->setBody('Template not found');
+        }
 
-        return $this->response->setJSON([
-            'success' => false,
-            'message' => 'PDF export is not yet implemented.'
-        ]);
+        try {
+            $templatePath = $template['path'];
+            
+            log_message('debug', 'PDF Export: Template path: ' . $templatePath);
+            
+            if (!file_exists($templatePath)) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Template file not found on disk.'
+                ]);
+            }
+
+            // Step 1: Generate DOCX file first
+            $templateProcessor = new TemplateProcessor($templatePath);
+
+            $filledData = is_array($filledFile['filledData']) ? $filledFile['filledData'] : json_decode($filledFile['filledData'] ?? '{}', true);
+            $fieldTypes = is_array($filledFile['fieldTypes']) ? $filledFile['fieldTypes'] : json_decode($filledFile['fieldTypes'] ?? '{}', true);
+            $imageSizes = is_array($filledFile['imageSizes']) ? $filledFile['imageSizes'] : json_decode($filledFile['imageSizes'] ?? '{}', true);
+
+            // Process each field based on type
+            foreach ($filledData as $field => $value) {
+                $fieldType = $fieldTypes[$field] ?? 'text';
+                
+                if ($fieldType === 'image' && !empty($value)) {
+                    // Image path is stored relative to filled_files directory with filledFileId subdirectory
+                    $imagePath = WRITEPATH . 'uploads/filled_files/' . $filledFileId . '/' . $value;
+                    
+                    if (file_exists($imagePath)) {
+                        $width = $imageSizes[$field]['width'] ?? 300;
+                        $height = $imageSizes[$field]['height'] ?? 200;
+                        $ratio = $imageSizes[$field]['ratio'] ?? true;
+                        
+                        log_message('debug', 'Export PDF: Setting image for field ' . $field . ' from path: ' . $imagePath);
+                        
+                        $templateProcessor->setImageValue(
+                            $field,
+                            [
+                                'path' => $imagePath,
+                                'width' => $width,
+                                'height' => $height,
+                                'ratio' => $ratio
+                            ]
+                        );
+                    } else {
+                        log_message('warning', 'Export PDF: Image not found for field ' . $field . ' at path: ' . $imagePath);
+                        $templateProcessor->setValue($field, '[Image not found]');
+                    }
+                } else {
+                    $templateProcessor->setValue($field, $value ?? '');
+                }
+            }
+
+            $baseFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filledFile['name']) . '_' . date('Y-m-d_His');
+            $docxFilename = $baseFilename . '.docx';
+            $pdfFilename = $baseFilename . '.pdf';
+            
+            $docxPath = WRITEPATH . 'uploads/exports/' . $docxFilename;
+            $pdfPath = WRITEPATH . 'uploads/exports/' . $pdfFilename;
+            $exportsDir = WRITEPATH . 'uploads/exports/';
+
+            // Ensure exports directory exists
+            if (!is_dir($exportsDir)) {
+                mkdir($exportsDir, 0755, true);
+            }
+
+            // Save the generated DOCX file
+            $templateProcessor->saveAs($docxPath);
+            
+            log_message('debug', 'PDF Export: DOCX generated at: ' . $docxPath);
+
+            // Step 2: Convert DOCX to PDF using LibreOffice
+            $libreOfficePath = $this->findLibreOfficePath();
+            
+            if (!$libreOfficePath) {
+                // Clean up DOCX file
+                if (file_exists($docxPath)) {
+                    unlink($docxPath);
+                }
+                
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'LibreOffice is not installed or could not be found. Please install LibreOffice to enable PDF export.'
+                ]);
+            }
+
+            // Execute LibreOffice conversion command
+            $command = sprintf(
+                '%s --headless --convert-to pdf:writer_pdf_Export --outdir %s %s 2>&1',
+                escapeshellarg($libreOfficePath),
+                escapeshellarg($exportsDir),
+                escapeshellarg($docxPath)
+            );
+            
+            log_message('debug', 'PDF Export: Executing command: ' . $command);
+            
+            exec($command, $output, $returnCode);
+            
+            log_message('debug', 'PDF Export: Command output: ' . implode("\n", $output));
+            log_message('debug', 'PDF Export: Return code: ' . $returnCode);
+
+            // Clean up DOCX file
+            if (file_exists($docxPath)) {
+                unlink($docxPath);
+            }
+
+            // Check if PDF was created successfully
+            if ($returnCode !== 0 || !file_exists($pdfPath)) {
+                log_message('error', 'PDF Export: Conversion failed. Output: ' . implode("\n", $output));
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Failed to convert DOCX to PDF. LibreOffice conversion error.'
+                ]);
+            }
+
+            log_message('info', 'PDF Export: Successfully generated PDF at: ' . $pdfPath);
+
+            // Return PDF file for download
+            return $this->response->download($pdfPath, null)->setFileName($pdfFilename);
+
+        } catch (\Exception $e) {
+            log_message('error', 'PDF export error: ' . $e->getMessage());
+            
+            // Clean up any temporary files
+            if (isset($docxPath) && file_exists($docxPath)) {
+                unlink($docxPath);
+            }
+            if (isset($pdfPath) && file_exists($pdfPath)) {
+                unlink($pdfPath);
+            }
+            
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Error generating PDF: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Find LibreOffice executable path
+     * Checks common installation locations on different operating systems
+     *
+     * @return string|null Path to LibreOffice executable or null if not found
+     */
+    private function findLibreOfficePath(): ?string
+    {
+        $possiblePaths = [];
+        
+        // Detect operating system and set possible paths
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows paths
+            $possiblePaths = [
+                'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+                'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
+                'soffice.exe', // If in PATH
+            ];
+        } elseif (PHP_OS === 'Darwin') {
+            // macOS paths
+            $possiblePaths = [
+                '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+                '/usr/local/bin/soffice',
+                'soffice', // If in PATH
+            ];
+        } else {
+            // Linux/Unix paths
+            $possiblePaths = [
+                '/usr/bin/soffice',
+                '/usr/bin/libreoffice',
+                '/usr/local/bin/soffice',
+                '/usr/local/bin/libreoffice',
+                '/opt/libreoffice/program/soffice',
+                'soffice', // If in PATH
+                'libreoffice', // If in PATH
+            ];
+        }
+
+        // Check each possible path
+        foreach ($possiblePaths as $path) {
+            // For commands without full path, check if they exist in PATH
+            if (basename($path) === $path) {
+                $checkCommand = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'where' : 'which';
+                exec("$checkCommand $path 2>&1", $output, $returnCode);
+                if ($returnCode === 0 && !empty($output[0])) {
+                    log_message('debug', 'LibreOffice found via PATH: ' . $output[0]);
+                    return trim($output[0]);
+                }
+            } else {
+                // Check if full path exists
+                if (file_exists($path)) {
+                    log_message('debug', 'LibreOffice found at: ' . $path);
+                    return $path;
+                }
+            }
+        }
+
+        log_message('warning', 'LibreOffice executable not found in any common locations');
+        return null;
     }
 }

@@ -1301,6 +1301,7 @@
                 list.className = 'space-y-4';
                 
                 const fieldTypes = fileData.fieldTypes || {};
+                const imageSizes = fileData.imageSizes || {};
                 
                 for (const [key, value] of Object.entries(fileData.filledData)) {
                     const item = document.createElement('div');
@@ -1349,6 +1350,12 @@
                                 hiddenInput.name = fieldName;
                                 hiddenInput.value = fieldValue || '';
                                 
+                                // Get saved image sizes or use defaults
+                                const savedSizes = imageSizes[fieldName] || {};
+                                const defaultWidth = savedSizes.width || 300;
+                                const defaultHeight = savedSizes.height || 200;
+                                const defaultRatio = savedSizes.ratio !== undefined ? savedSizes.ratio : true;
+                                
                                 const sizeControlsDiv = document.createElement('div');
                                 sizeControlsDiv.className = 'bg-gray-50 p-3 rounded-lg border border-gray-200';
                                 
@@ -1370,8 +1377,9 @@
                                 widthInput.className = 'w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500';
                                 widthInput.min = '50';
                                 widthInput.max = '1000';
-                                widthInput.value = '300';
+                                widthInput.value = defaultWidth;
                                 widthInput.placeholder = '300';
+                                widthInput.dataset.fieldName = fieldName;
                                 widthDiv.appendChild(widthLabel);
                                 widthDiv.appendChild(widthInput);
                                 
@@ -1385,8 +1393,9 @@
                                 heightInput.className = 'w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500';
                                 heightInput.min = '50';
                                 heightInput.max = '1000';
-                                heightInput.value = '200';
+                                heightInput.value = defaultHeight;
                                 heightInput.placeholder = '200';
+                                heightInput.dataset.fieldName = fieldName;
                                 heightDiv.appendChild(heightLabel);
                                 heightDiv.appendChild(heightInput);
                                 
@@ -1400,13 +1409,63 @@
                                 ratioCheckbox.type = 'checkbox';
                                 ratioCheckbox.name = `imageRatio_${fieldName}`;
                                 ratioCheckbox.className = 'mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded';
-                                ratioCheckbox.checked = true;
+                                ratioCheckbox.checked = defaultRatio;
+                                ratioCheckbox.dataset.fieldName = fieldName;
                                 const ratioLabel = document.createElement('label');
                                 ratioLabel.className = 'text-xs text-gray-600';
                                 ratioLabel.textContent = 'Maintain aspect ratio';
                                 ratioDiv.appendChild(ratioCheckbox);
                                 ratioDiv.appendChild(ratioLabel);
                                 sizeControlsDiv.appendChild(ratioDiv);
+                                
+                                // Store original image dimensions for aspect ratio calculation
+                                let originalAspectRatio = defaultWidth / defaultHeight;
+                                
+                                // Function to get actual image dimensions
+                                const getImageDimensions = (imageUrl) => {
+                                    return new Promise((resolve) => {
+                                        const img = new Image();
+                                        img.onload = function() {
+                                            resolve({ width: this.width, height: this.height });
+                                        };
+                                        img.onerror = function() {
+                                            resolve({ width: defaultWidth, height: defaultHeight });
+                                        };
+                                        img.src = imageUrl;
+                                    });
+                                };
+                                
+                                // If there's a current image, get its actual dimensions for aspect ratio
+                                if (fieldValue && fieldValue.trim()) {
+                                    const currentImageUrl = getImageUrl(fieldValue, currentSelectedFilledFile.id);
+                                    if (currentImageUrl) {
+                                        getImageDimensions(currentImageUrl).then(dims => {
+                                            originalAspectRatio = dims.width / dims.height;
+                                            // Store it on the inputs for reference
+                                            widthInput.dataset.originalAspectRatio = originalAspectRatio;
+                                            heightInput.dataset.originalAspectRatio = originalAspectRatio;
+                                        });
+                                    }
+                                }
+                                
+                                // Add aspect ratio adjustment listeners
+                                widthInput.addEventListener('input', function() {
+                                    if (ratioCheckbox.checked) {
+                                        const aspectRatio = parseFloat(this.dataset.originalAspectRatio) || originalAspectRatio;
+                                        const newWidth = parseInt(this.value) || defaultWidth;
+                                        const newHeight = Math.round(newWidth / aspectRatio);
+                                        heightInput.value = newHeight;
+                                    }
+                                });
+                                
+                                heightInput.addEventListener('input', function() {
+                                    if (ratioCheckbox.checked) {
+                                        const aspectRatio = parseFloat(this.dataset.originalAspectRatio) || originalAspectRatio;
+                                        const newHeight = parseInt(this.value) || defaultHeight;
+                                        const newWidth = Math.round(newHeight * aspectRatio);
+                                        widthInput.value = newWidth;
+                                    }
+                                });
                                 
                                 imageDiv.appendChild(sizeControlsDiv);
                                 
@@ -1502,11 +1561,30 @@
                                                             <i class="fas fa-times-circle"></i>
                                                         </button>
                                                     </div>
-                                                    <img src="${e.target.result}" alt="Preview" class="max-h-32 object-contain rounded border border-gray-200 mx-auto block" style="max-width: 200px;">
+                                                    <img src="${e.target.result}" alt="Preview" class="max-h-32 object-contain rounded border border-gray-200 mx-auto block" style="max-width: 200px;" id="preview_${fieldName}">
                                                     <div class="text-xs text-gray-600 mt-2 text-center">${file.name} (${(file.size / 1024).toFixed(1)} KB)</div>
                                                 </div>
                                             `;
                                             previewArea.classList.remove('hidden');
+                                            
+                                            // Update aspect ratio based on newly uploaded image
+                                            const previewImg = document.getElementById(`preview_${fieldName}`);
+                                            if (previewImg) {
+                                                previewImg.onload = function() {
+                                                    const newAspectRatio = this.naturalWidth / this.naturalHeight;
+                                                    widthInput.dataset.originalAspectRatio = newAspectRatio;
+                                                    heightInput.dataset.originalAspectRatio = newAspectRatio;
+                                                    
+                                                    // If aspect ratio is checked, update dimensions to match new image
+                                                    if (ratioCheckbox.checked) {
+                                                        const currentWidth = parseInt(widthInput.value) || defaultWidth;
+                                                        const newHeight = Math.round(currentWidth / newAspectRatio);
+                                                        heightInput.value = newHeight;
+                                                    }
+                                                    
+                                                    console.log(`Updated aspect ratio for ${fieldName}: ${newAspectRatio.toFixed(2)} (${this.naturalWidth}x${this.naturalHeight})`);
+                                                };
+                                            }
                                         };
                                         reader.readAsDataURL(file);
                                     }
@@ -2223,26 +2301,45 @@
                     console.log('Save successful:', result);
 
                     if (result.success) {
-                        if (result.updatedData) {
-                            currentSelectedFilledFile.filledData = result.updatedData;
-                            originalFilledData = JSON.parse(JSON.stringify(result.updatedData));
+                        // Update currentSelectedFilledFile with the data returned from server
+                        if (result.data && result.data.filledData) {
+                            currentSelectedFilledFile.filledData = result.data.filledData;
+                            originalFilledData = JSON.parse(JSON.stringify(result.data.filledData));
                         }
                         
-                        if (result.fieldTypes) {
-                            currentSelectedFilledFile.fieldTypes = result.fieldTypes;
-                        } else {
+                        if (result.data && result.data.fieldTypes) {
+                            currentSelectedFilledFile.fieldTypes = result.data.fieldTypes;
+                        } else if (fieldTypes) {
                             currentSelectedFilledFile.fieldTypes = fieldTypes;
                         }
+                        
+                        if (result.data && result.data.imageSizes) {
+                            currentSelectedFilledFile.imageSizes = result.data.imageSizes;
+                        } else if (imageSizes) {
+                            currentSelectedFilledFile.imageSizes = imageSizes;
+                        }
+                        
+                        if (result.data && result.data.name) {
+                            currentSelectedFilledFile.name = result.data.name;
+                        }
 
+                        // Update the template's filledFiles array in templatesData
                         const templateOfSavedFile = findTemplateById(currentSelectedFilledFile.template_id);
                         if (templateOfSavedFile && templateOfSavedFile.filledFiles) {
                             const fileIndex = templateOfSavedFile.filledFiles.findIndex(ff => ff.id.toString() === currentSelectedFilledFile.id.toString());
                             if (fileIndex > -1) {
                                 templateOfSavedFile.filledFiles[fileIndex].filledData = currentSelectedFilledFile.filledData;
                                 templateOfSavedFile.filledFiles[fileIndex].fieldTypes = currentSelectedFilledFile.fieldTypes;
+                                if (currentSelectedFilledFile.imageSizes) {
+                                    templateOfSavedFile.filledFiles[fileIndex].imageSizes = currentSelectedFilledFile.imageSizes;
+                                }
+                                if (currentSelectedFilledFile.name) {
+                                    templateOfSavedFile.filledFiles[fileIndex].name = currentSelectedFilledFile.name;
+                                }
                             }
                         }
                         
+                        // Re-render the file details with updated data
                         renderFileDetails(currentSelectedFilledFile, 'view');
                         showSuccessModal('File updated successfully!');
                     } else {
