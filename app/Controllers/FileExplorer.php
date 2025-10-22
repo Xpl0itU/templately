@@ -6,6 +6,12 @@ use PhpOffice\PhpWord\TemplateProcessor;
 use CodeIgniter\HTTP\ResponseInterface;
 use App\Libraries\PermissionManager;
 
+/**
+ * FileExplorer Controller
+ * 
+ * Handles template and filled file management operations including viewing,
+ * creating, updating, deleting, and exporting documents.
+ */
 class FileExplorer extends BaseController
 {
     protected $templateModel;
@@ -19,6 +25,11 @@ class FileExplorer extends BaseController
         $this->permissionManager = service('permissions');
     }
 
+    /**
+     * Display the file explorer interface
+     *
+     * @return mixed View or redirect
+     */
     public function index()
     {
         if (!$this->permissionManager->can(auth()->user(), 'templates.view')) {
@@ -36,19 +47,49 @@ class FileExplorer extends BaseController
         );
     }
 
+    /**
+     * Retrieve all templates with their associated filled files
+     *
+     * @return array Templates with parsed fields
+     */
     private function getTemplatesWithFilledFiles(): array
     {
-        // Use the optimized method from TemplateModel that eliminates N+1 queries
         $templates = $this->templateModel->getTemplatesWithFilledFilesOptimized();
         
-        // Process template fields for each template
         foreach ($templates as &$template) {
             $template['templateFields'] = $this->parseJsonField($template['templateFields']);
+            
+            // Initialize empty filledData for old filled files
+            if (isset($template['filledFiles']) && is_array($template['filledFiles'])) {
+                foreach ($template['filledFiles'] as &$filledFile) {
+                    $filledFile['filledData'] = $this->parseJsonField($filledFile['filledData']);
+                    
+                    // If filledData is empty or is an empty array, initialize with template fields
+                    if (empty($filledFile['filledData']) || (is_array($filledFile['filledData']) && count($filledFile['filledData']) === 0)) {
+                        $filledData = [];
+                        if (is_array($template['templateFields'])) {
+                            foreach ($template['templateFields'] as $field) {
+                                $fieldName = is_string($field) ? $field : ($field['name'] ?? $field['field'] ?? '');
+                                if ($fieldName) {
+                                    $filledData[$fieldName] = '';
+                                }
+                            }
+                        }
+                        $filledFile['filledData'] = $filledData;
+                    }
+                }
+            }
         }
 
         return $templates;
     }
 
+    /**
+     * Normalize filled file data with default values
+     *
+     * @param array $file File data to normalize
+     * @return array Normalized file data
+     */
     private function normalizeFilledFile(array $file): array
     {
         $file = array_merge(
@@ -66,9 +107,15 @@ class FileExplorer extends BaseController
         return $file;
     }
 
+    /**
+     * Update an existing template
+     *
+     * @param int $templateId Template ID to update
+     * @param array $data Update data
+     * @return array Result with success status and message
+     */
     private function updateTemplate(int $templateId, array $data): array
     {
-        // Validate that the user has permission to edit this template
         if (!$this->permissionManager->can(auth()->user(), 'templates.edit', 'template', $templateId)) {
             return [
                 'success' => false,
@@ -76,7 +123,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Check if template exists
         $existingTemplate = $this->templateModel->find($templateId);
         if (!$existingTemplate) {
             return [
@@ -85,7 +131,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Update the template
         $updateData = [
             'name' => $data['name'] ?? $existingTemplate['name'],
             'description' => $data['description'] ?? $existingTemplate['description'],
@@ -116,9 +161,13 @@ class FileExplorer extends BaseController
         ];
     }
 
+    /**
+     * Create a new filled file from a template (AJAX endpoint)
+     *
+     * @return ResponseInterface JSON response with creation result
+     */
     public function createFilledFile()
     {
-        // Only accept JSON requests
         if (!$this->request->isAJAX()) {
             return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
         }
@@ -129,9 +178,14 @@ class FileExplorer extends BaseController
         return $this->response->setJSON($result);
     }
 
+    /**
+     * Process the creation of a filled file with validation and permission checks
+     *
+     * @param array $data Request data with template ID, name, and filled data
+     * @return array Response with success status and message
+     */
     private function processCreateFilledFile(array $data): array
     {
-        // Validate template ID
         $templateId = (int) ($data['templateId'] ?? $data['template_id'] ?? 0);
         if ($templateId <= 0) {
             return [
@@ -140,7 +194,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Validate that the user has permission to create filled files from this template
         if (!$this->permissionManager->can(auth()->user(), 'filled-files.create', 'template', $templateId)) {
             return [
                 'success' => false,
@@ -148,7 +201,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Check if template exists
         $template = $this->templateModel->find($templateId);
         if (!$template) {
             return [
@@ -157,19 +209,29 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Validate filled data - allow empty object for templates with no fields
-        $filledData = $data['filledData'] ?? $data['filled_data'] ?? [];
+        // Initialize filledData with template fields if not provided
+        $filledData = $data['filledData'] ?? $data['filled_data'] ?? null;
         
-        // filledData can be empty for templates with no fields or new files
-        // Convert to array if it's not already
         if (is_string($filledData)) {
             $filledData = json_decode($filledData, true) ?? [];
         }
         if (!is_array($filledData)) {
             $filledData = [];
         }
+        
+        // If filledData is empty or null, initialize with template fields as empty strings
+        if (empty($filledData)) {
+            $templateFields = $this->parseJsonField($template['templateFields']);
+            if (is_array($templateFields)) {
+                foreach ($templateFields as $field) {
+                    $fieldName = is_string($field) ? $field : ($field['name'] ?? $field['field'] ?? '');
+                    if ($fieldName) {
+                        $filledData[$fieldName] = '';
+                    }
+                }
+            }
+        }
 
-        // Validate filled file name
         $name = trim($data['name'] ?? '');
         if (empty($name)) {
             return [
@@ -250,26 +312,31 @@ class FileExplorer extends BaseController
         ];
     }
 
+    /**
+     * Handle image upload for filled file fields
+     *
+     * @param mixed $file Uploaded file object
+     * @param string $fieldKey Field key for the image
+     * @param int $filledFileId Filled file ID for organizing uploads
+     * @return string|false Relative path to uploaded image or false on failure
+     */
     private function handleImageUpload($file, string $fieldKey, int $filledFileId): string|false
     {
         if (!$file || !$file->isValid()) {
             return false;
         }
 
-        // Create directory for this filled file's images if it doesn't exist
         $uploadPath = WRITEPATH . 'uploads/filled_files/' . $filledFileId . '/';
         if (!is_dir($uploadPath)) {
             mkdir($uploadPath, 0755, true);
         }
 
-        // Generate a unique filename
         $originalName = $file->getName();
         $extension = $file->getExtension();
         $baseName = pathinfo($originalName, PATHINFO_FILENAME);
         $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $baseName);
         $fileName = $safeName . '_' . uniqid() . '.' . $extension;
 
-        // Move the uploaded file
         if ($file->move($uploadPath, $fileName)) {
             return $fileName; // Return just the filename, not the full path
         }
@@ -277,13 +344,19 @@ class FileExplorer extends BaseController
         return false;
     }
 
+    /**
+     * Upload an image for a specific field in a filled file (AJAX endpoint)
+     *
+     * @param int $filledFileId Filled file ID
+     * @param string $fieldName Field name for the image
+     * @return ResponseInterface JSON response with upload result
+     */
     public function uploadFieldImage(int $filledFileId, string $fieldName)
     {
         if (!$this->request->isAJAX()) {
             return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
         }
 
-        // Check permissions
         if (!$this->permissionManager->can(auth()->user(), 'filled-files.edit', 'filled_file', $filledFileId)) {
             return $this->response->setJSON([
                 'success' => false,
@@ -291,7 +364,6 @@ class FileExplorer extends BaseController
             ]);
         }
 
-        // Check if filled file exists
         $filledFile = $this->filledFileModel->find($filledFileId);
         if (!$filledFile) {
             return $this->response->setJSON([
@@ -300,7 +372,6 @@ class FileExplorer extends BaseController
             ]);
         }
 
-        // Get the uploaded file
         $file = $this->request->getFile('image');
         if (!$file || !$file->isValid()) {
             return $this->response->setJSON([
@@ -309,7 +380,6 @@ class FileExplorer extends BaseController
             ]);
         }
 
-        // Upload the image
         $fileName = $this->handleImageUpload($file, $fieldName, $filledFileId);
         if ($fileName === false) {
             return $this->response->setJSON([
@@ -318,7 +388,6 @@ class FileExplorer extends BaseController
             ]);
         }
 
-        // Update the filled file data with the new image path
         $filledData = is_string($filledFile['filledData']) 
             ? json_decode($filledFile['filledData'], true) ?? [] 
             : $filledFile['filledData'];
@@ -338,20 +407,25 @@ class FileExplorer extends BaseController
         ]);
     }
 
+    /**
+     * Update an existing filled file (AJAX endpoint)
+     * Handles both JSON and multipart form data
+     *
+     * @param int $filledFileId Filled file ID to update
+     * @return ResponseInterface JSON response with update result
+     */
     public function updateFilledFile(int $filledFileId)
     {
-        // Only accept AJAX requests
         if (!$this->request->isAJAX()) {
             return $this->response->setJSON(['success' => false, 'message' => 'Invalid request']);
         }
 
-        // Get form data (could be JSON or multipart/form-data with files)
-        // Try to get JSON first, but don't fail if it's not JSON
+        // Try to get JSON first, but don't fail if it's not JSON (could be FormData)
         $jsonData = null;
         try {
             $jsonData = $this->request->getJSON(true);
         } catch (\Exception $e) {
-            // Not JSON, that's okay - it's probably FormData
+            // Not JSON, that's okay
         }
         
         $postData = $this->request->getPost();
@@ -359,16 +433,22 @@ class FileExplorer extends BaseController
         // Merge both sources, preferring JSON data
         $data = array_merge($postData ?? [], $jsonData ?? []);
         
-        // Handle file uploads for images
         $files = $this->request->getFiles();
         
         $result = $this->processUpdateFilledFile($filledFileId, $data, $files);
         return $this->response->setJSON($result);
     }
 
+    /**
+     * Process filled file update with validation, permission checks, and image handling
+     *
+     * @param int $filledFileId Filled file ID to update
+     * @param array $data Request data with name and filled data
+     * @param array $files Uploaded image files
+     * @return array Response with success status and message
+     */
     private function processUpdateFilledFile(int $filledFileId, array $data, array $files = []): array
     {
-        // Validate that the user has permission to edit this filled file
         if (!$this->permissionManager->can(auth()->user(), 'filled-files.edit', 'filled_file', $filledFileId)) {
             return [
                 'success' => false,
@@ -376,7 +456,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Check if filled file exists
         $existingFile = $this->filledFileModel->find($filledFileId);
         if (!$existingFile) {
             return [
@@ -385,21 +464,17 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Validate filled data - decode if it's a JSON string
         $filledDataRaw = $data['filledData'] ?? [];
         
-        // DEBUG: Log what we receive
         log_message('debug', 'FilledData raw type: ' . gettype($filledDataRaw));
         log_message('debug', 'FilledData raw value: ' . print_r($filledDataRaw, true));
         
         // Handle case where filledData might be an array (FormData duplicate keys)
         if (is_array($filledDataRaw) && !empty($filledDataRaw)) {
-            // If it's an array with multiple values, take the last one (the actual data, not placeholder)
             if (isset($filledDataRaw[0]) && is_string($filledDataRaw[0])) {
                 $filledDataRaw = end($filledDataRaw);
                 log_message('debug', 'Took last element from array: ' . $filledDataRaw);
             } else {
-                // It's already a proper array of data, use it directly
                 $filledData = $filledDataRaw;
                 log_message('debug', 'Using filledDataRaw directly as array');
                 goto skip_json_decode;
@@ -407,10 +482,8 @@ class FileExplorer extends BaseController
         }
         
         if (is_string($filledDataRaw)) {
-            // Try to decode JSON
             $filledData = json_decode($filledDataRaw, true);
             
-            // Check for JSON errors
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return [
                     'success' => false,
@@ -441,7 +514,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Validate filled file name
         $name = trim($data['name'] ?? $existingFile['name'] ?? '');
         if (empty($name)) {
             return [
@@ -450,7 +522,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Get list of fields with new images
         $fieldsWithNewImages = [];
         if (isset($data['fieldsWithNewImages'])) {
             if (is_string($data['fieldsWithNewImages'])) {
@@ -511,6 +582,12 @@ class FileExplorer extends BaseController
         ];
     }
 
+    /**
+     * Delete a template (AJAX endpoint)
+     *
+     * @param int $templateId Template ID to delete
+     * @return ResponseInterface JSON response with deletion result
+     */
     public function deleteTemplate(int $templateId)
     {
         if (!$this->request->isAJAX()) {
@@ -521,9 +598,15 @@ class FileExplorer extends BaseController
         return $this->response->setJSON($result);
     }
 
+    /**
+     * Process template deletion with permission checks and validation
+     * Prevents deletion if template has associated filled files
+     *
+     * @param int $templateId Template ID to delete
+     * @return array Response with success status and message
+     */
     private function processDeleteTemplate(int $templateId): array
     {
-        // Validate that the user has permission to delete this template
         if (!$this->permissionManager->can(auth()->user(), 'templates.delete', 'template', $templateId)) {
             return [
                 'success' => false,
@@ -531,7 +614,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Check if template exists
         $template = $this->templateModel->find($templateId);
         if (!$template) {
             return [
@@ -540,7 +622,7 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Check if there are any filled files associated with this template
+        // Prevent deletion if template has associated filled files
         $filledFiles = $this->filledFileModel->where('templateId', $templateId)->findAll();
         if (!empty($filledFiles)) {
             return [
@@ -549,7 +631,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Delete the template
         $result = $this->templateModel->delete($templateId);
 
         if ($result === false) {
@@ -565,6 +646,12 @@ class FileExplorer extends BaseController
         ];
     }
 
+    /**
+     * Delete a filled file (AJAX endpoint)
+     *
+     * @param int $filledFileId Filled file ID to delete
+     * @return ResponseInterface JSON response with deletion result
+     */
     public function deleteFilledFile(int $filledFileId)
     {
         if (!$this->request->isAJAX()) {
@@ -575,9 +662,14 @@ class FileExplorer extends BaseController
         return $this->response->setJSON($result);
     }
 
+    /**
+     * Process filled file deletion with permission checks
+     *
+     * @param int $filledFileId Filled file ID to delete
+     * @return array Response with success status and message
+     */
     private function processDeleteFilledFile(int $filledFileId): array
     {
-        // Validate that the user has permission to delete this filled file
         if (!$this->permissionManager->can(auth()->user(), 'filled-files.delete', 'filled_file', $filledFileId)) {
             return [
                 'success' => false,
@@ -585,7 +677,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Check if filled file exists
         $filledFile = $this->filledFileModel->find($filledFileId);
         if (!$filledFile) {
             return [
@@ -594,7 +685,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Delete the filled file
         $result = $this->filledFileModel->delete($filledFileId);
 
         if ($result === false) {
@@ -604,7 +694,6 @@ class FileExplorer extends BaseController
             ];
         }
 
-        // Update template's updatedAt timestamp
         if (isset($filledFile['templateId'])) {
             $this->templateModel->update($filledFile['templateId'], ['updatedAt' => date('Y-m-d H:i:s')]);
         }
@@ -615,6 +704,12 @@ class FileExplorer extends BaseController
         ];
     }
 
+    /**
+     * Parse JSON field data, returning array or empty array on error
+     *
+     * @param mixed $field JSON string or array
+     * @return array Parsed field data
+     */
     private function parseJsonField($field)
     {
         if (is_array($field)) {
@@ -630,6 +725,12 @@ class FileExplorer extends BaseController
         return is_array($decoded) ? $decoded : [];
     }
 
+    /**
+     * Extract field name from various field data structures
+     *
+     * @param mixed $field Field data (string, array with 'name' or 'field' key)
+     * @return string Extracted field name or empty string
+     */
     private function extractFieldName($field): string
     {
         if (is_string($field)) {
@@ -653,6 +754,12 @@ class FileExplorer extends BaseController
         return '';
     }
 
+    /**
+     * Get variable fields from template processor using reflection
+     *
+     * @param TemplateProcessor $templateProcessor Template processor instance
+     * @return array Variable fields extracted from template
+     */
     private function getTemplateVariableFields(TemplateProcessor $templateProcessor): array
     {
         if (method_exists($templateProcessor, 'getVariableFields')) {
@@ -664,6 +771,12 @@ class FileExplorer extends BaseController
         return [];
     }
 
+    /**
+     * Get cached user permissions for templates and filled files
+     * Caches results for 5 minutes to improve performance
+     *
+     * @return array Associative array of permission flags
+     */
     protected function getUserPermissions()
     {
         $userId = auth()->id();
@@ -693,12 +806,24 @@ class FileExplorer extends BaseController
         return $permissions;
     }
 
+    /**
+     * Redirect with error message in flash data
+     *
+     * @param string $url URL to redirect to
+     * @param string $message Error message to display
+     * @return RedirectResponse Redirect response with error message
+     */
     private function redirectWithError(string $url, string $message)
     {
         return redirect()->to($url)->with('error', $message);
     }
     
-    // New methods to handle template upload functionality
+    /**
+     * Handle template upload wizard step 1 - analyze uploaded file (AJAX endpoint)
+     * Extracts template fields and stores temporary file
+     *
+     * @return ResponseInterface JSON response with detected fields and temp file path
+     */
     public function uploadTemplateWizard()
     {
         if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
@@ -796,6 +921,12 @@ class FileExplorer extends BaseController
         }
     }
     
+    /**
+     * Finalize template upload after field configuration (AJAX endpoint)
+     * Moves temporary file to permanent location and creates database record
+     *
+     * @return ResponseInterface JSON response with upload result
+     */
     public function finalizeTemplateUpload()
     {
         if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
@@ -812,7 +943,6 @@ class FileExplorer extends BaseController
         $templateFields = $postData['templateFields'] ?? [];
         $originalFileName = $postData['originalFileName'] ?? '';
         
-        // Validate required fields
         if (empty($tempFilePath) || !file_exists($tempFilePath)) {
             return $this->response->setJSON([
                 'success' => false,
@@ -827,7 +957,6 @@ class FileExplorer extends BaseController
             ]);
         }
         
-        // Generate a safe path for the template
         $uploadPath = FCPATH . 'uploads/templates/';
         if (!is_dir($uploadPath)) {
             mkdir($uploadPath, 0755, true);
@@ -911,6 +1040,13 @@ class FileExplorer extends BaseController
         ]);
     }
     
+    /**
+     * Generate a unique filename by appending counter if file already exists
+     *
+     * @param string $originalFileName Original uploaded filename
+     * @param string $uploadPath Directory path to check for existing files
+     * @return string Unique filename
+     */
     private function generateUniqueFileName(string $originalFileName, string $uploadPath): string
     {
         $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
@@ -929,6 +1065,13 @@ class FileExplorer extends BaseController
         return $newFileName;
     }
 
+    /**
+     * Serve an image file from filled file uploads
+     *
+     * @param int $filledFileId Filled file ID containing the image
+     * @param string $imageName Image filename to serve
+     * @return ResponseInterface Image file response or 404
+     */
     public function serveImage(int $filledFileId, string $imageName)
     {
         // Get the filled file to verify it exists and get image path
@@ -995,27 +1138,29 @@ class FileExplorer extends BaseController
             ->setBody(file_get_contents($fullImagePath));
     }
 
+    /**
+     * Export a filled file as a DOCX document with merged template data
+     *
+     * @param int $filledFileId Filled file ID to export
+     * @return ResponseInterface DOCX file download or error response
+     */
     public function exportDocx(int $filledFileId)
     {
-        // Check permissions
         if (!$this->permissionManager->can(auth()->user(), 'filled-files.view', 'filled_file', $filledFileId)) {
             return $this->response->setStatusCode(403)->setBody('Access denied');
         }
 
-        // Get the filled file
         $filledFile = $this->filledFileModel->find($filledFileId);
         if (!$filledFile) {
             return $this->response->setStatusCode(404)->setBody('Filled file not found');
         }
 
-        // Get the template
         $template = $this->templateModel->find($filledFile['templateFileId']);
         if (!$template) {
             return $this->response->setStatusCode(404)->setBody('Template not found');
         }
 
         try {
-            // Load the template file - path is already absolute
             $templatePath = $template['path'];
             
             log_message('debug', 'Export: Template path: ' . $templatePath);
@@ -1027,20 +1172,17 @@ class FileExplorer extends BaseController
                 ]);
             }
 
-            // Create template processor
             $templateProcessor = new TemplateProcessor($templatePath);
 
-            // Get filled data - check if already decoded
             $filledData = is_array($filledFile['filledData']) ? $filledFile['filledData'] : json_decode($filledFile['filledData'], true);
             $fieldTypes = is_array($filledFile['fieldTypes']) ? $filledFile['fieldTypes'] : json_decode($filledFile['fieldTypes'], true);
             $imageSizes = is_array($filledFile['imageSizes']) ? $filledFile['imageSizes'] : json_decode($filledFile['imageSizes'], true);
 
-            // Process each field
+            // Process each field based on type
             foreach ($filledData as $field => $value) {
                 $fieldType = $fieldTypes[$field] ?? 'text';
                 
                 if ($fieldType === 'image' && !empty($value)) {
-                    // Handle image fields
                     $imagePath = WRITEPATH . 'uploads/images/' . $value;
                     if (file_exists($imagePath)) {
                         $width = $imageSizes[$field]['width'] ?? 300;
@@ -1057,16 +1199,13 @@ class FileExplorer extends BaseController
                             ]
                         );
                     } else {
-                        // Image not found, replace with placeholder text
                         $templateProcessor->setValue($field, '[Image not found]');
                     }
                 } else {
-                    // Handle text/paragraph fields
                     $templateProcessor->setValue($field, $value ?? '');
                 }
             }
 
-            // Generate output filename
             $outputFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filledFile['name']) . '_' . date('Y-m-d_His') . '.docx';
             $outputPath = WRITEPATH . 'uploads/exports/' . $outputFilename;
 
@@ -1090,14 +1229,19 @@ class FileExplorer extends BaseController
         }
     }
 
+    /**
+     * Export a filled file as a PDF document
+     * Currently not implemented - placeholder for future PDF generation
+     *
+     * @param int $filledFileId Filled file ID to export
+     * @return ResponseInterface PDF file download or error response
+     */
     public function exportPdf(int $filledFileId)
     {
-        // Check permissions
         if (!$this->permissionManager->can(auth()->user(), 'filled-files.view', 'filled_file', $filledFileId)) {
             return $this->response->setStatusCode(403)->setBody('Access denied');
         }
 
-        // Get the filled file
         $filledFile = $this->filledFileModel->find($filledFileId);
         if (!$filledFile) {
             return $this->response->setStatusCode(404)->setBody('Filled file not found');

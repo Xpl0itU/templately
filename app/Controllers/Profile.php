@@ -4,10 +4,20 @@ namespace App\Controllers;
 
 use CodeIgniter\Shield\Entities\User;
 
+/**
+ * Profile Controller
+ * Handles user profile management including viewing profile and updating email/password
+ */
 class Profile extends BaseController
 {
     protected $helpers = ['form'];
 
+    /**
+     * Display user profile page
+     * Shows current user information including username and email
+     *
+     * @return ResponseInterface|string Profile view or redirect to login
+     */
     public function index()
     {
         $user = auth()->user();
@@ -16,7 +26,6 @@ class Profile extends BaseController
             return redirect()->to('/login')->with('error', 'You must be logged in to view your profile.');
         }
 
-        // Get user's email from auth_identities table
         $identityModel = model('UserIdentityModel');
         $emailIdentity = $identityModel
             ->where('user_id', $user->id)
@@ -32,6 +41,12 @@ class Profile extends BaseController
         ]);
     }
 
+    /**
+     * Update user email address (AJAX endpoint)
+     * Requires current password verification
+     *
+     * @return ResponseInterface JSON response with update result
+     */
     public function updateEmail()
     {
         if (!$this->request->isAJAX()) {
@@ -69,7 +84,6 @@ class Profile extends BaseController
         $email = $this->request->getPost('email');
         $currentPassword = $this->request->getPost('current_password');
 
-        // Verify current password
         if (!auth()->check(['password' => $currentPassword])) {
             return $this->response->setJSON([
                 'success' => false,
@@ -80,7 +94,6 @@ class Profile extends BaseController
         try {
             $identityModel = model('UserIdentityModel');
             
-            // Check if email already exists for another user
             $existingIdentity = $identityModel
                 ->where('type', 'email_password')
                 ->where('secret', $email)
@@ -94,20 +107,17 @@ class Profile extends BaseController
                 ]);
             }
 
-            // Update or create email identity
             $identity = $identityModel
                 ->where('user_id', $user->id)
                 ->where('type', 'email_password')
                 ->first();
 
             if ($identity) {
-                // Update existing email
                 $identityModel->update($identity->id, [
                     'secret' => $email,
                     'updated_at' => date('Y-m-d H:i:s')
                 ]);
             } else {
-                // Create new email identity
                 $identityModel->insert([
                     'user_id' => $user->id,
                     'type' => 'email_password',
@@ -130,6 +140,12 @@ class Profile extends BaseController
         }
     }
 
+    /**
+     * Update user password (AJAX endpoint)
+     * Requires current password verification and strong password validation
+     *
+     * @return ResponseInterface JSON response with update result
+     */
     public function updatePassword()
     {
         if (!$this->request->isAJAX()) {
@@ -174,7 +190,6 @@ class Profile extends BaseController
         $currentPassword = $this->request->getPost('current_password');
         $newPassword = $this->request->getPost('new_password');
 
-        // Verify current password
         if (!auth()->check(['password' => $currentPassword])) {
             return $this->response->setJSON([
                 'success' => false,
@@ -183,7 +198,6 @@ class Profile extends BaseController
         }
 
         try {
-            // Update password using Shield's built-in method
             $user->password = $newPassword;
             
             $userModel = model('CodeIgniter\Shield\Models\UserModel');

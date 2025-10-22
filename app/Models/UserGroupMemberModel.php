@@ -5,6 +5,11 @@ namespace App\Models;
 use CodeIgniter\Model;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 
+/**
+ * User Group Member Model
+ * 
+ * Manages user-to-group memberships with synchronization support
+ */
 class UserGroupMemberModel extends Model
 {
     protected $table = 'user_group_members';

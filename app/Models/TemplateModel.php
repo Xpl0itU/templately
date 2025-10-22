@@ -4,6 +4,12 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Template Model
+ * 
+ * Manages template file records including CRUD operations,
+ * ownership tracking, and optimized queries with filled files.
+ */
 class TemplateModel extends Model
 {
     protected $table = 'templateFiles';
@@ -55,6 +61,12 @@ class TemplateModel extends Model
     protected $beforeDelete = [];
     protected $afterDelete = ['removeOwnership'];
 
+    /**
+     * Parse template fields from JSON string to array after find operations
+     *
+     * @param array $data Query result data
+     * @return array Modified data with parsed template fields
+     */
     protected function parseTemplateFields(array $data)
     {
         if (isset($data['data'])) {
@@ -63,7 +75,7 @@ class TemplateModel extends Model
             if (is_array($recordData)) {
                 if (isset($recordData['id'])) {
                     $data['data'] = $this->parseTemplateFieldsForRecord($recordData);
-                } else { // Multiple records
+                } else {
                     foreach ($recordData as &$record) {
                         if (is_array($record)) {
                             $record = $this->parseTemplateFieldsForRecord($record);
@@ -79,6 +91,12 @@ class TemplateModel extends Model
         return $data;
     }
 
+    /**
+     * Parse template fields for a single record with caching
+     *
+     * @param mixed $record Record data
+     * @return mixed Modified record with parsed fields
+     */
     protected function parseTemplateFieldsForRecord($record)
     {
         if (!is_array($record)) {
@@ -97,7 +115,6 @@ class TemplateModel extends Model
                 $parsed = is_array($decoded) ? $decoded : [];
                 $record['templateFields'] = $parsed;
                 
-                // Cache for 1 hour
                 cache()->save($cacheKey, $parsed, 3600);
             }
         } elseif (!isset($record['templateFields'])) {
@@ -108,24 +125,24 @@ class TemplateModel extends Model
     
     /**
      * Assign ownership to the currently authenticated user after template is created
+     *
+     * @param array $data Insert data with template ID
+     * @return array Unmodified data
      */
     protected function assignOwnership(array $data)
     {
         if (isset($data['id']) && $data['id']) {
             $currentUserId = null;
             
-            // Get the current user ID from the session
             $auth = service('auth');
             if ($auth && $auth->user()) {
                 $currentUserId = $auth->user()->id;
             }
             
             if ($currentUserId) {
-                // Create resource ownership
                 $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
                 $resourceOwnerModel->setOwner('template', $data['id'], $currentUserId);
                 
-                // Set default permissions for the owner
                 $aclEntryModel = model('App\Models\AclEntryModel');
                 $aclEntryModel->grantPermission(
                     'template',
@@ -133,8 +150,8 @@ class TemplateModel extends Model
                     'user',
                     $currentUserId,
                     'full_control',
-                    $currentUserId, // Granted by owner
-                    false // Not inherited
+                    $currentUserId,
+                    false
                 );
             }
         }
@@ -144,6 +161,9 @@ class TemplateModel extends Model
     
     /**
      * Remove ownership when template is deleted
+     *
+     * @param array $data Delete data with template ID
+     * @return array Unmodified data
      */
     protected function removeOwnership(array $data)
     {
@@ -157,6 +177,11 @@ class TemplateModel extends Model
         return $data;
     }
 
+    /**
+     * Get all templates with their associated filled files (legacy method, use optimized version)
+     *
+     * @return array Templates with filled files
+     */
     public function getTemplatesWithFilledFiles()
     {
         $templates = $this->findAll();
@@ -172,6 +197,8 @@ class TemplateModel extends Model
     /**
      * Optimized version that uses JOIN to fetch templates with filled files in a single query
      * This eliminates the N+1 query problem
+     *
+     * @return array Templates with filled files attached
      */
     public function getTemplatesWithFilledFilesOptimized()
     {
@@ -208,6 +235,12 @@ class TemplateModel extends Model
         return $templates;
     }
 
+    /**
+     * Get a specific template with its associated filled files
+     *
+     * @param int $templateId Template ID
+     * @return array|null Template with filled files, or null if not found
+     */
     public function getTemplateWithFilledFiles($templateId)
     {
         $template = $this->find($templateId);
@@ -220,6 +253,9 @@ class TemplateModel extends Model
 
     /**
      * Optimized version that uses a single query to fetch template with filled files
+     *
+     * @param int $templateId Template ID
+     * @return array|null Template with filled files, or null if not found
      */
     public function getTemplateWithFilledFilesOptimized($templateId)
     {
@@ -231,6 +267,14 @@ class TemplateModel extends Model
         return $template;
     }
 
+    /**
+     * Delete a template along with its associated files and database records
+     * Uses a transaction to ensure atomicity
+     *
+     * @param int $templateId Template ID to delete
+     * @return bool True on success
+     * @throws \Exception If template not found or transaction fails
+     */
     public function deleteTemplateWithFiles($templateId)
     {
         $this->db->transStart();

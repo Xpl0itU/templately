@@ -6,38 +6,43 @@ use CodeIgniter\Shield\Models\UserModel as ShieldUserModel;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 
+/**
+ * User Model
+ * 
+ * Extends Shield UserModel to support username-only authentication
+ */
 class UserModel extends ShieldUserModel
 {
     /**
-     * Override the findByCredentials method to properly handle username-only authentication
+     * Find user by credentials (username or email)
+     * 
+     * Overrides parent to properly handle username-only authentication
+     * in addition to email-based authentication
+     * 
+     * @param array $credentials User credentials (username or email + password)
+     * @return User|null User entity or null if not found
      */
     public function findByCredentials(array $credentials): ?User
     {
-        // Handle email authentication through parent method
         if (isset($credentials['email'])) {
             return parent::findByCredentials($credentials);
         }
 
-        // Handle username-only authentication
         $username = $credentials['username'] ?? null;
         if ($username === null) {
             return null;
         }
 
-        // First get the user from the users table with all fields
         $userData = $this->where('username', $username)->asArray()->first();
         if ($userData === null) {
             return null;
         }
 
-        // Now get the password hash from the identities table
-        // Use ID_TYPE_USERNAME for username-only authentication
         $identity = model('UserIdentityModel')
             ->where('user_id', $userData['id'])
             ->where('type', Session::ID_TYPE_USERNAME)
             ->first();
 
-        // If we don't find ID_TYPE_USERNAME, try ID_TYPE_EMAIL_PASSWORD as fallback
         if ($identity === null) {
             $identity = model('UserIdentityModel')
                 ->where('user_id', $userData['id'])
@@ -49,12 +54,9 @@ class UserModel extends ShieldUserModel
             return null;
         }
 
-        // Set the password hash on the user data
         $userData['password_hash'] = $identity->secret2;
-        // Set email/username from identity if it exists
         $userData['email'] = $identity->secret ?? null;
 
-        // Create user object - we need to handle this carefully to avoid the private method call
         $user = new $this->returnType($userData);
         $user->syncOriginal();
 

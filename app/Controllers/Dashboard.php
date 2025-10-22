@@ -2,8 +2,18 @@
 
 namespace App\Controllers;
 
+/**
+ * Dashboard Controller
+ * 
+ * Handles the main dashboard display with statistics and recent activity.
+ */
 class Dashboard extends BaseController
 {
+    /**
+     * Display the dashboard with user statistics and recent items
+     *
+     * @return mixed View or redirect to login
+     */
     public function index()
     {
         if (!auth()->loggedIn()) {

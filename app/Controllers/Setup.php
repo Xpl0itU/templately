@@ -4,24 +4,32 @@ namespace App\Controllers;
 
 use CodeIgniter\Shield\Entities\User;
 
+/**
+ * Setup Controller
+ * Handles initial application setup including superadmin account creation
+ * Ensures database is configured and system requirements are met
+ */
 class Setup extends BaseController
 {
+    /**
+     * Display setup page or process setup form submission
+     * Checks system requirements and database connectivity
+     *
+     * @return ResponseInterface|string Setup view or redirect
+     */
     public function index()
     {
         log_message('debug', 'Setup::index() called - Method: ' . $this->request->getMethod());
         
-        // Check if setup is already completed
         if ($this->isSetupCompleted()) {
             return redirect()->to('/dashboard')->with('error', 'Application has already been set up.');
         }
 
-        // Handle POST request (form submission)
         if (strtolower($this->request->getMethod()) === 'post') {
             log_message('debug', 'Processing POST request for setup');
             return $this->createSuperadmin();
         }
 
-        // Handle GET request (show setup form)
         $systemCheck = $this->checkSystemRequirements();
         $dbCheck = $this->checkDatabaseConnection();
 
@@ -31,9 +39,14 @@ class Setup extends BaseController
         ]);
     }
 
+    /**
+     * Create initial superadmin account
+     * Validates input and creates the first admin user with superadmin role
+     *
+     * @return ResponseInterface JSON response or redirect
+     */
     public function createSuperadmin()
     {
-        // Check if setup is already completed
         if ($this->isSetupCompleted()) {
             $contentType = $this->request->getHeaderLine('Content-Type');
             $isJsonRequest = strpos($contentType, 'application/json') !== false;
@@ -47,7 +60,6 @@ class Setup extends BaseController
             return redirect()->to('/dashboard')->with('error', 'Application has already been set up.');
         }
 
-        // Get data from either JSON or POST
         $data = [];
         $contentType = $this->request->getHeaderLine('Content-Type');
         $isAjax = $this->request->hasHeader('X-Requested-With') && 
@@ -60,7 +72,6 @@ class Setup extends BaseController
             $json = $this->request->getJSON(true);
             $data = $json;
         } else if ($isJsonRequest) {
-            // For AJAX requests that might not have JSON body
             $data = [
                 'username' => $this->request->getPost('username'),
                 'password' => $this->request->getPost('password'),
@@ -203,7 +214,9 @@ class Setup extends BaseController
     }
 
     /**
-     * Check if this is a JSON/AJAX request
+     * Check if request is JSON or AJAX
+     *
+     * @return bool True if JSON/AJAX request
      */
     private function isJsonRequest(): bool
     {
@@ -214,48 +227,49 @@ class Setup extends BaseController
     }
 
     /**
-     * Check if the application setup is completed
+     * Check if application setup is completed
+     * Verifies users table exists and contains at least one user
+     *
+     * @return bool True if setup is complete
      */
     private function isSetupCompleted(): bool
     {
         try {
-            // Check if the users table exists
             $db = \Config\Database::connect();
             $tables = $db->listTables();
             
-            // Get the users table name from the Shield configuration
             $usersModel = model('CodeIgniter\Shield\Models\UserModel');
             $usersTable = $usersModel->table;
             
-            // If users table doesn't exist, setup is not completed
             if (!in_array($usersTable, $tables, true)) {
                 return false;
             }
             
-            // Check if there are any users in the system
             $userCount = $usersModel->countAll();
             
             return $userCount > 0;
         } catch (\Exception $e) {
-            // If there's an error checking users (e.g., table doesn't exist), 
-            // assume setup is not completed
             log_message('debug', 'Setup not completed due to exception: ' . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Mark setup as completed (for future use if needed)
+     * Mark setup as completed in cache
+     * Stores flag indefinitely for future reference
+     *
+     * @return void
      */
     private function markSetupCompleted(): void
     {
-        // For now, we just rely on user count, but we could add a setup flag to database or cache
-        // This method is here for future extensibility
-        cache()->save('app_setup_completed', true, 0); // Save indefinitely
+        cache()->save('app_setup_completed', true, 0);
     }
 
     /**
-     * Check system requirements
+     * Check system requirements for application
+     * Verifies PHP version, directory permissions, and required libraries
+     *
+     * @return array Array of requirement checks with status
      */
     private function checkSystemRequirements(): array
     {
@@ -296,7 +310,9 @@ class Setup extends BaseController
     }
 
     /**
-     * Check database connection
+     * Check database connection and get database name
+     *
+     * @return array Connection status, message, and database name
      */
     private function checkDatabaseConnection(): array
     {
@@ -320,6 +336,9 @@ class Setup extends BaseController
 
     /**
      * Check if uploads directory exists and is writable
+     * Creates directory if it doesn't exist
+     *
+     * @return bool True if directory exists and is writable
      */
     private function checkUploadsDirectory(): bool
     {
@@ -335,7 +354,9 @@ class Setup extends BaseController
     }
 
     /**
-     * API endpoint to check system requirements
+     * API endpoint to check system requirements (AJAX)
+     *
+     * @return ResponseInterface JSON response with requirement checks
      */
     public function checkRequirements()
     {
@@ -354,18 +375,20 @@ class Setup extends BaseController
     }
 
     /**
-     * Check if all requirements are met
+     * Check if all system and database requirements are met
+     *
+     * @param array $systemCheck System requirement checks
+     * @param array $dbCheck Database connection check
+     * @return bool True if all requirements pass
      */
     private function allRequirementsPassed(array $systemCheck, array $dbCheck): bool
     {
-        // Check if all system requirements pass
         foreach ($systemCheck as $requirement) {
             if (!$requirement['status']) {
                 return false;
             }
         }
 
-        // Check if database connection is working
         return $dbCheck['status'];
     }
 }

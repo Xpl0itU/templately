@@ -4,6 +4,11 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * User Group Model
+ * 
+ * Manages user groups with member management functionality
+ */
 class UserGroupModel extends Model
 {
     protected $table = 'user_groups';

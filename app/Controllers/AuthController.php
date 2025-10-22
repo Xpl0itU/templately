@@ -7,6 +7,11 @@ use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Exceptions\ValidationException;
 use CodeIgniter\Shield\Traits\Viewable;
 
+/**
+ * AuthController
+ * Handles user authentication including login, logout, and registration
+ * Extends CodeIgniter Shield authentication with custom username-only support
+ */
 class AuthController extends BaseController
 {
     use Viewable;
@@ -14,6 +19,12 @@ class AuthController extends BaseController
 
     protected $helpers = ['auth', 'setting'];
 
+    /**
+     * Display login page
+     * Redirects to dashboard if user is already logged in
+     *
+     * @return ResponseInterface|string Login view or redirect
+     */
     public function loginView()
     {
         if (auth()->loggedIn()) {
@@ -23,6 +34,12 @@ class AuthController extends BaseController
         return $this->view(setting('Auth.views')['login']);
     }
 
+    /**
+     * Process login form submission
+     * Supports username-only or email+username authentication
+     *
+     * @return ResponseInterface Redirect to dashboard or back to login with errors
+     */
     public function loginAction()
     {
         $rules = $this->getValidationRules('login');
@@ -31,23 +48,20 @@ class AuthController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        // If user is already logged in, log them out first to prevent session conflicts
+        // Prevent session conflicts by logging out if already logged in
         if (auth()->loggedIn()) {
             auth()->logout();
         }
 
-        // Get credentials properly for username-only authentication
         $validFields = setting('Auth.validFields') ?? ['username'];
         $credentials = [];
         
-        // Extract only the valid fields from POST data
         foreach ($validFields as $field) {
             if ($this->request->getPost($field)) {
                 $credentials[$field] = $this->request->getPost($field);
             }
         }
         
-        // Always include password
         $credentials['password'] = $this->request->getPost('password');
         $remember = (bool) $this->request->getPost('remember');
 
@@ -56,7 +70,6 @@ class AuthController extends BaseController
          */
         $authenticator = auth('session')->getAuthenticator();
 
-        // Add debugging
         log_message('debug', 'Login attempt with credentials: ' . json_encode($credentials));
         
         $result = $authenticator->remember($remember)->attempt($credentials);
@@ -70,7 +83,7 @@ class AuthController extends BaseController
             $authenticator->startLogin($result->extraInfo());
         }
 
-        $user = $result->extraInfo() ?? $authenticator->getUser(); // Ensure $user is set
+        $user = $result->extraInfo() ?? $authenticator->getUser();
 
         if ($user->isBanned()) {
             $authenticator->logout();
@@ -78,11 +91,9 @@ class AuthController extends BaseController
             return redirect()->route('login')->withInput()->with('error', lang('Auth.bannedUser'));
         }
 
-        // Ensure login is completed
         if ($result->extraInfo() !== null) {
             $authenticator->completeLogin($result->extraInfo());
         } else {
-            // Make sure we have a user and complete login
             $user = $authenticator->getUser();
             if ($user !== null) {
                 $authenticator->completeLogin($user);
@@ -96,6 +107,12 @@ class AuthController extends BaseController
         return redirect()->to((string) $authenticator->getAction())->withCookies();
     }
 
+    /**
+     * Process logout action
+     * Clears user session and redirects to logout page
+     *
+     * @return ResponseInterface Redirect to logout page
+     */
     public function logoutAction()
     {
         auth()->logout();
@@ -103,6 +120,12 @@ class AuthController extends BaseController
         return redirect()->to(config(\Config\Auth::class)->logoutRedirect())->with('message', lang('Auth.logoutSuccess'));
     }
 
+    /**
+     * Display registration page
+     * Redirects if user is already logged in or registration is disabled
+     *
+     * @return ResponseInterface|string Registration view or redirect
+     */
     public function registerView()
     {
         if (auth()->loggedIn()) {
@@ -116,6 +139,12 @@ class AuthController extends BaseController
         return $this->view(setting('Auth.views')['register']);
     }
 
+    /**
+     * Process registration form submission
+     * Creates new user account and adds to default group
+     *
+     * @return ResponseInterface Redirect to dashboard or back to registration with errors
+     */
     public function registerAction()
     {
         if (! setting('Auth.allowRegistration')) {
@@ -130,15 +159,12 @@ class AuthController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        // Get the POST data
         $allowedPostFields = array_keys($rules);
         $postData = $this->request->getPost($allowedPostFields);
         
-        // If we're only using username for registration and no email field is provided,
-        // add a dummy email address to prevent TypeError in the User entity
+        // Add dummy email for username-only registration to prevent TypeError
         $registrationFields = setting('Auth.registrationFields') ?? ['username', 'email'];
         if (!in_array('email', $registrationFields, true) && !isset($postData['email'])) {
-            // Create a dummy email from the username
             $postData['email'] = $postData['username'] . '@example.com';
         }
 
@@ -177,6 +203,12 @@ class AuthController extends BaseController
         return redirect()->to($redirectURL)->with('message', lang('Auth.registrationSuccess'));
     }
 
+    /**
+     * Get validation rules for login or registration
+     *
+     * @param string|null $type Type of validation ('login' or 'register')
+     * @return array Validation rules configuration
+     */
     protected function getValidationRules(?string $type = null): array
     {
         if ($type === 'login') {
@@ -248,6 +280,11 @@ class AuthController extends BaseController
         return $rules;
     }
 
+    /**
+     * Get new user entity instance for registration
+     *
+     * @return \CodeIgniter\Shield\Entities\User User entity
+     */
     protected function getUserEntity(): \CodeIgniter\Shield\Entities\User
     {
         return new \CodeIgniter\Shield\Entities\User();

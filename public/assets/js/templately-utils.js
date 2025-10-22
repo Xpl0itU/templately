@@ -1,8 +1,3 @@
-/**
- * Shared utility functions for Templately
- */
-
-// Global utility object
 window.Templately = window.Templately || {};
 
 const TEMPLATELY_CONFIRM_INTENT_CLASSES = {
@@ -14,7 +9,6 @@ const TEMPLATELY_CONFIRM_INTENT_CLASSES = {
 const TEMPLATELY_CONFIRM_OK_BASE = 'inline-flex items-center px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-150';
 const TEMPLATELY_CONFIRM_CANCEL_BASE = 'inline-flex items-center px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-150';
 
-// Modal handling utilities
 Templately.Modal = {
     modals: {},
     currentModal: null,
@@ -53,21 +47,18 @@ Templately.Modal = {
     handleGlobalKeydown: function(e) {
         if (!this.currentModal) return;
 
-        // ESC key - dismiss any modal
         if (e.key === 'Escape') {
             e.preventDefault();
             this.dismissCurrentModal();
             return;
         }
 
-        // Enter key - trigger primary action
         if (e.key === 'Enter') {
             e.preventDefault();
             this.triggerPrimaryAction();
             return;
         }
 
-        // Tab navigation within modal
         if (e.key === 'Tab') {
             this.trapFocus(e);
         }
@@ -141,7 +132,6 @@ Templately.Modal = {
         if (type === 'input') {
             focusTarget = document.getElementById('inputValue');
         } else {
-            // Find the first button or focusable element
             focusTarget = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         }
 
@@ -288,10 +278,8 @@ Templately.Modal = {
     }
 };
 
-// Alert/Notification utilities
 Templately.Alert = {
     showAlert: function(message, type = 'info', duration = 5000) {
-        // Create or reuse alert container
         let alertContainer = document.getElementById('templately-alert-container');
         if (!alertContainer) {
             alertContainer = document.createElement('div');
@@ -300,7 +288,6 @@ Templately.Alert = {
             document.body.appendChild(alertContainer);
         }
         
-        // Create alert element
         const alertId = 'alert-' + Date.now();
         const alertElement = document.createElement('div');
         alertElement.id = alertId;
@@ -322,10 +309,8 @@ Templately.Alert = {
             </div>
         `;
         
-        // Add to container
         alertContainer.appendChild(alertElement);
         
-        // Auto remove after duration
         if (duration > 0) {
             setTimeout(() => {
                 alertElement.classList.add('opacity-0', 'translate-x-full');
@@ -339,7 +324,6 @@ Templately.Alert = {
     }
 };
 
-// HTTP utilities
 Templately.Http = {
     getCsrfToken: function() {
         const meta = document.querySelector('meta[name="X-CSRF-TOKEN"]');
@@ -347,7 +331,6 @@ Templately.Http = {
     },
     
     fetch: function(url, options = {}) {
-        // Add default headers
         options.headers = options.headers || {};
         options.headers['X-Requested-With'] = 'XMLHttpRequest';
         
@@ -360,9 +343,7 @@ Templately.Http = {
     }
 };
 
-// DOM utilities
 Templately.DOM = {
-    // Debounce function to limit how often a function can be called
     debounce: function(func, wait, immediate) {
         let timeout;
         return function() {
@@ -378,7 +359,6 @@ Templately.DOM = {
         };
     },
     
-    // Throttle function to limit how often a function can be called
     throttle: function(func, limit) {
         let inThrottle;
         return function() {
@@ -392,7 +372,6 @@ Templately.DOM = {
         };
     },
     
-    // Helper to create DOM elements more easily
     createElement: function(tag, attributes = {}, content = '') {
         const element = document.createElement(tag);
         Object.keys(attributes).forEach(key => {
@@ -413,9 +392,7 @@ Templately.DOM = {
     }
 };
 
-// File Explorer specific utilities
 Templately.FileExplorer = {
-    // Wizard state management
     wizardState: {
         currentStep: 1,
         templateFile: null,
@@ -423,7 +400,6 @@ Templately.FileExplorer = {
         templateName: ''
     },
     
-    // Reset wizard to initial state
     resetWizard: function() {
         this.wizardState = {
             currentStep: 1,
@@ -432,28 +408,23 @@ Templately.FileExplorer = {
             templateName: ''
         };
         
-        // Reset UI elements
         const uploadModal = document.getElementById('uploadWizardModal');
         if (uploadModal) {
             uploadModal.classList.add('hidden');
         }
         
-        // Reset form elements
         const fileInput = document.getElementById('templateFileWizard');
         if (fileInput) fileInput.value = '';
         
         const nameInput = document.getElementById('templateNameWizard');
         if (nameInput) nameInput.value = '';
         
-        // Reset file preview
         const filePreview = document.getElementById('filePreview');
         if (filePreview) filePreview.classList.add('hidden');
         
-        // Reset wizard steps
         this.updateWizardSteps(1);
     },
     
-    // Update wizard step indicators
     updateWizardSteps: function(currentStep) {
         const steps = [
             document.getElementById('step1Circle'),
@@ -462,7 +433,7 @@ Templately.FileExplorer = {
             document.getElementById('step4Circle')
         ];
         
-        if (!steps[0]) return; // Elements not available yet
+        if (!steps[0]) return;
         
         steps.forEach((step, index) => {
             if (!step) return;
@@ -480,7 +451,6 @@ Templately.FileExplorer = {
         });
     },
     
-    // File handling utilities
     updateFileLabel: function() {
         const input = document.getElementById('templateFileWizard');
         const fileLabel = document.getElementById('fileLabel');
@@ -522,7 +492,6 @@ Templately.FileExplorer = {
         }
     },
     
-    // Loading modal utilities
     showLoadingModal: function(title = 'Processing...', message = 'Please wait while we process your request.') {
         const loadingModal = document.getElementById('loadingModal');
         const loadingTitle = document.getElementById('loadingTitle');
@@ -543,7 +512,6 @@ Templately.FileExplorer = {
                     modalContent.classList.add('scale-100');
                 }
                 
-                // Focus the close button
                 const closeButton = document.getElementById('loadingModalClose');
                 if (closeButton) {
                     setTimeout(() => closeButton.focus(), 100);
@@ -578,7 +546,6 @@ Templately.FileExplorer = {
         }
     },
     
-    // Image handling utilities
     clearImageSelection: function(fieldName) {
         const container = document.querySelector(`#input_container_${fieldName}`);
         if (container) {

@@ -1,10 +1,6 @@
-/**
- * File Explorer Main Module
- */
 Templately.FileExplorerMain = (function() {
     'use strict';
     
-    // Private variables
     let fileHierarchy = null;
     let fileNameHeading = null;
     let fileDetails = null;
@@ -15,7 +11,6 @@ Templately.FileExplorerMain = (function() {
     let cancelButton = null;
     let deleteFilledFileButton = null;
     
-    // Private functions
     function initializeElements() {
         fileHierarchy = document.getElementById('fileHierarchy');
         fileNameHeading = document.getElementById('fileNameHeading');
@@ -49,7 +44,6 @@ Templately.FileExplorerMain = (function() {
             deleteFilledFileButton.addEventListener('click', handleDeleteClick);
         }
         
-        // Attach modal event listeners
         attachModalEventListeners();
     }
     
@@ -111,7 +105,6 @@ Templately.FileExplorerMain = (function() {
             loadingModalClose.addEventListener('click', Templately.FileExplorer.hideLoadingModal);
         }
         
-        // Modal overlay click handlers
         Object.values(Templately.Modal.modals).forEach(modal => {
             if (modal) {
                 modal.addEventListener('click', (e) => {
@@ -126,29 +119,24 @@ Templately.FileExplorerMain = (function() {
         });
     }
     
-    // Event handler functions
     function handleSearch(e) {
         const searchTerm = e.target.value.toLowerCase();
         filterFileHierarchy(searchTerm);
     }
     
     function handleEditClick() {
-        // Implementation would go here
         console.log('Edit button clicked');
     }
     
     function handleSaveClick() {
-        // Implementation would go here
         console.log('Save button clicked');
     }
     
     function handleCancelClick() {
-        // Implementation would go here
         console.log('Cancel button clicked');
     }
     
     function handleDeleteClick() {
-        // Implementation would go here
         console.log('Delete button clicked');
     }
     
@@ -169,14 +157,12 @@ Templately.FileExplorerMain = (function() {
         });
     }
     
-    // Public API
     return {
         init: function() {
             initializeElements();
             attachEventListeners();
         },
         
-        // Expose some functions for external use
         filterFiles: filterFileHierarchy
     };
 })();

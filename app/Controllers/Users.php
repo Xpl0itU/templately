@@ -4,8 +4,19 @@ namespace App\Controllers;
 
 use CodeIgniter\Shield\Entities\User;
 
+/**
+ * Users Controller
+ * Handles user management operations including listing, creating, updating, and deleting users
+ * Requires admin or superadmin privileges
+ */
 class Users extends BaseController
 {
+    /**
+     * Display list of all users with their roles
+     * Restricted to admin and superadmin users only
+     *
+     * @return ResponseInterface|string View with user list or redirect
+     */
     public function index()
     {
         if (!auth()->user()->inGroup('superadmin', 'admin')) {
@@ -36,6 +47,12 @@ class Users extends BaseController
         ]);
     }
     
+    /**
+     * Create a new user (AJAX endpoint)
+     * Validates permissions and checks for existing username/email
+     *
+     * @return ResponseInterface JSON response with creation result
+     */
     public function create()
     {
         if (!auth()->user()->inGroup('superadmin', 'admin')) {
@@ -61,7 +78,6 @@ class Users extends BaseController
             ]);
         }
 
-        // Validate role permission
         if ($json->role === 'superadmin' && !auth()->user()->inGroup('superadmin')) {
             return $this->response->setStatusCode(403)->setJSON([
                 'success' => false, 
@@ -72,7 +88,6 @@ class Users extends BaseController
         try {
             $userModel = model('CodeIgniter\Shield\Models\UserModel');
             
-            // Check if username already exists
             $existingUser = $userModel->where('username', $json->username)->first();
             if ($existingUser) {
                 return $this->response->setStatusCode(400)->setJSON([
@@ -81,7 +96,6 @@ class Users extends BaseController
                 ]);
             }
             
-            // Check if email already exists
             $identityModel = model('CodeIgniter\Shield\Models\UserIdentityModel');
             $existingEmail = $identityModel->where('secret', $json->email)->first();
             if ($existingEmail) {
@@ -91,7 +105,6 @@ class Users extends BaseController
                 ]);
             }
             
-            // Create the user
             $user = new User([
                 'username' => $json->username,
                 'email' => $json->email,
@@ -101,10 +114,8 @@ class Users extends BaseController
             
             $userModel->save($user);
             
-            // Get the created user
             $createdUser = $userModel->where('username', $json->username)->first();
             
-            // Assign role
             if ($createdUser) {
                 $createdUser->syncGroups($json->role);
             }
@@ -123,6 +134,12 @@ class Users extends BaseController
         }
     }
     
+    /**
+     * Get details of a specific user (AJAX endpoint)
+     *
+     * @param int|null $id User ID to fetch
+     * @return ResponseInterface JSON response with user data
+     */
     public function getUser($id = null)
     {
         if (!auth()->user()->inGroup('superadmin', 'admin')) {
@@ -173,6 +190,11 @@ class Users extends BaseController
         }
     }
     
+    /**
+     * Update an existing user's information and role (AJAX endpoint)
+     *
+     * @return ResponseInterface JSON response with update result
+     */
     public function update()
     {
         if (!auth()->user()->inGroup('superadmin', 'admin')) {
@@ -227,14 +249,12 @@ class Users extends BaseController
                 ]);
             }
 
-            // Update user data
             $user->username = $json->username;
             $user->email = $json->email;
             $user->active = (bool) $json->active;
             
             $userModel->save($user);
             
-            // Update role
             $user->syncGroups($json->role);
 
             return $this->response->setJSON([
@@ -251,6 +271,13 @@ class Users extends BaseController
         }
     }
 
+    /**
+     * Delete a user (AJAX endpoint)
+     * Restricted to superadmin only
+     *
+     * @param int|null $id User ID to delete
+     * @return ResponseInterface JSON response with deletion result
+     */
     public function delete($id = null)
     {
         if (!auth()->user()->inGroup('superadmin')) {
