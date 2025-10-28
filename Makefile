@@ -25,6 +25,8 @@ down: ## Stop Docker containers
 	docker-compose down
 
 reset: ## Reset Docker containers
+	@docker exec templately_app bash -c "rm -rf /var/www/html/writable/cache/*" 2>/dev/null || true
+	@docker exec templately_app bash -c "rm -f /var/www/html/writable/session/*" 2>/dev/null || true
 	docker-compose down -v
 
 restart: ## Restart Docker containers
