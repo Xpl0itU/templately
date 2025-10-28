@@ -29,7 +29,7 @@ final class LoginTest extends CIUnitTestCase
 
         // Should redirect to dashboard
         $result->assertRedirect();
-        $result->assertHeader('Location', 'http://example.com/index.php');
+        $result->assertRedirectTo(site_url());
     }
 
     public function testLoginFailsWithWrongPassword(): void
@@ -45,7 +45,7 @@ final class LoginTest extends CIUnitTestCase
 
         // Should redirect back to login with error
         $result->assertRedirect();
-        $result->assertHeader('Location', 'http://example.com/index.php/login');
+        $result->assertRedirectTo(site_url('login'));
     }
 
     public function testLoginFailsWithNonExistentUser(): void
@@ -58,7 +58,7 @@ final class LoginTest extends CIUnitTestCase
 
         // Should redirect back to setup page when no users exist
         $result->assertRedirect();
-        $result->assertHeader('Location', 'http://example.com/index.php/setup');
+        $result->assertRedirectTo(site_url('setup'));
     }
 
     private function createTestUser(string $username, string $password): void

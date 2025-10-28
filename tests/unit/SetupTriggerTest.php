@@ -49,13 +49,33 @@ final class SetupTriggerTest extends CIUnitTestCase
 
         // Should redirect to setup
         $result->assertRedirect();
-    $result->assertHeader('Location', 'http://example.com/index.php/setup');
+        $result->assertRedirectTo(site_url('setup'));
     }
 
     public function testSetupTriggeredWhenUsersTableDoesNotExist(): void
     {
-        // This test would require dropping the users table, which might affect other tests
-        // In a real scenario, we would mock the database connection to simulate this condition
-        $this->markTestIncomplete('This test requires complex database mocking');
+        $db = db_connect();
+        $forge = \Config\Database::forge();
+        
+        // Clear setup completion cache
+        cache()->delete('app_setup_completed');
+        
+        // Drop the users table temporarily
+        if ($db->tableExists('users')) {
+            $forge->dropTable('users', true);
+        }
+        
+        // Verify table doesn't exist
+        $this->assertFalse($db->tableExists('users'), 'Users table should not exist');
+        
+        // Try to access a protected route
+        $result = $this->get('/dashboard');
+
+        // Should redirect to setup
+        $result->assertRedirect();
+        $result->assertRedirectTo(site_url('setup'));
+        
+        // Recreate the users table for other tests
+        $this->migrateDatabase();
     }
 }
