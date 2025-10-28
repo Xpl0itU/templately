@@ -54,6 +54,8 @@ jobs:
     - name: Setup database configuration
       run: |
         cat >> .env << EOF
+        encryption.key = hex2bin:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        
         database.default.hostname = 127.0.0.1
         database.default.database = ci4_test
         database.default.username = root
@@ -68,9 +70,6 @@ jobs:
         database.tests.DBDriver = MySQLi
         database.tests.port = 3306
         EOF
-
-    - name: Generate encryption key
-      run: php spark key:generate
 
     - name: Wait for MySQL
       run: |
