@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs clean test shell mysql-shell migrate seed
+.PHONY: help build up down reset restart logs clean test shell mysql-shell migrate seed
 
 # Load environment variables from .env.docker if it exists
 ifneq (,$(wildcard .env.docker))
@@ -23,6 +23,9 @@ up: ## Start Docker containers
 
 down: ## Stop Docker containers
 	docker-compose down
+
+reset: ## Reset Docker containers
+	docker-compose down -v
 
 restart: ## Restart Docker containers
 	docker-compose restart
