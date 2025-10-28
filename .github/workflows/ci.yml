@@ -71,6 +71,11 @@ jobs:
         database.tests.port = 3306
         EOF
 
+    - name: Create writable directories
+      run: |
+        mkdir -p writable/cache writable/logs writable/session writable/uploads
+        chmod -R 777 writable
+
     - name: Wait for MySQL
       run: |
         for i in {1..30}; do
@@ -84,6 +89,8 @@ jobs:
 
     - name: Run database migrations
       run: php spark migrate --all
+      env:
+        CI: true
 
     - name: Run PHPUnit tests
       run: vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml
