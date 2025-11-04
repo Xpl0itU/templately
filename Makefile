@@ -90,6 +90,8 @@ init: ## Initialize application (first-time setup)
 	@make up
 	@echo "Waiting for services to start..."
 	@sleep 10
+	@echo "Installing Composer dependencies..."
+	@make composer-install
 	@make key-generate
 	@make migrate
 	@echo "Setup complete! Access the application at http://localhost:8080"
