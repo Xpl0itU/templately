@@ -15,14 +15,14 @@ class MarkAclTablesAsMigrated extends Migration
         }
         // Check if the migration record already exists
         $result = $this->db->table('migrations')
-            ->where('version', '2025-09-15-150006')
+            ->where('version', '2025-09-15-150005')
             ->where('class', 'CreateAclTables')
             ->countAllResults();
         
         if ($result == 0) {
             // Insert a record to mark the migration as completed
             $data = [
-                'version' => '2025-09-15-150006',
+                'version' => '2025-09-15-150005',
                 'class' => 'CreateAclTables',
                 'namespace' => 'App',
                 'group' => 'default',
@@ -42,7 +42,7 @@ class MarkAclTablesAsMigrated extends Migration
             return;
         }
         $this->db->table('migrations')
-            ->where('version', '2025-09-15-150006')
+            ->where('version', '2025-09-15-150005')
             ->where('class', 'CreateAclTables')
             ->delete();
     }
