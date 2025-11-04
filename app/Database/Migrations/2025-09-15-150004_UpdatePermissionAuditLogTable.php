@@ -16,7 +16,7 @@ class UpdatePermissionAuditLogTable extends Migration
             return;
         }
         // Check if the table exists
-    if (!$db->tableExists('permission_audit_log')) {
+        if (!$db->tableExists('permission_audit_log')) {
             // Create the table if it doesn't exist
             $this->forge->addField([
                 'id' => [
@@ -81,22 +81,22 @@ class UpdatePermissionAuditLogTable extends Migration
                     'null' => false,
                 ],
             ]);
-            
-            $this->forge->addKey('id', true);
-            $this->forge->addKey('user_id');
-            $this->forge->addKey('target_user_id');
-            $this->forge->addKey('action');
-            $this->forge->addKey('resource_type');
-            $this->forge->addKey('resource_id');
-            $this->forge->addKey('permission');
-            $this->forge->addKey('created_at');
-            $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-            $this->forge->addForeignKey('target_user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-            $this->forge->createTable('permission_audit_log', true);
+
+                $this->forge->addKey('id', true);
+                $this->forge->addKey('user_id');
+                $this->forge->addKey('target_user_id');
+                $this->forge->addKey('action');
+                $this->forge->addKey('resource_type');
+                $this->forge->addKey('resource_id');
+                $this->forge->addKey('permission');
+                $this->forge->addKey('created_at');
+                $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+                $this->forge->addForeignKey('target_user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+                $this->forge->createTable('permission_audit_log', true);
         } else {
             // Update existing table structure if needed
             // Add any missing columns or modify existing ones
-            
+
             // Check if target_user_id column exists
             if (!$db->fieldExists('target_user_id', 'permission_audit_log')) {
                 $this->forge->addColumn('permission_audit_log', [
@@ -108,11 +108,11 @@ class UpdatePermissionAuditLogTable extends Migration
                         'after' => 'user_id',
                     ],
                 ]);
-                
+
                 // Add foreign key for target_user_id
                 $this->forge->addForeignKey('target_user_id', 'users', 'id', 'CASCADE', 'CASCADE');
             }
-            
+
             // Check if resource_type column exists
             if (!$db->fieldExists('resource_type', 'permission_audit_log')) {
                 $this->forge->addColumn('permission_audit_log', [
@@ -124,7 +124,7 @@ class UpdatePermissionAuditLogTable extends Migration
                     ],
                 ]);
             }
-            
+
             // Check if resource_id column exists
             if (!$db->fieldExists('resource_id', 'permission_audit_log')) {
                 $this->forge->addColumn('permission_audit_log', [
@@ -148,7 +148,11 @@ class UpdatePermissionAuditLogTable extends Migration
         }
         // Don't drop the table in down migration to preserve audit logs
         // Just remove added columns if they exist
+
+        // First, drop foreign key constraints before dropping columns
         if ($db->fieldExists('target_user_id', 'permission_audit_log')) {
+            // Drop the foreign key constraint first
+            $this->forge->dropForeignKey('permission_audit_log', 'db_permission_audit_log_target_user_id_foreign');
             $this->forge->dropColumn('permission_audit_log', 'target_user_id');
         }
 
