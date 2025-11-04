@@ -38,10 +38,17 @@ EOF
 echo ".env file generated with Docker environment variables"
 cat /var/www/html/.env
 
+# Ensure writable subdirectories exist
+mkdir -p /var/www/html/writable/cache
+mkdir -p /var/www/html/writable/logs
+mkdir -p /var/www/html/writable/session
+mkdir -p /var/www/html/writable/uploads
+mkdir -p /var/www/html/writable/debugbar
+
 # Set proper permissions
 chown www-data:www-data /var/www/html/.env
 chown -R www-data:www-data /var/www/html/writable
-chmod -R 755 /var/www/html/writable
+chmod -R 775 /var/www/html/writable
 
 # Wait for MySQL to be ready
 echo "Waiting for MySQL at ${DB_HOST}:${DB_PORT}..."

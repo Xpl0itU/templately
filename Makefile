@@ -16,33 +16,33 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
 
 build: ## Build Docker containers
-	docker-compose --env-file .env.docker build
+	docker compose --env-file .env.docker build
 
 up: ## Start Docker containers
-	docker-compose --env-file .env.docker up -d
+	docker compose --env-file .env.docker up -d
 
 down: ## Stop Docker containers
-	docker-compose down
+	docker compose down
 
 reset: ## Reset Docker containers
 	@docker exec templately_app bash -c "rm -rf /var/www/html/writable/cache/*" 2>/dev/null || true
 	@docker exec templately_app bash -c "rm -f /var/www/html/writable/session/*" 2>/dev/null || true
-	docker-compose down -v
+	docker compose down -v
 
 restart: ## Restart Docker containers
-	docker-compose restart
+	docker compose restart
 
 logs: ## View logs from all containers
-	docker-compose logs -f
+	docker compose logs -f
 
 logs-app: ## View application logs
-	docker-compose logs -f app
+	docker compose logs -f app
 
 logs-mysql: ## View MySQL logs
-	docker-compose logs -f mysql
+	docker compose logs -f mysql
 
 clean: ## Stop containers and remove volumes
-	docker-compose down -v
+	docker compose down -v
 
 test: ## Run PHPUnit tests
 	docker exec -it templately_app vendor/bin/phpunit
@@ -76,7 +76,7 @@ composer-update: ## Update composer dependencies
 	docker exec -it templately_app composer update
 
 ps: ## Show running containers
-	docker-compose ps
+	docker compose ps
 
 rebuild: down build up ## Rebuild and restart containers
 
