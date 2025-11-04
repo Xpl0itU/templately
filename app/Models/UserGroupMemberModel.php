@@ -7,7 +7,7 @@ use CodeIgniter\Shield\Authentication\Authenticators\Session;
 
 /**
  * User Group Member Model
- * 
+ *
  * Manages user-to-group memberships with synchronization support
  */
 class UserGroupMemberModel extends Model
@@ -21,10 +21,10 @@ class UserGroupMemberModel extends Model
         'created_at',
     ];
     protected $useTimestamps = false;
-    
+
     /**
      * Get all members of a group
-     * 
+     *
      * @param int $groupId Group ID
      * @return array Array of group members
      */
@@ -32,10 +32,10 @@ class UserGroupMemberModel extends Model
     {
         return $this->where('group_id', $groupId)->findAll();
     }
-    
+
     /**
      * Get all groups a user belongs to
-     * 
+     *
      * @param int $userId User ID
      * @return array Array of user groups
      */
@@ -82,10 +82,10 @@ class UserGroupMemberModel extends Model
 
         return $this->db->transStatus();
     }
-    
+
     /**
      * Add a user to a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @param int|null $addedBy User ID of the person adding the user (optional)
@@ -97,24 +97,24 @@ class UserGroupMemberModel extends Model
         $existing = $this->where('user_id', $userId)
             ->where('group_id', $groupId)
             ->first();
-            
+
         if ($existing) {
             return $existing['id']; // Return existing membership ID
         }
-        
+
         $data = [
             'user_id' => $userId,
             'group_id' => $groupId,
             'added_by' => $addedBy,
             'created_at' => date('Y-m-d H:i:s'),
         ];
-        
+
         return $this->insert($data);
     }
-    
+
     /**
      * Remove a user from a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @return bool True on success, false on failure
@@ -125,10 +125,10 @@ class UserGroupMemberModel extends Model
             ->where('group_id', $groupId)
             ->delete();
     }
-    
+
     /**
      * Check if a user is a member of a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @return bool True if user is a member, false otherwise
@@ -139,10 +139,10 @@ class UserGroupMemberModel extends Model
             ->where('group_id', $groupId)
             ->countAllResults() > 0;
     }
-    
+
     /**
      * Get the count of members in a group
-     * 
+     *
      * @param int $groupId Group ID
      * @return int Number of members in the group
      */
@@ -150,10 +150,10 @@ class UserGroupMemberModel extends Model
     {
         return $this->where('group_id', $groupId)->countAllResults();
     }
-    
+
     /**
      * Get detailed information about group members including user details
-     * 
+     *
      * @param int $groupId Group ID
      * @return array Array of group members with user details
      */

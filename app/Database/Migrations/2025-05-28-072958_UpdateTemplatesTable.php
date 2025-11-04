@@ -21,7 +21,7 @@ class UpdateTemplatesTable extends Migration
     }
 
     public function down()
-    {        
+    {
         if ($this->columnExists('templateFiles', 'originalFileName')) {
             $this->forge->dropColumn('templateFiles', 'originalFileName');
         }
@@ -30,7 +30,7 @@ class UpdateTemplatesTable extends Migration
     private function columnExists($table, $column)
     {
         $dbDriver = $this->db->getPlatform();
-        
+
         if (stripos($dbDriver, 'mysql') !== false) {
             // MySQL approach
             $query = $this->db->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");

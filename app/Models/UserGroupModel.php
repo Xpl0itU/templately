@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 /**
  * User Group Model
- * 
+ *
  * Manages user groups with member management functionality
  */
 class UserGroupModel extends Model
@@ -20,26 +20,26 @@ class UserGroupModel extends Model
         'updated_at',
     ];
     protected $useTimestamps = false;
-    
+
     /**
      * Get all user groups with member counts
-     * 
+     *
      * @return array Array of user groups with member counts
      */
     public function getAllGroupsWithMemberCounts(): array
     {
         $groups = $this->findAll();
-        
+
         foreach ($groups as &$group) {
             $group['member_count'] = $this->getGroupMemberCount($group['id']);
         }
-        
+
         return $groups;
     }
-    
+
     /**
      * Get all user groups
-     * 
+     *
      * @return array Array of user groups
      */
     public function getAllGroups(): array
@@ -75,10 +75,10 @@ class UserGroupModel extends Model
 
         return array_column($groups, 'id');
     }
-    
+
     /**
      * Get a user group by ID
-     * 
+     *
      * @param int $groupId Group ID
      * @return array|null Group data or null if not found
      */
@@ -86,10 +86,10 @@ class UserGroupModel extends Model
     {
         return $this->find($groupId);
     }
-    
+
     /**
      * Get a user group by name
-     * 
+     *
      * @param string $groupName Group name
      * @return array|null Group data or null if not found
      */
@@ -97,10 +97,10 @@ class UserGroupModel extends Model
     {
         return $this->where('name', $groupName)->first();
     }
-    
+
     /**
      * Create a new user group
-     * 
+     *
      * @param string $name Group name
      * @param string|null $description Group description
      * @return int|false Group ID on success, false on failure
@@ -113,13 +113,13 @@ class UserGroupModel extends Model
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
-        
+
         return $this->insert($data);
     }
-    
+
     /**
      * Update a user group
-     * 
+     *
      * @param int $groupId Group ID
      * @param array $data Group data to update
      * @return bool True on success, false on failure
@@ -129,10 +129,10 @@ class UserGroupModel extends Model
         $data['updated_at'] = date('Y-m-d H:i:s');
         return $this->update($groupId, $data);
     }
-    
+
     /**
      * Delete a user group
-     * 
+     *
      * @param int $groupId Group ID
      * @return bool True on success, false on failure
      */
@@ -140,10 +140,10 @@ class UserGroupModel extends Model
     {
         return $this->delete($groupId);
     }
-    
+
     /**
      * Get all members of a group
-     * 
+     *
      * @param int $groupId Group ID
      * @return array Array of group members
      */
@@ -153,10 +153,10 @@ class UserGroupModel extends Model
 
         return $userGroupMemberModel->getGroupMembers($groupId);
     }
-    
+
     /**
      * Add a user to a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @param int|null $addedBy User ID of the person adding the user (optional)
@@ -168,10 +168,10 @@ class UserGroupModel extends Model
 
         return $userGroupMemberModel->addUserToGroup($userId, $groupId, $addedBy);
     }
-    
+
     /**
      * Remove a user from a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @return bool True on success, false on failure
@@ -182,10 +182,10 @@ class UserGroupModel extends Model
 
         return $userGroupMemberModel->removeUserFromGroup($userId, $groupId);
     }
-    
+
     /**
      * Check if a user is a member of a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @return bool True if user is a member, false otherwise
@@ -196,10 +196,10 @@ class UserGroupModel extends Model
 
         return $userGroupMemberModel->isUserInGroup($userId, $groupId);
     }
-    
+
     /**
      * Get detailed information about group members including user details
-     * 
+     *
      * @param int $groupId Group ID
      * @return array Array of group members with user details
      */
@@ -209,10 +209,10 @@ class UserGroupModel extends Model
 
         return $userGroupMemberModel->getGroupMembersWithDetails($groupId);
     }
-    
+
     /**
      * Get the count of members in a group
-     * 
+     *
      * @param int $groupId Group ID
      * @return int Number of members in the group
      */

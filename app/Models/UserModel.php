@@ -8,17 +8,17 @@ use CodeIgniter\Shield\Authentication\Authenticators\Session;
 
 /**
  * User Model
- * 
+ *
  * Extends Shield UserModel to support username-only authentication
  */
 class UserModel extends ShieldUserModel
 {
     /**
      * Find user by credentials (username or email)
-     * 
+     *
      * Overrides parent to properly handle username-only authentication
      * in addition to email-based authentication
-     * 
+     *
      * @param array $credentials User credentials (username or email + password)
      * @return User|null User entity or null if not found
      */

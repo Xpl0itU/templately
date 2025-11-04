@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 /**
  * Template Model
- * 
+ *
  * Manages template file records including CRUD operations,
  * ownership tracking, and optimized queries with filled files.
  */
@@ -39,7 +39,7 @@ class TemplateModel extends Model
         'path' => 'permit_empty|max_length[500]',
         'templateFields' => 'permit_empty'
     ];
-    
+
     protected $validationMessages = [
         'name' => [
             'required' => 'Template name is required',
@@ -71,7 +71,7 @@ class TemplateModel extends Model
     {
         if (isset($data['data'])) {
             $recordData = $data['data'];
-            
+
             if (is_array($recordData)) {
                 if (isset($recordData['id'])) {
                     $data['data'] = $this->parseTemplateFieldsForRecord($recordData);
@@ -102,19 +102,19 @@ class TemplateModel extends Model
         if (!is_array($record)) {
             return $record;
         }
-        
+
         if (isset($record['templateFields']) && is_string($record['templateFields'])) {
             // Check if we have a cached version
             $cacheKey = 'template_fields_' . md5($record['templateFields']);
             $cached = cache($cacheKey);
-            
+
             if ($cached !== null) {
                 $record['templateFields'] = $cached;
             } else {
                 $decoded = json_decode($record['templateFields'], true);
                 $parsed = is_array($decoded) ? $decoded : [];
                 $record['templateFields'] = $parsed;
-                
+
                 cache()->save($cacheKey, $parsed, 3600);
             }
         } elseif (!isset($record['templateFields'])) {
@@ -122,7 +122,7 @@ class TemplateModel extends Model
         }
         return $record;
     }
-    
+
     /**
      * Assign ownership to the currently authenticated user after template is created
      *
@@ -133,16 +133,16 @@ class TemplateModel extends Model
     {
         if (isset($data['id']) && $data['id']) {
             $currentUserId = null;
-            
+
             $auth = service('auth');
             if ($auth && $auth->user()) {
                 $currentUserId = $auth->user()->id;
             }
-            
+
             if ($currentUserId) {
                 $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
                 $resourceOwnerModel->setOwner('template', $data['id'], $currentUserId);
-                
+
                 $aclEntryModel = model('App\Models\AclEntryModel');
                 $aclEntryModel->grantPermission(
                     'template',
@@ -155,10 +155,10 @@ class TemplateModel extends Model
                 );
             }
         }
-        
+
         return $data;
     }
-    
+
     /**
      * Remove ownership when template is deleted
      *
@@ -173,7 +173,7 @@ class TemplateModel extends Model
                               ->where('resource_id', $data['id'])
                               ->delete();
         }
-        
+
         return $data;
     }
 
@@ -186,11 +186,11 @@ class TemplateModel extends Model
     {
         $templates = $this->findAll();
         $filledFileModel = new FilledFilesModel();
-        
+
         foreach ($templates as &$template) {
             $template['filledFiles'] = $filledFileModel->where('templateFileId', $template['id'])->findAll();
         }
-        
+
         return $templates;
     }
 
@@ -204,18 +204,18 @@ class TemplateModel extends Model
     {
         // First, get all templates
         $templates = $this->findAll();
-        
+
         // Create a map of template IDs for efficient lookup
         $templateIds = array_column($templates, 'id');
-        
+
         if (empty($templateIds)) {
             return $templates;
         }
-        
+
         // Get all filled files for these templates in a single query
         $filledFileModel = new FilledFilesModel();
         $filledFiles = $filledFileModel->whereIn('templateFileId', $templateIds)->findAll();
-        
+
         // Group filled files by template ID
         $filledFilesByTemplate = [];
         foreach ($filledFiles as $file) {
@@ -225,13 +225,13 @@ class TemplateModel extends Model
             }
             $filledFilesByTemplate[$templateId][] = $file;
         }
-        
+
         // Attach filled files to templates
         foreach ($templates as &$template) {
             $templateId = $template['id'];
             $template['filledFiles'] = $filledFilesByTemplate[$templateId] ?? [];
         }
-        
+
         return $templates;
     }
 
@@ -278,30 +278,29 @@ class TemplateModel extends Model
     public function deleteTemplateWithFiles($templateId)
     {
         $this->db->transStart();
-        
+
         try {
             $template = $this->find($templateId);
             if (!$template) {
                 throw new \Exception('Template not found');
             }
-            
+
             $filledFileModel = new FilledFilesModel();
             $filledFileModel->where('templateFileId', $templateId)->delete();
-            
+
             if (!empty($template['path']) && file_exists($template['path'])) {
                 unlink($template['path']);
             }
-            
+
             $this->delete($templateId);
-            
+
             $this->db->transComplete();
-            
+
             if ($this->db->transStatus() === false) {
                 throw new \Exception('Transaction failed');
             }
-            
+
             return true;
-            
         } catch (\Exception $e) {
             $this->db->transRollback();
             throw $e;

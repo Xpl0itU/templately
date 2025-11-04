@@ -12,7 +12,7 @@
 
             <div class="flex items-center space-x-1">
                 <?php if (!isset($hideNavLinks) || !$hideNavLinks) : ?>
-                    <?php 
+                    <?php
                     $currentPath = current_url();
                     $dashboardActive = strpos($currentPath, '/dashboard') !== false;
                     $fileExplorerActive = strpos($currentPath, '/file-explorer') !== false;

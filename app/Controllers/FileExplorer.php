@@ -8,7 +8,7 @@ use App\Libraries\PermissionManager;
 
 /**
  * FileExplorer Controller
- * 
+ *
  * Handles template and filled file management operations including viewing,
  * creating, updating, deleting, and exporting documents.
  */
@@ -37,9 +37,10 @@ class FileExplorer extends BaseController
         }
 
         $templates = $this->getTemplatesWithFilledFiles();
-        
+
         return view(
-            'file_explorer', [
+            'file_explorer',
+            [
             'title' => 'File Explorer',
             'templates' => $templates,
             'userPermissions' => $this->getUserPermissions()
@@ -55,17 +56,17 @@ class FileExplorer extends BaseController
     private function getTemplatesWithFilledFiles(): array
     {
         $templates = $this->templateModel->getTemplatesWithFilledFilesOptimized();
-        
+
         foreach ($templates as &$template) {
             $template['templateFields'] = $this->parseJsonField($template['templateFields']);
-            
+
             // Initialize empty filledData for old filled files
             if (isset($template['filledFiles']) && is_array($template['filledFiles'])) {
                 foreach ($template['filledFiles'] as &$filledFile) {
                     $filledFile['filledData'] = $this->parseJsonField($filledFile['filledData']);
                     $filledFile['fieldTypes'] = $this->parseJsonField($filledFile['fieldTypes']);
                     $filledFile['imageSizes'] = $this->parseJsonField($filledFile['imageSizes']);
-                    
+
                     // If filledData is empty or is an empty array, initialize with template fields
                     if (empty($filledFile['filledData']) || (is_array($filledFile['filledData']) && count($filledFile['filledData']) === 0)) {
                         $filledData = [];
@@ -101,7 +102,8 @@ class FileExplorer extends BaseController
             'createdAt' => null,
             'updatedAt' => null,
             'filledData' => []
-            ], $file
+            ],
+            $file
         );
 
         $file['filledData'] = $this->parseJsonField($file['filledData']);
@@ -175,7 +177,7 @@ class FileExplorer extends BaseController
         }
 
         $data = $this->request->getJSON(true) ?? $this->request->getPost();
-        
+
         $result = $this->processCreateFilledFile($data);
         return $this->response->setJSON($result);
     }
@@ -213,14 +215,14 @@ class FileExplorer extends BaseController
 
         // Initialize filledData with template fields if not provided
         $filledData = $data['filledData'] ?? $data['filled_data'] ?? null;
-        
+
         if (is_string($filledData)) {
             $filledData = json_decode($filledData, true) ?? [];
         }
         if (!is_array($filledData)) {
             $filledData = [];
         }
-        
+
         // If filledData is empty or null, initialize with template fields as empty strings
         if (empty($filledData)) {
             $templateFields = $this->parseJsonField($template['templateFields']);
@@ -390,10 +392,10 @@ class FileExplorer extends BaseController
             ]);
         }
 
-        $filledData = is_string($filledFile['filledData']) 
-            ? json_decode($filledFile['filledData'], true) ?? [] 
+        $filledData = is_string($filledFile['filledData'])
+            ? json_decode($filledFile['filledData'], true) ?? []
             : $filledFile['filledData'];
-        
+
         $filledData[$fieldName] = $fileName;
 
         $this->filledFileModel->update($filledFileId, [
@@ -429,14 +431,14 @@ class FileExplorer extends BaseController
         } catch (\Exception $e) {
             // Not JSON, that's okay
         }
-        
+
         $postData = $this->request->getPost();
-        
+
         // Merge both sources, preferring JSON data
         $data = array_merge($postData ?? [], $jsonData ?? []);
-        
+
         $files = $this->request->getFiles();
-        
+
         $result = $this->processUpdateFilledFile($filledFileId, $data, $files);
         return $this->response->setJSON($result);
     }
@@ -467,10 +469,10 @@ class FileExplorer extends BaseController
         }
 
         $filledDataRaw = $data['filledData'] ?? [];
-        
+
         log_message('debug', 'FilledData raw type: ' . gettype($filledDataRaw));
         log_message('debug', 'FilledData raw value: ' . print_r($filledDataRaw, true));
-        
+
         // Handle case where filledData might be an array (FormData duplicate keys)
         if (is_array($filledDataRaw) && !empty($filledDataRaw)) {
             if (isset($filledDataRaw[0]) && is_string($filledDataRaw[0])) {
@@ -482,10 +484,10 @@ class FileExplorer extends BaseController
                 goto skip_json_decode;
             }
         }
-        
+
         if (is_string($filledDataRaw)) {
             $filledData = json_decode($filledDataRaw, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return [
                     'success' => false,
@@ -499,16 +501,16 @@ class FileExplorer extends BaseController
                     ]
                 ];
             }
-            
+
             if (!is_array($filledData)) {
                 $filledData = [];
             }
         } else {
             $filledData = $filledDataRaw;
         }
-        
+
         skip_json_decode:
-        
+
         if (empty($filledData) && empty($files)) {
             return [
                 'success' => false,
@@ -540,7 +542,7 @@ class FileExplorer extends BaseController
                 // Check if this is an image field (starts with 'image_')
                 if (strpos($key, 'image_') === 0) {
                     $fieldName = substr($key, 6); // Remove 'image_' prefix
-                    
+
                     if ($file->isValid() && !$file->hasMoved()) {
                         $uploadedPath = $this->handleImageUpload($file, $fieldName, $filledFileId);
                         if ($uploadedPath !== false) {
@@ -553,11 +555,11 @@ class FileExplorer extends BaseController
 
         // Merge processed images with filled data
         $filledDataWithImages = array_merge($filledData, $processedImages);
-        
+
         // Extract and update fieldTypes and imageSizes if provided
         $fieldTypes = null;
         $imageSizes = null;
-        
+
         if (isset($data['fieldTypes'])) {
             if (is_string($data['fieldTypes'])) {
                 $fieldTypes = json_decode($data['fieldTypes'], true);
@@ -565,7 +567,7 @@ class FileExplorer extends BaseController
                 $fieldTypes = $data['fieldTypes'];
             }
         }
-        
+
         if (isset($data['imageSizes'])) {
             if (is_string($data['imageSizes'])) {
                 $imageSizes = json_decode($data['imageSizes'], true);
@@ -580,12 +582,12 @@ class FileExplorer extends BaseController
             'filledData' => json_encode($filledDataWithImages),
             'updatedAt' => date('Y-m-d H:i:s')
         ];
-        
+
         // Add fieldTypes and imageSizes to update if provided
         if ($fieldTypes !== null) {
             $updateData['fieldTypes'] = json_encode($fieldTypes);
         }
-        
+
         if ($imageSizes !== null) {
             $updateData['imageSizes'] = json_encode($imageSizes);
         }
@@ -600,7 +602,7 @@ class FileExplorer extends BaseController
                 'errors' => $this->filledFileModel->errors()
             ];
         }
-        
+
         // Prepare response data
         $responseData = [
             'filledFileId' => $filledFileId,
@@ -608,11 +610,11 @@ class FileExplorer extends BaseController
             'filledData' => $filledDataWithImages,
             'updatedAt' => $updateData['updatedAt']
         ];
-        
+
         if ($fieldTypes !== null) {
             $responseData['fieldTypes'] = $fieldTypes;
         }
-        
+
         if ($imageSizes !== null) {
             $responseData['imageSizes'] = $imageSizes;
         }
@@ -812,7 +814,7 @@ class FileExplorer extends BaseController
 
             // Fallback: use reflection if getVariables doesn't exist
             log_message('warning', 'TemplateProcessor::getVariables() not found, using reflection fallback');
-            
+
             $reflection = new \ReflectionClass($templateProcessor);
             $fields = [];
 
@@ -825,7 +827,7 @@ class FileExplorer extends BaseController
                     $property = $reflection->getProperty('tempDocumentMainPart');
                     $property->setAccessible(true);
                     $mainPart = $property->getValue($templateProcessor);
-                    
+
                     $fields = array_merge($fields, $method->invoke($templateProcessor, $mainPart));
                 }
 
@@ -834,7 +836,7 @@ class FileExplorer extends BaseController
                     $property = $reflection->getProperty('tempDocumentHeaders');
                     $property->setAccessible(true);
                     $headers = $property->getValue($templateProcessor);
-                    
+
                     if (is_array($headers)) {
                         foreach ($headers as $header) {
                             $fields = array_merge($fields, $method->invoke($templateProcessor, $header));
@@ -847,7 +849,7 @@ class FileExplorer extends BaseController
                     $property = $reflection->getProperty('tempDocumentFooters');
                     $property->setAccessible(true);
                     $footers = $property->getValue($templateProcessor);
-                    
+
                     if (is_array($footers)) {
                         foreach ($footers as $footer) {
                             $fields = array_merge($fields, $method->invoke($templateProcessor, $footer));
@@ -875,11 +877,11 @@ class FileExplorer extends BaseController
         $userId = auth()->id();
         $cacheKey = 'user_permissions_' . $userId;
         $cached = cache($cacheKey);
-        
+
         if ($cached !== null) {
             return $cached;
         }
-        
+
         $user = auth()->user();
         $permissions = [
             'canViewTemplates' => $this->permissionManager->can($user, 'templates.view'),
@@ -892,10 +894,10 @@ class FileExplorer extends BaseController
             'canDeleteFilledFiles' => $this->permissionManager->can($user, 'filled-files.delete'),
             'canExportFilledFiles' => $this->permissionManager->can($user, 'filled-files.view'),
         ];
-        
+
         // Cache for 5 minutes
         cache()->save($cacheKey, $permissions, 300);
-        
+
         return $permissions;
     }
 
@@ -910,7 +912,7 @@ class FileExplorer extends BaseController
     {
         return redirect()->to($url)->with('error', $message);
     }
-    
+
     /**
      * Handle template upload wizard step 1 - analyze uploaded file (AJAX endpoint)
      * Extracts template fields and stores temporary file
@@ -922,29 +924,29 @@ class FileExplorer extends BaseController
         if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
             return $this->redirectWithError('/dashboard', 'You do not have permission to create templates.');
         }
-        
+
         return view('upload_template_wizard', [
             'title' => 'Upload Template',
             'userPermissions' => $this->getUserPermissions()
         ]);
     }
-    
+
     public function createFilledFileWizard()
     {
         if (!$this->permissionManager->can(auth()->user(), 'filled_files.create')) {
             return $this->redirectWithError('/dashboard', 'You do not have permission to create filled files.');
         }
-        
+
         // Get all available templates for the user to select
         $templates = $this->templateModel->findAll();
-        
+
         return view('create_filled_file_wizard', [
             'title' => 'Create Filled File',
             'templates' => $templates,
             'userPermissions' => $this->getUserPermissions()
         ]);
     }
-    
+
     public function analyzeTemplate()
     {
         if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
@@ -953,23 +955,23 @@ class FileExplorer extends BaseController
                 'message' => 'You do not have permission to create templates.'
             ]);
         }
-        
+
         $file = $this->request->getFile('templateFile');
-        
+
         if (!$file || !$file->isValid()) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Invalid template file provided.'
             ]);
         }
-        
+
         if (!$file->guessExtension() || !in_array($file->guessExtension(), ['docx'])) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Only DOCX files are allowed.'
             ]);
         }
-        
+
         // Create a temporary file path using a single generated random name
         $tempFileName = $file->getRandomName();
         $tempPath     = WRITEPATH . 'uploads/' . $tempFileName;
@@ -980,12 +982,12 @@ class FileExplorer extends BaseController
                 'message' => 'Unable to store the uploaded template temporarily.'
             ]);
         }
-        
+
         // Analyze the template file to find field names
         try {
             $templateProcessor = new TemplateProcessor($tempPath);
             $fields            = $this->getTemplateVariableFields($templateProcessor);
-            
+
             // Clean up the field names
             $cleanedFields = [];
             foreach ($fields as $field) {
@@ -1001,7 +1003,7 @@ class FileExplorer extends BaseController
                     $cleanedFields[] = $cleanedField;
                 }
             }
-            
+
             return $this->response->setJSON([
                 'success' => true,
                 'tempFilePath' => $tempPath,
@@ -1014,14 +1016,14 @@ class FileExplorer extends BaseController
             if (file_exists($tempPath)) {
                 unlink($tempPath);
             }
-            
+
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Failed to analyze template file: ' . $e->getMessage()
             ]);
         }
     }
-    
+
     /**
      * Finalize template upload after field configuration (AJAX endpoint)
      * Moves temporary file to permanent location and creates database record
@@ -1036,49 +1038,49 @@ class FileExplorer extends BaseController
                 'message' => 'You do not have permission to create templates.'
             ]);
         }
-        
+
         $postData = $this->request->getJSON(true);
-        
+
         // Log the received data for debugging
         log_message('debug', 'Finalize template upload - raw postData: ' . json_encode($postData));
-        
+
         $tempFilePath = $postData['tempFilePath'] ?? '';
         $templateName = trim($postData['templateName'] ?? '');
         $templateFieldsRaw = $postData['templateFields'] ?? [];
-        
+
         // Handle templateFields - could be array or JSON string
         if (is_string($templateFieldsRaw)) {
             $templateFields = json_decode($templateFieldsRaw, true) ?? [];
         } else {
             $templateFields = is_array($templateFieldsRaw) ? $templateFieldsRaw : [];
         }
-        
+
         $originalFileName = $postData['originalFileName'] ?? '';
-        
+
         log_message('debug', 'Finalize template - templateFields type: ' . gettype($templateFieldsRaw) . ', count: ' . count($templateFields));
-        
+
         if (empty($tempFilePath) || !file_exists($tempFilePath)) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Template file is required.'
             ]);
         }
-        
+
         if (empty($templateName)) {
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Template name is required.'
             ]);
         }
-        
+
         $uploadPath = FCPATH . 'uploads/templates/';
         if (!is_dir($uploadPath)) {
             mkdir($uploadPath, 0755, true);
         }
-        
+
         $newFileName = $this->generateUniqueFileName($originalFileName, $uploadPath);
         $finalPath = $uploadPath . $newFileName;
-        
+
         // Move the temporary file to the final location
         if (!rename($tempFilePath, $finalPath)) {
             return $this->response->setJSON([
@@ -1086,23 +1088,23 @@ class FileExplorer extends BaseController
                 'message' => 'Failed to save template file.'
             ]);
         }
-        
+
         // Calculate file size
         $fileSize = filesize($finalPath);
-        
+
         // Prepare data for the template model
         // Ensure templateFields is an array before encoding
         if (!is_array($templateFields)) {
             log_message('error', 'templateFields is not an array: ' . gettype($templateFields));
             $templateFields = [];
         }
-        
+
         $templateFieldsJson = json_encode($templateFields);
         if ($templateFieldsJson === false) {
             log_message('error', 'Failed to encode templateFields: ' . json_last_error_msg());
             $templateFieldsJson = '[]';
         }
-        
+
         $templateData = [
             'name' => $templateName,
             'originalFileName' => $originalFileName,
@@ -1110,25 +1112,25 @@ class FileExplorer extends BaseController
             'size' => $fileSize,
             'templateFields' => $templateFieldsJson
         ];
-        
+
         log_message('debug', 'Template data prepared: ' . json_encode($templateData));
-        
+
         // Insert the template
         $templateId = $this->templateModel->insert($templateData);
-        
+
         if ($templateId === false) {
             // Remove the file if database insertion failed
             if (file_exists($finalPath)) {
                 unlink($finalPath);
             }
-            
+
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Failed to create template record.',
                 'errors' => $this->templateModel->errors()
             ]);
         }
-        
+
         // The TemplateModel's afterInsert hook will handle creating ownership and permissions
         // But we need to make sure it has the correct current user context
         $currentUser = auth()->user();
@@ -1137,12 +1139,12 @@ class FileExplorer extends BaseController
             // But we'll also ensure proper permissions are set
             $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
             $aclEntryModel = model('App\Models\AclEntryModel');
-            
+
             // Verify ownership is set
             if (!$resourceOwnerModel->getOwner('template', $templateId)) {
                 $resourceOwnerModel->setOwner('template', $templateId, $currentUser->id);
             }
-            
+
             // Ensure the owner has full control
             $aclEntryModel->grantPermission(
                 'template',
@@ -1154,17 +1156,17 @@ class FileExplorer extends BaseController
                 false
             );
         }
-        
+
         // Return the new template details
         $newTemplate = $this->templateModel->find($templateId);
-        
+
         return $this->response->setJSON([
             'success' => true,
             'message' => 'Template uploaded successfully.',
             'newTemplate' => $newTemplate
         ]);
     }
-    
+
     /**
      * Generate a unique filename by appending counter if file already exists
      *
@@ -1176,17 +1178,17 @@ class FileExplorer extends BaseController
     {
         $extension = pathinfo($originalFileName, PATHINFO_EXTENSION);
         $basename = pathinfo($originalFileName, PATHINFO_FILENAME);
-        
+
         $counter = 1;
         $newFileName = $basename . '.' . $extension;
         $newFilePath = $uploadPath . $newFileName;
-        
+
         while (file_exists($newFilePath)) {
             $newFileName = $basename . '_' . $counter . '.' . $extension;
             $newFilePath = $uploadPath . $newFileName;
             $counter++;
         }
-        
+
         return $newFileName;
     }
 
@@ -1201,7 +1203,7 @@ class FileExplorer extends BaseController
     {
         // Get the filled file to verify it exists and get image path
         $filledFile = $this->filledFileModel->find($filledFileId);
-        
+
         if (!$filledFile) {
             return $this->response->setStatusCode(404)->setBody('Filled file not found');
         }
@@ -1219,7 +1221,7 @@ class FileExplorer extends BaseController
         } elseif (!is_array($filledData)) {
             $filledData = [];
         }
-        
+
         // Find the image in the filled data
         $imagePath = null;
         foreach ($filledData as $field => $value) {
@@ -1254,7 +1256,7 @@ class FileExplorer extends BaseController
         $mimeType = finfo_file($finfo, $fullImagePath);
         finfo_close($finfo);
 
-        
+
         // Serve the image
         return $this->response
             ->setHeader('Content-Type', $mimeType)
@@ -1287,9 +1289,9 @@ class FileExplorer extends BaseController
 
         try {
             $templatePath = $template['path'];
-            
+
             log_message('debug', 'Export: Template path: ' . $templatePath);
-            
+
             if (!file_exists($templatePath)) {
                 return $this->response->setJSON([
                     'success' => false,
@@ -1306,18 +1308,18 @@ class FileExplorer extends BaseController
             // Process each field based on type
             foreach ($filledData as $field => $value) {
                 $fieldType = $fieldTypes[$field] ?? 'text';
-                
+
                 if ($fieldType === 'image' && !empty($value)) {
                     // Image path is stored relative to filled_files directory with filledFileId subdirectory
                     $imagePath = WRITEPATH . 'uploads/filled_files/' . $filledFileId . '/' . $value;
-                    
+
                     if (file_exists($imagePath)) {
                         $width = $imageSizes[$field]['width'] ?? 300;
                         $height = $imageSizes[$field]['height'] ?? 200;
                         $ratio = $imageSizes[$field]['ratio'] ?? true;
-                        
+
                         log_message('debug', 'Export DOCX: Setting image for field ' . $field . ' from path: ' . $imagePath);
-                        
+
                         $templateProcessor->setImageValue(
                             $field,
                             [
@@ -1349,7 +1351,6 @@ class FileExplorer extends BaseController
 
             // Return file for download
             return $this->response->download($outputPath, null)->setFileName($outputFilename);
-
         } catch (\Exception $e) {
             log_message('error', 'DOCX export error: ' . $e->getMessage());
             return $this->response->setJSON([
@@ -1384,9 +1385,9 @@ class FileExplorer extends BaseController
 
         try {
             $templatePath = $template['path'];
-            
+
             log_message('debug', 'PDF Export: Template path: ' . $templatePath);
-            
+
             if (!file_exists($templatePath)) {
                 return $this->response->setJSON([
                     'success' => false,
@@ -1404,18 +1405,18 @@ class FileExplorer extends BaseController
             // Process each field based on type
             foreach ($filledData as $field => $value) {
                 $fieldType = $fieldTypes[$field] ?? 'text';
-                
+
                 if ($fieldType === 'image' && !empty($value)) {
                     // Image path is stored relative to filled_files directory with filledFileId subdirectory
                     $imagePath = WRITEPATH . 'uploads/filled_files/' . $filledFileId . '/' . $value;
-                    
+
                     if (file_exists($imagePath)) {
                         $width = $imageSizes[$field]['width'] ?? 300;
                         $height = $imageSizes[$field]['height'] ?? 200;
                         $ratio = $imageSizes[$field]['ratio'] ?? true;
-                        
+
                         log_message('debug', 'Export PDF: Setting image for field ' . $field . ' from path: ' . $imagePath);
-                        
+
                         $templateProcessor->setImageValue(
                             $field,
                             [
@@ -1437,7 +1438,7 @@ class FileExplorer extends BaseController
             $baseFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filledFile['name']) . '_' . date('Y-m-d_His');
             $docxFilename = $baseFilename . '.docx';
             $pdfFilename = $baseFilename . '.pdf';
-            
+
             $docxPath = WRITEPATH . 'uploads/exports/' . $docxFilename;
             $pdfPath = WRITEPATH . 'uploads/exports/' . $pdfFilename;
             $exportsDir = WRITEPATH . 'uploads/exports/';
@@ -1449,18 +1450,18 @@ class FileExplorer extends BaseController
 
             // Save the generated DOCX file
             $templateProcessor->saveAs($docxPath);
-            
+
             log_message('debug', 'PDF Export: DOCX generated at: ' . $docxPath);
 
             // Step 2: Convert DOCX to PDF using LibreOffice
             $libreOfficePath = $this->findLibreOfficePath();
-            
+
             if (!$libreOfficePath) {
                 // Clean up DOCX file
                 if (file_exists($docxPath)) {
                     unlink($docxPath);
                 }
-                
+
                 return $this->response->setJSON([
                     'success' => false,
                     'message' => 'LibreOffice is not installed or could not be found. Please install LibreOffice to enable PDF export.'
@@ -1473,7 +1474,7 @@ class FileExplorer extends BaseController
             if (!is_dir($userProfile)) {
                 mkdir($userProfile, 0755, true);
             }
-            
+
             $command = sprintf(
                 '%s -env:UserInstallation=file://%s --headless --convert-to pdf:writer_pdf_Export --outdir %s %s 2>&1',
                 escapeshellarg($libreOfficePath),
@@ -1481,11 +1482,11 @@ class FileExplorer extends BaseController
                 escapeshellarg($exportsDir),
                 escapeshellarg($docxPath)
             );
-            
+
             log_message('debug', 'PDF Export: Executing command: ' . $command);
-            
+
             exec($command, $output, $returnCode);
-            
+
             log_message('debug', 'PDF Export: Command output: ' . implode("\n", $output));
             log_message('debug', 'PDF Export: Return code: ' . $returnCode);
 
@@ -1507,10 +1508,9 @@ class FileExplorer extends BaseController
 
             // Return PDF file for download
             return $this->response->download($pdfPath, null)->setFileName($pdfFilename);
-
         } catch (\Exception $e) {
             log_message('error', 'PDF export error: ' . $e->getMessage());
-            
+
             // Clean up any temporary files
             if (isset($docxPath) && file_exists($docxPath)) {
                 unlink($docxPath);
@@ -1518,7 +1518,7 @@ class FileExplorer extends BaseController
             if (isset($pdfPath) && file_exists($pdfPath)) {
                 unlink($pdfPath);
             }
-            
+
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Error generating PDF: ' . $e->getMessage()
@@ -1535,7 +1535,7 @@ class FileExplorer extends BaseController
     private function findLibreOfficePath(): ?string
     {
         $possiblePaths = [];
-        
+
         // Detect operating system and set possible paths
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
             // Windows paths

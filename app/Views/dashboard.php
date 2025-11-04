@@ -4,7 +4,8 @@
 
 <?php echo $this->section('navigation') ?>
     <?php echo $this->include(
-        'components/navigation', [
+        'components/navigation',
+        [
         'pageTitle' => 'Templately',
         'pageIcon' => 'file-alt',
         'stickyNav' => false,
@@ -126,7 +127,7 @@
             <div class="p-6">
                 <?php if (!empty($recentTemplates)) : ?>
                     <div class="space-y-3">
-                        <?php foreach ($recentTemplates as $template): ?>
+                        <?php foreach ($recentTemplates as $template) : ?>
                             <a href="/file-explorer#template-<?php echo $template['id'] ?>" 
                                class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-200 border-2 border-transparent transition-all duration-200 group">
                                 <div class="flex-shrink-0">
@@ -148,7 +149,7 @@
                             </a>
                         <?php endforeach; ?>
                     </div>
-                <?php else: ?>
+                <?php else : ?>
                     <div class="text-center py-12">
                         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-file-alt text-gray-400 text-2xl"></i>
@@ -174,7 +175,7 @@
             <div class="p-6">
                 <?php if (!empty($recentFilledFiles)) : ?>
                     <div class="space-y-3">
-                        <?php foreach ($recentFilledFiles as $file): ?>
+                        <?php foreach ($recentFilledFiles as $file) : ?>
                             <a href="/file-explorer#filled-file-<?php echo $file['id'] ?? '' ?>" 
                                class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 hover:border-green-200 border-2 border-transparent transition-all duration-200 group">
                                 <div class="flex-shrink-0">
@@ -199,7 +200,7 @@
                             </a>
                         <?php endforeach; ?>
                     </div>
-                <?php else: ?>
+                <?php else : ?>
                     <div class="text-center py-12">
                         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-edit text-gray-400 text-2xl"></i>

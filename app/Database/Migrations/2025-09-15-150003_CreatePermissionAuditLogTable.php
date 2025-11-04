@@ -81,7 +81,7 @@ class CreatePermissionAuditLogTable extends Migration
                 'null' => false,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey('user_id');
         $this->forge->addKey('target_user_id');

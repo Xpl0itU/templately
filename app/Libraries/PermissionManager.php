@@ -73,7 +73,7 @@ class PermissionManager
 
     /**
      * Check if a user or group has a specific permission for a resource
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $principalType Type of principal ('user' or 'group')
      * @param string $permission Permission to check (e.g., 'templates.view')
@@ -85,8 +85,8 @@ class PermissionManager
     public function hasPermission(int $principalId, string $principalType, string $permission, ?string $resourceType = null, ?int $resourceId = null, array $context = []): bool
     {
         // Create cache key
-    $cacheKey = $this->buildCacheKey($principalType, $principalId, $permission, $resourceType, $resourceId, $context);
-        
+        $cacheKey = $this->buildCacheKey($principalType, $principalId, $permission, $resourceType, $resourceId, $context);
+
         // Check cache first
         $cachedRaw = $this->cache->get($cacheKey);
         if (is_string($cachedRaw)) {
@@ -180,14 +180,22 @@ class PermissionManager
         }
 
         // 5. Check inherited permissions if enabled
-        if ($this->aclSettingModel->getSetting('inheritance_enabled', true) && 
-            $resourceType !== null && $resourceId !== null) {
+        if (
+            $this->aclSettingModel->getSetting('inheritance_enabled', true) &&
+            $resourceType !== null && $resourceId !== null
+        ) {
             $inheritedPermission = $this->checkInheritedPermissions($principalId, $principalType, $permission, $resourceType, $resourceId, $context);
             if ($inheritedPermission !== null) {
                 if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
                     $resultText = $inheritedPermission ? 'allowed' : 'denied';
-                    $this->auditLogger->logPermissionCheck($principalId, $permission, $resourceType, $resourceId, 
-                        $resultText, 'Inherited permission');
+                    $this->auditLogger->logPermissionCheck(
+                        $principalId,
+                        $permission,
+                        $resourceType,
+                        $resourceId,
+                        $resultText,
+                        'Inherited permission'
+                    );
                 }
                 $this->cache->save($cacheKey, $inheritedPermission ? 'allow' : 'deny', 300); // Cache for 5 minutes
                 return $inheritedPermission;
@@ -200,8 +208,14 @@ class PermissionManager
             if ($policyResult !== null) {
                 if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
                     $resultText = $policyResult ? 'allowed' : 'denied';
-                    $this->auditLogger->logPermissionCheck($principalId, $permission, $resourceType, $resourceId, 
-                        $resultText, 'ABAC policy evaluation');
+                    $this->auditLogger->logPermissionCheck(
+                        $principalId,
+                        $permission,
+                        $resourceType,
+                        $resourceId,
+                        $resultText,
+                        'ABAC policy evaluation'
+                    );
                 }
                 $this->cache->save($cacheKey, $policyResult ? 'allow' : 'deny', 300); // Cache for 5 minutes
                 return $policyResult;
@@ -215,10 +229,10 @@ class PermissionManager
         $this->cache->save($cacheKey, 'deny', 300); // Cache for 5 minutes
         return false;
     }
-    
+
     /**
      * Check if a user has permissions through their group memberships
-     * 
+     *
      * @param int $userId User ID
      * @param string $permission Permission to check
      * @param string|null $resourceType Type of resource
@@ -234,7 +248,7 @@ class PermissionManager
         if (empty($groupIds)) {
             return false;
         }
-        
+
         // Check each group for the permission
         foreach ($groupIds as $groupId) {
             // Check if group has permission for this resource
@@ -245,13 +259,13 @@ class PermissionManager
                 }
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Get all groups a user belongs to
-     * 
+     *
      * @param int $userId User ID
      * @return array Array of user groups
      */
@@ -260,10 +274,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->getGroupsForUser($userId);
     }
-    
+
     /**
      * Get all members of a group
-     * 
+     *
      * @param int $groupId Group ID
      * @return array Array of group members
      */
@@ -272,10 +286,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->getGroupMembers($groupId);
     }
-    
+
     /**
      * Add a user to a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @param int|null $addedBy User ID of the person adding the user (optional)
@@ -286,10 +300,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->addUserToGroup($userId, $groupId, $addedBy);
     }
-    
+
     /**
      * Remove a user from a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @return bool True on success, false on failure
@@ -299,10 +313,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->removeUserFromGroup($userId, $groupId);
     }
-    
+
     /**
      * Check if a user is a member of a group
-     * 
+     *
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @return bool True if user is a member, false otherwise
@@ -312,10 +326,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->isUserInGroup($userId, $groupId);
     }
-    
+
     /**
      * Get detailed information about group members including user details
-     * 
+     *
      * @param int $groupId Group ID
      * @return array Array of group members with user details
      */
@@ -324,10 +338,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->getGroupMembersWithDetails($groupId);
     }
-    
+
     /**
      * Get the count of members in a group
-     * 
+     *
      * @param int $groupId Group ID
      * @return int Number of members in the group
      */
@@ -336,10 +350,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->getGroupMemberCount($groupId);
     }
-    
+
     /**
      * Create a new user group
-     * 
+     *
      * @param string $name Group name
      * @param string|null $description Group description
      * @return int|false Group ID on success, false on failure
@@ -349,10 +363,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->createGroup($name, $description);
     }
-    
+
     /**
      * Delete a user group
-     * 
+     *
      * @param int $groupId Group ID
      * @return bool True on success, false on failure
      */
@@ -361,10 +375,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->deleteGroup($groupId);
     }
-    
+
     /**
      * Get all user groups
-     * 
+     *
      * @return array Array of user groups
      */
     public function getAllGroups(): array
@@ -372,10 +386,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->getAllGroups();
     }
-    
+
     /**
      * Get a user group by ID
-     * 
+     *
      * @param int $groupId Group ID
      * @return array|null Group data or null if not found
      */
@@ -384,10 +398,10 @@ class PermissionManager
         $userGroupModel = model('App\Models\UserGroupModel');
         return $userGroupModel->getGroup($groupId);
     }
-    
+
     /**
      * Grant a permission to a principal (user or group) for a resource
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $principalType Type of principal ('user' or 'group')
      * @param string $permission Permission to grant
@@ -401,18 +415,17 @@ class PermissionManager
      * @return bool True on success, false on failure
      */
     public function grantPermission(
-        int $principalId, 
+        int $principalId,
         string $principalType,
-        string $permission, 
-        string $resourceType, 
-        int $resourceId, 
-        ?int $grantedBy = null, 
+        string $permission,
+        string $resourceType,
+        int $resourceId,
+        ?int $grantedBy = null,
         bool $inherited = false,
-        ?string $inheritanceSourceType = null, 
-        ?int $inheritanceSourceId = null, 
+        ?string $inheritanceSourceType = null,
+        ?int $inheritanceSourceId = null,
         ?string $expiresAt = null
-    ): bool
-    {
+    ): bool {
         try {
             // Only allow superadmin or resource owner to grant permissions
             $currentUser = null;
@@ -428,9 +441,11 @@ class PermissionManager
                 }
             }
 
-            if ($currentUser !== null &&
-                ! $currentUser->inGroup('superadmin') && 
-                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)) {
+            if (
+                $currentUser !== null &&
+                ! $currentUser->inGroup('superadmin') &&
+                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)
+            ) {
                 return false;
             }
 
@@ -448,14 +463,14 @@ class PermissionManager
                 $inheritanceSourceId,
                 $expiresAt
             );
-            
+
             if ($result) {
                 // Clear cache for this principal-permission combination
                 $cacheKey = $this->buildCacheKey($principalType, $principalId, $permission, $resourceType, $resourceId);
                 if (! $this->cache->delete($cacheKey)) {
                     log_message('debug', 'Failed to delete permission cache key: ' . $cacheKey);
                 }
-                
+
                 // Log the action if audit logging is enabled
                 if ($this->aclSettingModel->getSetting('audit_log_enabled', true) && $actingUserId !== null) {
                     $this->auditLogger->logPermissionGrant(
@@ -469,17 +484,17 @@ class PermissionManager
                     );
                 }
             }
-            
+
             return $result;
         } catch (\Exception $e) {
             log_message('error', 'Error granting permission: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Revoke a permission from a principal (user or group) for a resource
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $principalType Type of principal ('user' or 'group')
      * @param string $permission Permission to revoke
@@ -488,13 +503,12 @@ class PermissionManager
      * @return bool True on success, false on failure
      */
     public function revokePermission(
-        int $principalId, 
+        int $principalId,
         string $principalType,
-        string $permission, 
-        string $resourceType, 
+        string $permission,
+        string $resourceType,
         int $resourceId
-    ): bool
-    {
+    ): bool {
         try {
             // Only allow superadmin or resource owner to revoke permissions
             $currentUser = null;
@@ -510,9 +524,11 @@ class PermissionManager
                 }
             }
 
-            if ($currentUser !== null &&
-                ! $currentUser->inGroup('superadmin') && 
-                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)) {
+            if (
+                $currentUser !== null &&
+                ! $currentUser->inGroup('superadmin') &&
+                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)
+            ) {
                 return false;
             }
 
@@ -525,14 +541,14 @@ class PermissionManager
                 $principalId,
                 $permission
             );
-            
+
             if ($result) {
                 // Clear cache for this principal-permission combination
                 $cacheKey = $this->buildCacheKey($principalType, $principalId, $permission, $resourceType, $resourceId);
                 if (! $this->cache->delete($cacheKey)) {
                     log_message('debug', 'Failed to delete permission cache key: ' . $cacheKey);
                 }
-                
+
                 // Log the action if audit logging is enabled
                 if ($this->aclSettingModel->getSetting('audit_log_enabled', true) && $actingUserId !== null) {
                     $this->auditLogger->logPermissionRevoke(
@@ -546,17 +562,17 @@ class PermissionManager
                     );
                 }
             }
-            
+
             return $result;
         } catch (\Exception $e) {
             log_message('error', 'Error revoking permission: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Get all permissions for a principal (user or group) on a resource
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $principalType Type of principal ('user' or 'group')
      * @param string $resourceType Type of resource (template, filled_file, etc.)
@@ -570,7 +586,7 @@ class PermissionManager
 
     /**
      * Check if a group has a specific permission
-     * 
+     *
      * @param string $groupName The group name
      * @param string $permission The permission to check
      * @return bool True if group has permission, false otherwise
@@ -578,20 +594,20 @@ class PermissionManager
     protected function hasGroupPermission(string $groupName, string $permission): bool
     {
     /** @var \Config\AuthGroups $authGroups */
-    $authGroups = config('AuthGroups');
+        $authGroups = config('AuthGroups');
         $matrix = $authGroups->matrix;
-        
+
         if (!isset($matrix[$groupName])) {
             return false;
         }
-        
+
         $groupPermissions = $matrix[$groupName];
-        
+
         // Check for exact match
         if (in_array($permission, $groupPermissions)) {
             return true;
         }
-        
+
         // Check for wildcard matches
         $permissionParts = explode('.', $permission);
         if (count($permissionParts) >= 2) {
@@ -600,7 +616,7 @@ class PermissionManager
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -699,7 +715,7 @@ class PermissionManager
 
     /**
      * Evaluate ABAC policies
-     * 
+     *
     * @param int $principalId The principal ID (must be a user)
     * @param string $principalType Type of principal ('user' or 'group')
      * @param string $permission The permission to check
@@ -717,7 +733,7 @@ class PermissionManager
 
     /**
      * Grant a resource-specific permission to a user or group
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $permission Permission to grant (e.g., 'templates.view')
      * @param string $resourceType Type of resource (template, filled_file, etc.)
@@ -731,18 +747,17 @@ class PermissionManager
      * @return bool True on success, false on failure
      */
     public function grantResourcePermission(
-        int $principalId, 
-        string $permission, 
-        string $resourceType, 
-        int $resourceId, 
+        int $principalId,
+        string $permission,
+        string $resourceType,
+        int $resourceId,
         string $principalType = 'user',
         ?int $grantedBy = null,
         bool $inherited = false,
-        ?string $inheritanceSourceType = null, 
-        ?int $inheritanceSourceId = null, 
+        ?string $inheritanceSourceType = null,
+        ?int $inheritanceSourceId = null,
         ?string $expiresAt = null
-    ): bool
-    {
+    ): bool {
         try {
             $currentUser = null;
 
@@ -754,9 +769,11 @@ class PermissionManager
                 }
             }
 
-            if ($currentUser !== null &&
+            if (
+                $currentUser !== null &&
                 ! $currentUser->inGroup('superadmin') &&
-                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)) {
+                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)
+            ) {
                 return false;
             }
 
@@ -840,7 +857,7 @@ class PermissionManager
 
     /**
      * Revoke a resource-specific permission from a user or group
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $permission Permission to revoke (e.g., 'templates.view')
      * @param string $resourceType Type of resource (template, filled_file, etc.)
@@ -849,13 +866,12 @@ class PermissionManager
      * @return bool True on success, false on failure
      */
     public function revokeResourcePermission(
-        int $principalId, 
-        string $permission, 
-        string $resourceType, 
+        int $principalId,
+        string $permission,
+        string $resourceType,
         int $resourceId,
         string $principalType = 'user'
-    ): bool
-    {
+    ): bool {
         try {
             $currentUser = null;
 
@@ -867,9 +883,11 @@ class PermissionManager
                 }
             }
 
-            if ($currentUser !== null &&
+            if (
+                $currentUser !== null &&
                 ! $currentUser->inGroup('superadmin') &&
-                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)) {
+                ! $this->resourceOwnerModel->isOwner($currentUser->id, $resourceType, $resourceId)
+            ) {
                 return false;
             }
 
@@ -926,7 +944,7 @@ class PermissionManager
 
     /**
      * Set the owner of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @param int $ownerId ID of the user who owns the resource
@@ -939,13 +957,13 @@ class PermissionManager
         if (!$currentUser->inGroup('superadmin')) {
             return false;
         }
-        
+
         return $this->resourceOwnerModel->setOwner($resourceType, $resourceId, $ownerId);
     }
 
     /**
      * Get the owner of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @return int|null Owner ID or null if not found
@@ -957,7 +975,7 @@ class PermissionManager
 
     /**
      * Check if a user is the owner of a resource
-     * 
+     *
      * @param int $userId ID of the user
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
@@ -983,7 +1001,7 @@ class PermissionManager
 
     /**
      * Transfer ownership of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @param int $newOwnerId ID of the new owner
@@ -997,7 +1015,7 @@ class PermissionManager
 
     /**
      * Remove ownership of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @return bool True on success, false on failure
@@ -1009,7 +1027,7 @@ class PermissionManager
 
     /**
      * Get all resources owned by a user
-     * 
+     *
      * @param int $userId ID of the user
      * @param string|null $resourceType Optional resource type filter
      * @return array Array of resources owned by the user
@@ -1021,7 +1039,7 @@ class PermissionManager
 
     /**
      * Get all ACL entries for a specific principal (user or group) on a resource
-     * 
+     *
      * @param int $principalId ID of the user or group
      * @param string $principalType Type of principal ('user' or 'group')
      * @param string $resourceType Type of resource (template, filled_file, etc.)
@@ -1032,10 +1050,10 @@ class PermissionManager
     {
         return $this->aclEntryModel->getPrincipalResourcePermissions($principalId, $principalType, $resourceType, $resourceId);
     }
-    
+
     /**
      * Get all ACL entries for a specific user on a resource
-     * 
+     *
      * @param int $userId ID of the user
      * @param string $resourceType Type of resource (template, filled_file, etc.)
      * @param int $resourceId ID of the specific resource
@@ -1045,10 +1063,10 @@ class PermissionManager
     {
         return $this->aclEntryModel->getPrincipalResourcePermissions($userId, 'user', $resourceType, $resourceId);
     }
-    
+
     /**
      * Get all ACL entries for a specific resource
-     * 
+     *
      * @param string $resourceType Type of resource (template, filled_file, etc.)
      * @param int $resourceId ID of the specific resource
      * @return array Array of ACL entries
@@ -1084,7 +1102,7 @@ class PermissionManager
                     'id'       => (int) $userArray['id'],
                     'username' => $userArray['username'] ?? null,
                     'email'    => $userArray['email'] ?? null,
-                    'firstName'=> $userArray['first_name'] ?? null,
+                    'firstName' => $userArray['first_name'] ?? null,
                     'lastName' => $userArray['last_name'] ?? null,
                     'display'  => $userArray['full_name'] ?? null,
                 ];
@@ -1153,7 +1171,7 @@ class PermissionManager
 
     /**
      * Get all ACL entries for a specific user
-     * 
+     *
      * @param int $userId ID of the user
      * @return array Array of ACL entries
      */
@@ -1164,7 +1182,7 @@ class PermissionManager
 
     /**
      * Get a setting value
-     * 
+     *
      * @param string $key Setting key
      * @param mixed $default Default value if setting not found
      * @return mixed Setting value or default
@@ -1179,7 +1197,7 @@ class PermissionManager
 
     /**
      * Set a setting value
-     * 
+     *
      * @param string $key Setting key
      * @param mixed $value Setting value
      * @return bool True on success, false on failure
@@ -1191,13 +1209,13 @@ class PermissionManager
         if (!$currentUser->inGroup('superadmin')) {
             return false;
         }
-        
+
         return $this->aclSettingModel->setSetting($key, $value);
     }
 
     /**
      * Get all settings
-     * 
+     *
      * @return array Array of all settings
      */
     public function getAllSettings(): array
@@ -1207,7 +1225,7 @@ class PermissionManager
 
     /**
      * Get settings with descriptions
-     * 
+     *
      * @return array Array of settings with descriptions
      */
     public function getSettingsWithDescriptions(): array
@@ -1217,7 +1235,7 @@ class PermissionManager
 
     /**
      * Reset a setting to its default value
-     * 
+     *
      * @param string $key Setting key
      * @return bool True on success, false on failure
      */
@@ -1228,7 +1246,7 @@ class PermissionManager
 
     /**
      * Reset all settings to their default values
-     * 
+     *
      * @return bool True on success, false on failure
      */
     public function resetAllSettings(): bool
@@ -1238,7 +1256,7 @@ class PermissionManager
 
     /**
      * Validate a setting value
-     * 
+     *
      * @param string $key Setting key
      * @param mixed $value Setting value
      * @return bool True if valid, false if invalid
@@ -1250,7 +1268,7 @@ class PermissionManager
 
     /**
      * Get all permissions
-     * 
+     *
      * @return array Array of all permissions
      */
     public function getAllPermissions(): array
@@ -1260,7 +1278,7 @@ class PermissionManager
 
     /**
      * Get permission by name
-     * 
+     *
      * @param string $name Permission name
      * @return array|null Permission data or null if not found
      */
@@ -1274,7 +1292,7 @@ class PermissionManager
 
     /**
      * Get permission by bit value
-     * 
+     *
      * @param int $bitValue Bit value of the permission
      * @return array|null Permission data or null if not found
      */
@@ -1282,5 +1300,4 @@ class PermissionManager
     {
         return $this->aclPermissionModel->getPermissionByBitValue($bitValue);
     }
-
 }

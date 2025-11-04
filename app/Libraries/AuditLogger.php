@@ -15,7 +15,7 @@ class AuditLogger
 
     /**
      * Log a permission-related action
-     * 
+     *
      * @param int|null $userId User who performed the action
      * @param string $action Type of action (grant, revoke, check, etc.)
      * @param string|null $permission Specific permission involved
@@ -26,12 +26,12 @@ class AuditLogger
      * @return bool True on success, false on failure
      */
     public function log(
-        ?int $userId, 
-        string $action, 
-        ?string $permission = null, 
-        ?string $resourceType = null, 
-        ?int $resourceId = null, 
-        string $result = 'allowed', 
+        ?int $userId,
+        string $action,
+        ?string $permission = null,
+        ?string $resourceType = null,
+        ?int $resourceId = null,
+        string $result = 'allowed',
         ?string $details = null
     ): bool {
         try {
@@ -39,7 +39,7 @@ class AuditLogger
             $request = \Config\Services::request();
             $ipAddress = $request->getIPAddress();
             $userAgent = $request->getUserAgent() ? $request->getUserAgent()->getAgentString() : null;
-            
+
             $data = [
                 'user_id' => $userId,
                 'target_user_id' => null, // This would be set for actions affecting other users
@@ -53,9 +53,9 @@ class AuditLogger
                 'details' => $details,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             $this->db->table('permission_audit_log')->insert($data);
-            
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Error logging permission audit: ' . $e->getMessage());
@@ -65,7 +65,7 @@ class AuditLogger
 
     /**
      * Log an action affecting another user
-     * 
+     *
      * @param int|null $userId User who performed the action
      * @param int|null $targetUserId User affected by the action
      * @param string $action Type of action (grant, revoke, etc.)
@@ -76,12 +76,12 @@ class AuditLogger
      * @return bool True on success, false on failure
      */
     public function logUserAction(
-        ?int $userId, 
+        ?int $userId,
         ?int $targetUserId,
-        string $action, 
-        ?string $permission = null, 
-        ?string $resourceType = null, 
-        ?int $resourceId = null, 
+        string $action,
+        ?string $permission = null,
+        ?string $resourceType = null,
+        ?int $resourceId = null,
         ?string $details = null
     ): bool {
         try {
@@ -89,7 +89,7 @@ class AuditLogger
             $request = \Config\Services::request();
             $ipAddress = $request->getIPAddress();
             $userAgent = $request->getUserAgent() ? $request->getUserAgent()->getAgentString() : null;
-            
+
             $data = [
                 'user_id' => $userId,
                 'target_user_id' => $targetUserId,
@@ -103,9 +103,9 @@ class AuditLogger
                 'details' => $details,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             $this->db->table('permission_audit_log')->insert($data);
-            
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Error logging user action audit: ' . $e->getMessage());
@@ -115,7 +115,7 @@ class AuditLogger
 
     /**
      * Log a permission check (access control decision)
-     * 
+     *
      * @param int|null $userId User who attempted access
      * @param string $permission Permission being checked
      * @param string|null $resourceType Type of resource
@@ -125,11 +125,11 @@ class AuditLogger
      * @return bool True on success, false on failure
      */
     public function logPermissionCheck(
-        ?int $userId, 
-        string $permission, 
-        ?string $resourceType = null, 
-        ?int $resourceId = null, 
-        string $result = 'denied', 
+        ?int $userId,
+        string $permission,
+        ?string $resourceType = null,
+        ?int $resourceId = null,
+        string $result = 'denied',
         ?string $reason = null
     ): bool {
         try {
@@ -137,7 +137,7 @@ class AuditLogger
             $request = \Config\Services::request();
             $ipAddress = $request->getIPAddress();
             $userAgent = $request->getUserAgent() ? $request->getUserAgent()->getAgentString() : null;
-            
+
             $data = [
                 'user_id' => $userId,
                 'target_user_id' => null,
@@ -151,9 +151,9 @@ class AuditLogger
                 'details' => $reason,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             $this->db->table('permission_audit_log')->insert($data);
-            
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Error logging permission check audit: ' . $e->getMessage());
@@ -163,7 +163,7 @@ class AuditLogger
 
     /**
      * Log a resource access attempt
-     * 
+     *
      * @param int|null $userId User who attempted access
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of specific resource
@@ -173,11 +173,11 @@ class AuditLogger
      * @return bool True on success, false on failure
      */
     public function logResourceAccess(
-        ?int $userId, 
-        string $resourceType, 
-        int $resourceId, 
-        string $action, 
-        string $result = 'denied', 
+        ?int $userId,
+        string $resourceType,
+        int $resourceId,
+        string $action,
+        string $result = 'denied',
         ?string $reason = null
     ): bool {
         try {
@@ -185,7 +185,7 @@ class AuditLogger
             $request = \Config\Services::request();
             $ipAddress = $request->getIPAddress();
             $userAgent = $request->getUserAgent() ? $request->getUserAgent()->getAgentString() : null;
-            
+
             $data = [
                 'user_id' => $userId,
                 'target_user_id' => null,
@@ -199,9 +199,9 @@ class AuditLogger
                 'details' => $reason,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             $this->db->table('permission_audit_log')->insert($data);
-            
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Error logging resource access audit: ' . $e->getMessage());
@@ -211,7 +211,7 @@ class AuditLogger
 
     /**
      * Get recent audit logs
-     * 
+     *
      * @param int $limit Number of logs to retrieve
      * @param int $offset Offset for pagination
      * @return array Array of audit logs
@@ -226,7 +226,7 @@ class AuditLogger
                 ->orderBy('pal.created_at', 'DESC')
                 ->limit($limit, $offset)
                 ->get();
-            
+
             return $query->getResultArray();
         } catch (\Exception $e) {
             log_message('error', 'Error retrieving audit logs: ' . $e->getMessage());
@@ -236,7 +236,7 @@ class AuditLogger
 
     /**
      * Get audit logs for a specific user
-     * 
+     *
      * @param int $userId User ID
      * @param int $limit Number of logs to retrieve
      * @param int $offset Offset for pagination
@@ -251,7 +251,7 @@ class AuditLogger
                 ->orderBy('created_at', 'DESC')
                 ->limit($limit, $offset)
                 ->get();
-            
+
             return $query->getResultArray();
         } catch (\Exception $e) {
             log_message('error', 'Error retrieving user audit logs: ' . $e->getMessage());
@@ -261,7 +261,7 @@ class AuditLogger
 
     /**
      * Get audit logs for a specific resource
-     * 
+     *
      * @param string $resourceType Resource type
      * @param int $resourceId Resource ID
      * @param int $limit Number of logs to retrieve
@@ -277,7 +277,7 @@ class AuditLogger
                 ->orderBy('created_at', 'DESC')
                 ->limit($limit, $offset)
                 ->get();
-            
+
             return $query->getResultArray();
         } catch (\Exception $e) {
             log_message('error', 'Error retrieving resource audit logs: ' . $e->getMessage());
@@ -287,7 +287,7 @@ class AuditLogger
 
     /**
      * Get audit logs filtered by action type
-     * 
+     *
      * @param string $action Action type (grant, revoke, check, etc.)
      * @param int $limit Number of logs to retrieve
      * @param int $offset Offset for pagination
@@ -304,7 +304,7 @@ class AuditLogger
                 ->orderBy('pal.created_at', 'DESC')
                 ->limit($limit, $offset)
                 ->get();
-            
+
             return $query->getResultArray();
         } catch (\Exception $e) {
             log_message('error', 'Error retrieving action audit logs: ' . $e->getMessage());
@@ -314,7 +314,7 @@ class AuditLogger
 
     /**
      * Get audit logs for a specific permission
-     * 
+     *
      * @param string $permission Permission name
      * @param int $limit Number of logs to retrieve
      * @param int $offset Offset for pagination
@@ -331,7 +331,7 @@ class AuditLogger
                 ->orderBy('pal.created_at', 'DESC')
                 ->limit($limit, $offset)
                 ->get();
-            
+
             return $query->getResultArray();
         } catch (\Exception $e) {
             log_message('error', 'Error retrieving permission audit logs: ' . $e->getMessage());
@@ -341,7 +341,7 @@ class AuditLogger
 
     /**
      * Search audit logs with multiple criteria
-     * 
+     *
      * @param array $criteria Search criteria
      * @param int $limit Number of logs to retrieve
      * @param int $offset Offset for pagination
@@ -354,47 +354,47 @@ class AuditLogger
             $builder->select('pal.*, u.username as user_username, tu.username as target_username');
             $builder->join('users u', 'pal.user_id = u.id', 'left');
             $builder->join('users tu', 'pal.target_user_id = tu.id', 'left');
-            
+
             // Apply search criteria
             if (!empty($criteria['user_id'])) {
                 $builder->where('pal.user_id', $criteria['user_id']);
             }
-            
+
             if (!empty($criteria['target_user_id'])) {
                 $builder->where('pal.target_user_id', $criteria['target_user_id']);
             }
-            
+
             if (!empty($criteria['action'])) {
                 $builder->where('pal.action', $criteria['action']);
             }
-            
+
             if (!empty($criteria['permission'])) {
                 $builder->where('pal.permission', $criteria['permission']);
             }
-            
+
             if (!empty($criteria['resource_type'])) {
                 $builder->where('pal.resource_type', $criteria['resource_type']);
             }
-            
+
             if (!empty($criteria['resource_id'])) {
                 $builder->where('pal.resource_id', $criteria['resource_id']);
             }
-            
+
             if (!empty($criteria['result'])) {
                 $builder->where('pal.result', $criteria['result']);
             }
-            
+
             if (!empty($criteria['date_from'])) {
                 $builder->where('pal.created_at >=', $criteria['date_from']);
             }
-            
+
             if (!empty($criteria['date_to'])) {
                 $builder->where('pal.created_at <=', $criteria['date_to']);
             }
-            
+
             $builder->orderBy('pal.created_at', 'DESC');
             $builder->limit($limit, $offset);
-            
+
             $query = $builder->get();
             return $query->getResultArray();
         } catch (\Exception $e) {
@@ -405,7 +405,7 @@ class AuditLogger
 
     /**
      * Get audit log statistics
-     * 
+     *
      * @param string|null $period Time period (day, week, month)
      * @return array Statistics data
      */
@@ -413,7 +413,7 @@ class AuditLogger
     {
         try {
             $builder = $this->db->table('permission_audit_log');
-            
+
             // Apply time period filter
             $dateColumn = 'DATE(created_at)';
             switch ($period) {
@@ -430,26 +430,26 @@ class AuditLogger
                     $builder->where('created_at >=', date('Y-m-d H:i:s', strtotime('-1 month')));
                     break;
             }
-            
+
             // Get total counts by action
             $actionStats = $builder->select("action, COUNT(*) as count")
                 ->groupBy('action')
                 ->get()
                 ->getResultArray();
-            
+
             // Get total counts by result
             $resultStats = $builder->select("result, COUNT(*) as count")
                 ->groupBy('result')
                 ->get()
                 ->getResultArray();
-            
+
             // Get counts by date
             $dateStats = $builder->select("{$dateColumn} as date, COUNT(*) as count")
                 ->groupBy($dateColumn)
                 ->orderBy($dateColumn, 'ASC')
                 ->get()
                 ->getResultArray();
-            
+
             return [
                 'by_action' => $actionStats,
                 'by_result' => $resultStats,

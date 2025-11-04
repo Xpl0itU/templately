@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 /**
  * Dashboard Controller
- * 
+ *
  * Handles the main dashboard display with statistics and recent activity.
  */
 class Dashboard extends BaseController
@@ -21,20 +21,20 @@ class Dashboard extends BaseController
         }
 
         $user = auth()->user();
-        
+
         $templateModel = model('App\Models\TemplateModel');
         $filledFilesModel = model('App\Models\FilledFilesModel');
-        
+
         $totalTemplates = $templateModel->countAll();
         $totalFilledFiles = $filledFilesModel->countAll();
-        
+
         $recentTemplates = $templateModel->orderBy('createdAt', 'DESC')->findAll(5);
-        
+
         $recentFilledFiles = $filledFilesModel->select('filledFiles.*, templateFiles.name as template_name')
             ->join('templateFiles', 'templateFiles.id = filledFiles.templateFileId', 'left')
             ->orderBy('filledFiles.createdAt', 'DESC')
             ->findAll(5);
-        
+
         $data = [
             'user' => $user,
             'totalTemplates' => $totalTemplates,
@@ -52,7 +52,7 @@ class Dashboard extends BaseController
                 'canDeleteFilledFiles' => $user->can('filled-files.delete'),
             ]
         ];
-        
+
         return view('dashboard', $data);
     }
 }

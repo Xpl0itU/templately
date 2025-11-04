@@ -27,7 +27,7 @@ class AddAclConstraints extends Migration
                 }
             }
         }
-        
+
         // Check if the unique index for resource_type, resource_id exists
         $indexes = $this->db->query("SHOW INDEX FROM resource_owners WHERE Key_name = 'unique_resource'")->getResultArray();
         if (empty($indexes)) {
@@ -40,7 +40,7 @@ class AddAclConstraints extends Migration
                 }
             }
         }
-        
+
         // Check if the indexes for acl_entries exist
         $indexes = $this->db->query("SHOW INDEX FROM acl_entries WHERE Key_name = 'idx_resource_type_id'")->getResultArray();
         if (empty($indexes)) {
@@ -53,7 +53,7 @@ class AddAclConstraints extends Migration
                 }
             }
         }
-        
+
         $indexes = $this->db->query("SHOW INDEX FROM acl_entries WHERE Key_name = 'idx_principal'")->getResultArray();
         if (empty($indexes)) {
             try {
@@ -65,7 +65,7 @@ class AddAclConstraints extends Migration
                 }
             }
         }
-        
+
         $indexes = $this->db->query("SHOW INDEX FROM acl_entries WHERE Key_name = 'idx_permission_id'")->getResultArray();
         if (empty($indexes)) {
             try {
@@ -77,7 +77,7 @@ class AddAclConstraints extends Migration
                 }
             }
         }
-        
+
         // Check if the index for resource_owners exists
         $indexes = $this->db->query("SHOW INDEX FROM resource_owners WHERE Key_name = 'idx_owner_id'")->getResultArray();
         if (empty($indexes)) {

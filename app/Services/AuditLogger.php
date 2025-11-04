@@ -19,7 +19,7 @@ class AuditLogger
 
     /**
      * Log a permission check attempt
-     * 
+     *
      * @param int $userId ID of the user making the request
      * @param string $permission The permission being checked
      * @param string|null $resourceType Type of resource (template, filled_file, etc.)
@@ -58,7 +58,7 @@ class AuditLogger
 
     /**
      * Log a user action (grant, revoke, etc.)
-     * 
+     *
      * @param int $userId ID of the user initiating the action
      * @param int|null $targetUserId ID of the target user
      * @param string $action The action being performed
@@ -100,7 +100,7 @@ class AuditLogger
 
     /**
      * Log a resource access attempt
-     * 
+     *
      * @param int|null $userId ID of the user making the request
      * @param string $resourceType Type of resource (template, filled_file, etc.)
      * @param int $resourceId ID of the specific resource
@@ -138,7 +138,7 @@ class AuditLogger
 
     /**
      * Log a permission inheritance event
-     * 
+     *
      * @param int $userId ID of the user involved
      * @param string $action The action (inherit, revoke_inheritance, etc.)
      * @param string|null $resourceType Type of resource (template, filled_file, etc.)
@@ -183,7 +183,7 @@ class AuditLogger
 
     /**
      * Query audit logs
-     * 
+     *
      * @param array $filters Filters to apply
      * @param int $limit Number of results to return
      * @param int $offset Number of results to skip
@@ -193,46 +193,46 @@ class AuditLogger
     {
         try {
             $builder = $this->db->table('audit_log');
-            
+
             // Apply filters
             if (isset($filters['user_id']) && $filters['user_id']) {
                 $builder->where('user_id', $filters['user_id']);
             }
-            
+
             if (isset($filters['action']) && $filters['action']) {
                 $builder->where('action', $filters['action']);
             }
-            
+
             if (isset($filters['resource_type']) && $filters['resource_type']) {
                 $builder->where('resource_type', $filters['resource_type']);
             }
-            
+
             if (isset($filters['resource_id']) && $filters['resource_id']) {
                 $builder->where('resource_id', $filters['resource_id']);
             }
-            
+
             if (isset($filters['permission']) && $filters['permission']) {
                 $builder->where('permission', $filters['permission']);
             }
-            
+
             if (isset($filters['start_date']) && $filters['start_date']) {
                 $builder->where('timestamp >=', $filters['start_date']);
             }
-            
+
             if (isset($filters['end_date']) && $filters['end_date']) {
                 $builder->where('timestamp <=', $filters['end_date']);
             }
-            
+
             if (isset($filters['result']) && $filters['result']) {
                 $builder->where('result', $filters['result']);
             }
-            
+
             // Order by timestamp descending
             $builder->orderBy('timestamp', 'DESC');
-            
+
             // Apply pagination
             $builder->limit($limit, $offset);
-            
+
             $query = $builder->get();
             return $query->getResultArray();
         } catch (\Exception $e) {
@@ -243,7 +243,7 @@ class AuditLogger
 
     /**
      * Count audit logs based on filters
-     * 
+     *
      * @param array $filters Filters to apply
      * @return int Number of matching audit log entries
      */
@@ -251,40 +251,40 @@ class AuditLogger
     {
         try {
             $builder = $this->db->table('audit_log');
-            
+
             // Apply filters
             if (isset($filters['user_id']) && $filters['user_id']) {
                 $builder->where('user_id', $filters['user_id']);
             }
-            
+
             if (isset($filters['action']) && $filters['action']) {
                 $builder->where('action', $filters['action']);
             }
-            
+
             if (isset($filters['resource_type']) && $filters['resource_type']) {
                 $builder->where('resource_type', $filters['resource_type']);
             }
-            
+
             if (isset($filters['resource_id']) && $filters['resource_id']) {
                 $builder->where('resource_id', $filters['resource_id']);
             }
-            
+
             if (isset($filters['permission']) && $filters['permission']) {
                 $builder->where('permission', $filters['permission']);
             }
-            
+
             if (isset($filters['start_date']) && $filters['start_date']) {
                 $builder->where('timestamp >=', $filters['start_date']);
             }
-            
+
             if (isset($filters['end_date']) && $filters['end_date']) {
                 $builder->where('timestamp <=', $filters['end_date']);
             }
-            
+
             if (isset($filters['result']) && $filters['result']) {
                 $builder->where('result', $filters['result']);
             }
-            
+
             return $builder->countAllResults();
         } catch (\Exception $e) {
             log_message('error', 'Error counting audit logs: ' . $e->getMessage());
@@ -294,7 +294,7 @@ class AuditLogger
 
     /**
      * Check if audit logging is enabled
-     * 
+     *
      * @return bool True if enabled, false otherwise
      */
     protected function isAuditLogEnabled(): bool

@@ -23,12 +23,12 @@
     <div id="alertMessage" class="hidden mb-6"></div>
 
     <!-- Quick Stats -->
-    <?php 
+    <?php
     // Get current user role
     $currentUser = auth()->user();
     $currentUserRole = 'viewer'; // default
     $currentUserRoleLabel = 'Viewer';
-    
+
     // Find current user in users array to get their role
     foreach ($users as $user) {
         if ($user['id'] == $currentUser->id) {
@@ -36,7 +36,7 @@
             break;
         }
     }
-    
+
     // Map roles to display labels and Font Awesome icons
     $roleInfo = [
         'superadmin' => [
@@ -70,7 +70,7 @@
             'icon' => 'clipboard-check'
         ]
     ];
-    
+
     $currentUserRoleLabel = $roleInfo[$currentUserRole]['label'] ?? 'Viewer';
     $totalUsers = count($users);
     ?>
@@ -155,7 +155,7 @@
                     </tr>
                 </thead>
                 <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
-                    <?php foreach ($users as $user): ?>
+                    <?php foreach ($users as $user) : ?>
                     <tr class="hover:bg-gray-50 transition duration-150" 
                         data-user-id="<?php echo $user['id'] ?>"
                         data-user-role="<?php echo $user['role'] ?? 'user' ?>"
@@ -170,7 +170,7 @@
                                 <div class="ml-4">
                                     <div class="text-sm font-medium text-gray-900">
                                         <?php echo esc($user['username']) ?>
-                                        <?php if ($user['id'] === $currentUser->id): ?>
+                                        <?php if ($user['id'] === $currentUser->id) : ?>
                                             <span class="ml-2 text-xs text-indigo-600">(You)</span>
                                         <?php endif; ?>
                                     </div>
@@ -181,7 +181,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <?php 
+                            <?php
                             $roleConfig = [
                                 'superadmin' => ['color' => 'red', 'icon' => 'crown', 'label' => 'Superadmin'],
                                 'admin' => ['color' => 'orange', 'icon' => 'user-shield', 'label' => 'Admin'],
@@ -197,11 +197,11 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <?php if ($user['active']): ?>
+                            <?php if ($user['active']) : ?>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                     <i class="fas fa-check-circle mr-1"></i>Active
                                 </span>
-                            <?php else: ?>
+                            <?php else : ?>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                     <i class="fas fa-ban mr-1"></i>Inactive
                                 </span>
@@ -216,7 +216,7 @@
                                         class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-md transition duration-150">
                                     <i class="fas fa-edit mr-1.5"></i>Edit
                                 </button>
-                                <?php if ($currentUser->inGroup('superadmin') && $user['id'] !== $currentUser->id): ?>
+                                <?php if ($currentUser->inGroup('superadmin') && $user['id'] !== $currentUser->id) : ?>
                                 <button onclick="deleteUser(<?php echo $user['id'] ?>, '<?php echo esc($user['username']) ?>')" 
                                         class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition duration-150">
                                     <i class="fas fa-trash mr-1.5"></i>Delete
@@ -380,7 +380,7 @@
                     <option value="editor">Editor - Edit all documents</option>
                     <option value="manager">Manager - Oversee & approve</option>
                     <option value="auditor">Auditor - Compliance & archival</option>
-                    <?php if ($currentUser->inGroup('superadmin')): ?>
+                    <?php if ($currentUser->inGroup('superadmin')) : ?>
                     <option value="superadmin">System Administrator - Full control</option>
                     <?php endif; ?>
                 </select>
@@ -453,7 +453,7 @@
                     <option value="editor">Editor - Edit all documents</option>
                     <option value="manager">Manager - Oversee & approve</option>
                     <option value="auditor">Auditor - Compliance & archival</option>
-                    <?php if ($currentUser->inGroup('superadmin')): ?>
+                    <?php if ($currentUser->inGroup('superadmin')) : ?>
                     <option value="superadmin">System Administrator - Full control</option>
                     <?php endif; ?>
                 </select>

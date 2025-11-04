@@ -19,7 +19,7 @@ class AddImageSizesToFilledFiles extends Migration
 
     public function down()
     {
-    $db = \Config\Database::connect();
+        $db = \Config\Database::connect();
 
         if ($db->DBDriver === 'SQLite3') {
             return;

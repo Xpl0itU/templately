@@ -23,10 +23,10 @@ class AclModel extends Model
         'expires_at'
     ];
     protected $useTimestamps = false;
-    
+
     /**
      * Get all ACL entries for a specific resource
-     * 
+     *
      * @param string $resourceType Type of resource (template, filled_file, etc.)
      * @param int $resourceId ID of the specific resource
      * @return array Array of ACL entries
@@ -37,10 +37,10 @@ class AclModel extends Model
             ->where('resource_id', $resourceId)
             ->findAll();
     }
-    
+
     /**
      * Get ACL entries for a specific user/group
-     * 
+     *
      * @param string $principalType Type of principal (user, group)
      * @param int $principalId ID of the user or group
      * @return array Array of ACL entries
@@ -51,10 +51,10 @@ class AclModel extends Model
             ->where('principal_id', $principalId)
             ->findAll();
     }
-    
+
     /**
      * Get ACL entries for a specific user (including group memberships)
-     * 
+     *
      * @param int $userId ID of the user
      * @param array $userGroups Array of group names the user belongs to
      * @return array Array of ACL entries
@@ -63,7 +63,7 @@ class AclModel extends Model
     {
         $builder = $this->db->table($this->table);
         $builder->where('(principal_type = "user" AND principal_id = ' . $userId . ')');
-        
+
         if (!empty($userGroups)) {
             // Get group IDs from the groups_users table
             $groupIds = [];
@@ -72,23 +72,23 @@ class AclModel extends Model
                 ->where('user_id', $userId)
                 ->get()
                 ->getResultArray();
-            
+
             foreach ($groupsResult as $groupRow) {
                 $groupIds[] = $groupRow['group'];
             }
-            
+
             if (!empty($groupIds)) {
                 $builder->orWhere('(principal_type = "group" AND principal_id IN (' . implode(',', array_map('intval', $groupIds)) . '))');
             }
         }
-        
+
         $query = $builder->get();
         return $query->getResultArray();
     }
-    
+
     /**
      * Check if a user has a specific permission for a resource
-     * 
+     *
      * @param int $userId ID of the user
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
@@ -103,13 +103,13 @@ class AclModel extends Model
         if ($ownerModel->isOwner($userId, $resourceType, $resourceId)) {
             return true; // Owners have full control
         }
-        
+
         // Get the permission ID
         $permissionId = $this->getPermissionId($permission);
         if (!$permissionId) {
             return false;
         }
-        
+
         // Check for explicit user permissions
         $userQuery = $this->db->table($this->table)
             ->where('resource_type', $resourceType)
@@ -119,11 +119,11 @@ class AclModel extends Model
             ->where('permission_id', $permissionId)
             ->where('(expires_at IS NULL OR expires_at > NOW())')
             ->get();
-        
+
         if ($userQuery->getNumRows() > 0) {
             return true;
         }
-        
+
         // Check for group permissions
         if (!empty($userGroups)) {
             $groupIds = [];
@@ -132,11 +132,11 @@ class AclModel extends Model
                 ->where('user_id', $userId)
                 ->get()
                 ->getResultArray();
-            
+
             foreach ($groupsResult as $groupRow) {
                 $groupIds[] = $groupRow['group'];
             }
-            
+
             if (!empty($groupIds)) {
                 $groupQuery = $this->db->table($this->table)
                     ->where('resource_type', $resourceType)
@@ -146,25 +146,25 @@ class AclModel extends Model
                     ->where('permission_id', $permissionId)
                     ->where('(expires_at IS NULL OR expires_at > NOW())')
                     ->get();
-                
+
                 if ($groupQuery->getNumRows() > 0) {
                     return true;
                 }
             }
         }
-        
+
         // Check inherited permissions if enabled
         $settingsModel = model('App\Models\AclSettingsModel');
         if ($settingsModel->getSetting('inheritance_enabled', true)) {
             return $this->checkInheritedPermissions($userId, $resourceType, $resourceId, $permission, $userGroups);
         }
-        
+
         return false;
     }
-    
+
     /**
      * Check inherited permissions from parent resources
-     * 
+     *
      * @param int $userId ID of the user
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
@@ -179,21 +179,21 @@ class AclModel extends Model
             // Get the template ID for this filled file
             $filledFileModel = model('App\Models\FilledFilesModel');
             $filledFile = $filledFileModel->find($resourceId);
-            
+
             if ($filledFile && isset($filledFile['templateFileId'])) {
                 $templateId = $filledFile['templateFileId'];
-                
+
                 // Check if the template has the permission for this user
                 return $this->userHasPermission($userId, 'template', $templateId, $permission, $userGroups);
             }
         }
-        
+
         return false;
     }
-    
+
     /**
      * Grant a permission to a user or group for a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @param string $principalType Type of principal (user, group)
@@ -223,7 +223,7 @@ class AclModel extends Model
             if (!$permissionId) {
                 return false;
             }
-            
+
             // Check if this permission already exists
             $existing = $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
@@ -231,7 +231,7 @@ class AclModel extends Model
                 ->where('principal_id', $principalId)
                 ->where('permission_id', $permissionId)
                 ->first();
-            
+
             if ($existing) {
                 // Update existing permission
                 $data = [
@@ -242,10 +242,10 @@ class AclModel extends Model
                     'updated_at' => date('Y-m-d H:i:s'),
                     'expires_at' => $expiresAt,
                 ];
-                
+
                 return $this->update($existing['id'], $data);
             }
-            
+
             // Insert new permission
             $data = [
                 'resource_type' => $resourceType,
@@ -261,17 +261,17 @@ class AclModel extends Model
                 'updated_at' => date('Y-m-d H:i:s'),
                 'expires_at' => $expiresAt,
             ];
-            
+
             return $this->insert($data) !== false;
         } catch (\Exception $e) {
             log_message('error', 'Error granting permission: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Revoke a permission from a user or group for a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @param string $principalType Type of principal (user, group)
@@ -291,7 +291,7 @@ class AclModel extends Model
             if (!$permissionId) {
                 return false;
             }
-            
+
             // Delete the permission
             return $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
@@ -304,10 +304,10 @@ class AclModel extends Model
             return false;
         }
     }
-    
+
     /**
      * Get permission ID by name
-     * 
+     *
      * @param string $permission Permission name
      * @return int|null Permission ID or null if not found
      */
@@ -317,15 +317,15 @@ class AclModel extends Model
             ->select('id')
             ->where('name', $permission)
             ->get();
-        
+
         $result = $query->getRow();
-        
+
         return $result ? $result->id : null;
     }
-    
+
     /**
      * Get permission name by ID
-     * 
+     *
      * @param int $permissionId Permission ID
      * @return string|null Permission name or null if not found
      */
@@ -335,28 +335,28 @@ class AclModel extends Model
             ->select('name')
             ->where('id', $permissionId)
             ->get();
-        
+
         $result = $query->getRow();
-        
+
         return $result ? $result->name : null;
     }
-    
+
     /**
      * Get all permissions
-     * 
+     *
      * @return array Array of all permissions
      */
     public function getAllPermissions(): array
     {
         $query = $this->db->table('acl_permissions')
             ->get();
-        
+
         return $query->getResultArray();
     }
-    
+
     /**
      * Get all principals with permissions for a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @return array Array of principals with permissions
@@ -371,7 +371,7 @@ class AclModel extends Model
         $builder->where('ae.resource_id', $resourceId);
         $builder->orderBy('ae.principal_type', 'ASC');
         $builder->orderBy('ae.principal_id', 'ASC');
-        
+
         $query = $builder->get();
         return $query->getResultArray();
     }

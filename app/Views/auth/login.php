@@ -2,7 +2,7 @@
 
 <?php echo $this->section('title') ?>Login<?php echo $this->endSection() ?>
 
-<?php 
+<?php
 // If user is already logged in, redirect to dashboard
 if (auth()->loggedIn()) {
     return redirect()->to(config(\Config\Auth::class)->loginRedirect());
@@ -106,7 +106,8 @@ if (auth()->loggedIn()) {
                     <input id="remember" 
                            name="remember" 
                            type="checkbox" 
-                           <?php if (old('remember')) : ?> checked<?php 
+                           <?php if (old('remember')) :
+                                ?> checked<?php
                            endif ?>
                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                     <label for="remember" class="ml-2 block text-sm text-gray-700">

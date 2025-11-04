@@ -55,26 +55,26 @@ class AuthController extends BaseController
 
         $validFields = setting('Auth.validFields') ?? ['username'];
         $credentials = [];
-        
+
         foreach ($validFields as $field) {
             if ($this->request->getPost($field)) {
                 $credentials[$field] = $this->request->getPost($field);
             }
         }
-        
+
         $credentials['password'] = $this->request->getPost('password');
         $remember = (bool) $this->request->getPost('remember');
 
         /**
-         * @var Session $authenticator 
+         * @var Session $authenticator
          */
         $authenticator = auth('session')->getAuthenticator();
 
         log_message('debug', 'Login attempt with credentials: ' . json_encode($credentials));
-        
+
         $result = $authenticator->remember($remember)->attempt($credentials);
         log_message('debug', 'Login result: ' . ($result->isOK() ? 'SUCCESS' : 'FAILED - ' . $result->reason()));
-        
+
         if (! $result->isOK()) {
             return redirect()->route('login')->withInput()->with('error', $result->reason());
         }
@@ -161,7 +161,7 @@ class AuthController extends BaseController
 
         $allowedPostFields = array_keys($rules);
         $postData = $this->request->getPost($allowedPostFields);
-        
+
         // Add dummy email for username-only registration to prevent TypeError
         $registrationFields = setting('Auth.registrationFields') ?? ['username', 'email'];
         if (!in_array('email', $registrationFields, true) && !isset($postData['email'])) {
@@ -178,9 +178,9 @@ class AuthController extends BaseController
         }
 
         $insertId = $users->getInsertID();
-        
+
         $user = auth()->getProvider()->findById($insertId);
-        
+
         if ($user === null) {
             return redirect()->back()->withInput()->with('error', 'Failed to create user account.');
         }
@@ -188,7 +188,7 @@ class AuthController extends BaseController
         $users->addToDefaultGroup($user);
 
         /**
-         * @var Session $authenticator 
+         * @var Session $authenticator
          */
         $authenticator = auth('session')->getAuthenticator();
 
@@ -215,7 +215,7 @@ class AuthController extends BaseController
             $validFields = setting('Auth.validFields') ?? ['username'];
             $authConfig = config(\Config\Auth::class);
             $rules = [];
-            
+
             if (in_array('email', $validFields, true)) {
                 $emailRulesArray = $authConfig->emailValidationRules['rules'] ?? ['required', 'valid_email'];
                 $rules['email'] = [
@@ -238,13 +238,13 @@ class AuthController extends BaseController
         }
 
         $authConfig = config(\Config\Auth::class);
-        
+
         $usernameRulesArray = $authConfig->usernameValidationRules['rules'] ?? ['required', 'min_length[3]'];
         $emailRulesArray = $authConfig->emailValidationRules['rules'] ?? ['required', 'valid_email'];
-        
+
         $usernameRulesArray[] = 'is_unique[users.username]';
         $emailRulesArray[] = 'is_unique[auth_identities.secret,auth_identities.type,email]';
-        
+
         $usernameRules = implode('|', $usernameRulesArray);
         $emailRules = implode('|', $emailRulesArray);
 

@@ -95,7 +95,7 @@ class CreateAuditLogTable extends Migration
                 'comment' => 'User agent string of the request',
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey('user_id');
         $this->forge->addKey('target_user_id');
@@ -106,7 +106,7 @@ class CreateAuditLogTable extends Migration
         $this->forge->addKey('result');
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->addForeignKey('target_user_id', 'users', 'id', 'SET NULL', 'CASCADE');
-        
+
         $this->forge->createTable('audit_log', true);
     }
 

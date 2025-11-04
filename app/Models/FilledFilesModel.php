@@ -37,7 +37,7 @@ class FilledFilesModel extends Model
         'name' => 'required|min_length[1]|max_length[255]',
         'filledData' => 'permit_empty'
     ];
-    
+
     protected $validationMessages = [
         'templateFileId' => [
             'required' => 'Template ID is required',
@@ -74,7 +74,7 @@ class FilledFilesModel extends Model
     {
         if (isset($data['data'])) {
             $recordData = $data['data'];
-            
+
             if (is_array($recordData)) {
                 if (isset($recordData['id'])) {
                     $data['data'] = $this->parseFilledDataForRecord($recordData);
@@ -106,18 +106,18 @@ class FilledFilesModel extends Model
         if (!is_array($record)) {
             return $record;
         }
-        
+
         if (isset($record['filledData']) && is_string($record['filledData'])) {
             $cacheKey = 'filled_data_' . md5($record['filledData']);
             $cached = cache($cacheKey);
-            
+
             if ($cached !== null) {
                 $record['filledData'] = $cached;
             } else {
                 $decoded = json_decode($record['filledData'], true);
                 $parsed = is_array($decoded) ? $decoded : [];
                 $record['filledData'] = $parsed;
-                
+
                 cache()->save($cacheKey, $parsed, 3600);
             }
         } elseif (!isset($record['filledData'])) {
@@ -127,14 +127,14 @@ class FilledFilesModel extends Model
         if (isset($record['fieldTypes']) && is_string($record['fieldTypes'])) {
             $cacheKey = 'field_types_' . md5($record['fieldTypes']);
             $cached = cache($cacheKey);
-            
+
             if ($cached !== null) {
                 $record['fieldTypes'] = $cached;
             } else {
                 $decoded = json_decode($record['fieldTypes'], true);
                 $parsed = is_array($decoded) ? $decoded : [];
                 $record['fieldTypes'] = $parsed;
-                
+
                 cache()->save($cacheKey, $parsed, 3600);
             }
         } elseif (!isset($record['fieldTypes'])) {
@@ -143,7 +143,7 @@ class FilledFilesModel extends Model
 
         return $record;
     }
-    
+
     /**
      * Assign ownership and inherit permissions from template after filled file creation
      * Sets owner, grants full control to creator, and inherits permissions from parent template
@@ -155,16 +155,16 @@ class FilledFilesModel extends Model
     {
         if (isset($data['id']) && $data['id']) {
             $currentUserId = null;
-            
+
             $auth = service('auth');
             if ($auth && $auth->user()) {
                 $currentUserId = $auth->user()->id;
             }
-            
+
             if ($currentUserId) {
                 $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
                 $resourceOwnerModel->setOwner('filled_file', $data['id'], $currentUserId);
-                
+
                 $aclEntryModel = model('App\Models\AclEntryModel');
                 $aclEntryModel->grantPermission(
                     'filled_file',
@@ -175,15 +175,15 @@ class FilledFilesModel extends Model
                     $currentUserId,
                     false
                 );
-                
+
                 $aclSettingModel = model('App\Models\AclSettingsModel');
                 if ($aclSettingModel && $aclSettingModel->getSetting('inheritance_enabled', true)) {
                     $templateId = $data['data']['templateFileId'] ?? $data['templateFileId'] ?? null;
-                    
+
                     if ($templateId) {
                         // Inherit permissions from parent template
                         $templateAclEntries = $aclEntryModel->getResourceAclEntries('template', $templateId);
-                        
+
                         foreach ($templateAclEntries as $entry) {
                             $aclEntryModel->grantPermission(
                                 'filled_file',
@@ -197,10 +197,10 @@ class FilledFilesModel extends Model
                                 $templateId
                             );
                         }
-                        
+
                         $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
                         $templateOwner = $resourceOwnerModel->getOwner('template', $templateId);
-                        
+
                         if ($templateOwner && $templateOwner !== $currentUserId) {
                             $aclEntryModel->grantPermission(
                                 'filled_file',
@@ -218,10 +218,10 @@ class FilledFilesModel extends Model
                 }
             }
         }
-        
+
         return $data;
     }
-    
+
     /**
      * Remove ownership when filled file is deleted
      *
@@ -236,7 +236,7 @@ class FilledFilesModel extends Model
                               ->where('resource_id', $data['id'])
                               ->delete();
         }
-        
+
         return $data;
     }
 }

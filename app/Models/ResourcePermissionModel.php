@@ -29,10 +29,10 @@ class ResourcePermissionModel extends Model
             ->orWhere('expires_at >', $now)
             ->groupEnd();
     }
-    
+
     /**
      * Get all resource permissions for a user
-     * 
+     *
      * @param int $userId The user ID
      * @return array Array of resource permissions
      */
@@ -44,10 +44,10 @@ class ResourcePermissionModel extends Model
 
         return $builder->get()->getResultArray();
     }
-    
+
     /**
      * Get specific resource permissions for a user
-     * 
+     *
      * @param int $userId The user ID
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
@@ -64,10 +64,10 @@ class ResourcePermissionModel extends Model
 
         return $builder->get()->getResultArray();
     }
-    
+
     /**
      * Check if a user has a specific permission for a resource
-     * 
+     *
      * @param int $userId The user ID
      * @param string $permission The permission to check
      * @param string $resourceType Type of resource
@@ -97,13 +97,13 @@ class ResourcePermissionModel extends Model
                 'found' => $result !== null,
             ])
         );
-        
+
         return $result !== null;
     }
-    
+
     /**
      * Grant a resource permission to a user
-     * 
+     *
      * @param int $userId The user ID
      * @param string $permission The permission to grant
      * @param string $resourceType Type of resource
@@ -113,11 +113,11 @@ class ResourcePermissionModel extends Model
      * @return bool True on success, false on failure
      */
     public function grantResourcePermission(
-        int $userId, 
-        string $permission, 
-        string $resourceType, 
-        int $resourceId, 
-        ?string $scope = null, 
+        int $userId,
+        string $permission,
+        string $resourceType,
+        int $resourceId,
+        ?string $scope = null,
         ?string $expiresAt = null
     ): bool {
         $data = [
@@ -129,13 +129,13 @@ class ResourcePermissionModel extends Model
             'created_at' => date('Y-m-d H:i:s'),
             'expires_at' => $expiresAt,
         ];
-        
+
         return $this->insert($data) !== false;
     }
-    
+
     /**
      * Revoke a resource permission from a user
-     * 
+     *
      * @param int $userId The user ID
      * @param string $permission The permission to revoke
      * @param string $resourceType Type of resource
@@ -143,9 +143,9 @@ class ResourcePermissionModel extends Model
      * @return bool True on success, false on failure
      */
     public function revokeResourcePermission(
-        int $userId, 
-        string $permission, 
-        string $resourceType, 
+        int $userId,
+        string $permission,
+        string $resourceType,
         int $resourceId
     ): bool {
         return $this->where('user_id', $userId)
@@ -154,10 +154,10 @@ class ResourcePermissionModel extends Model
             ->where('permission', $permission)
             ->delete();
     }
-    
+
     /**
      * Get all users with permissions for a specific resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @return array Array of users with permissions
@@ -174,14 +174,14 @@ class ResourcePermissionModel extends Model
             ->where('rp.expires_at', null)
             ->orWhere('rp.expires_at >', $now)
             ->groupEnd();
-        
+
         $query = $builder->get();
         return $query->getResultArray();
     }
-    
+
     /**
      * Get all resources a user has permissions for
-     * 
+     *
      * @param int $userId The user ID
      * @param string $resourceType Type of resource
      * @return array Array of resources
@@ -199,7 +199,7 @@ class ResourcePermissionModel extends Model
             ->orWhere('rp.expires_at >', $now)
             ->groupEnd();
         $builder->groupBy('rp.resource_id');
-        
+
         $query = $builder->get();
         return $query->getResultArray();
     }

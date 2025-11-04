@@ -19,7 +19,7 @@ class Services extends BaseService
     {
         return static::permissions($getShared);
     }
-    
+
     public static function auditLogger(bool $getShared = true)
     {
         if ($getShared) {

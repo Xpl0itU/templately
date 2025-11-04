@@ -29,7 +29,7 @@ class AddFieldTypesToFilledFiles extends Migration
     private function columnExists($table, $column)
     {
         $dbDriver = $this->db->getPlatform();
-        
+
         if (stripos($dbDriver, 'mysql') !== false) {
             // MySQL approach
             $query = $this->db->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");

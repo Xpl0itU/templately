@@ -16,10 +16,10 @@ class ResourceOwnerModel extends Model
         'updated_at',
     ];
     protected $useTimestamps = false;
-    
+
     /**
      * Set the owner of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @param int $ownerId ID of the user who owns the resource
@@ -32,17 +32,17 @@ class ResourceOwnerModel extends Model
             $existing = $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
                 ->first();
-            
+
             if ($existing) {
                 // Update existing owner
                 $data = [
                     'owner_id' => $ownerId,
                     'updated_at' => date('Y-m-d H:i:s'),
                 ];
-                
+
                 return $this->update($existing['id'], $data);
             }
-            
+
             // Insert new owner
             $data = [
                 'resource_type' => $resourceType,
@@ -51,17 +51,17 @@ class ResourceOwnerModel extends Model
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             return $this->insert($data) !== false;
         } catch (\Exception $e) {
             log_message('error', 'Error setting resource owner: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Get the owner of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @return int|null Owner ID or null if not found
@@ -72,19 +72,19 @@ class ResourceOwnerModel extends Model
             $query = $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
                 ->get();
-            
+
             $result = $query->getRow();
-            
+
             return $result ? $result->owner_id : null;
         } catch (\Exception $e) {
             log_message('error', 'Error getting resource owner: ' . $e->getMessage());
             return null;
         }
     }
-    
+
     /**
      * Check if a user is the owner of a resource
-     * 
+     *
      * @param int $userId ID of the user
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
@@ -94,17 +94,17 @@ class ResourceOwnerModel extends Model
     {
         try {
             $ownerId = $this->getOwner($resourceType, $resourceId);
-            
+
             return $ownerId === $userId;
         } catch (\Exception $e) {
             log_message('error', 'Error checking resource ownership: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Get all resources owned by a user
-     * 
+     *
      * @param int $userId ID of the user
      * @param string|null $resourceType Optional resource type filter
      * @return array Array of resources owned by the user
@@ -114,11 +114,11 @@ class ResourceOwnerModel extends Model
         try {
             $builder = $this->db->table($this->table);
             $builder->where('owner_id', $userId);
-            
+
             if ($resourceType !== null) {
                 $builder->where('resource_type', $resourceType);
             }
-            
+
             $query = $builder->get();
             return $query->getResultArray();
         } catch (\Exception $e) {
@@ -126,10 +126,10 @@ class ResourceOwnerModel extends Model
             return [];
         }
     }
-    
+
     /**
      * Transfer ownership of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @param int $newOwnerId ID of the new owner
@@ -141,33 +141,33 @@ class ResourceOwnerModel extends Model
         try {
             // Get current owner
             $currentOwnerId = $this->getOwner($resourceType, $resourceId);
-            
+
             if ($currentOwnerId === null) {
                 // Resource doesn't have an owner yet, set new owner
                 return $this->setOwner($resourceType, $resourceId, $newOwnerId);
             }
-            
+
             if ($currentOwnerId === $newOwnerId) {
                 // Already owned by the new owner
                 return true;
             }
-            
+
             // Only allow owner or superadmin to transfer ownership
             $currentUser = auth()->user();
             if ($currentUser->id !== $currentOwnerId && !$currentUser->inGroup('superadmin')) {
                 return false;
             }
-            
+
             // Update owner
             $data = [
                 'owner_id' => $newOwnerId,
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             $result = $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
                 ->update($data);
-            
+
             // Log the transfer
             if ($result) {
                 $auditLogger = service('auditLogger');
@@ -182,17 +182,17 @@ class ResourceOwnerModel extends Model
                     "Transferred ownership from user {$currentOwnerId} to user {$newOwnerId}"
                 );
             }
-            
+
             return $result;
         } catch (\Exception $e) {
             log_message('error', 'Error transferring resource ownership: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Remove ownership of a resource
-     * 
+     *
      * @param string $resourceType Type of resource
      * @param int $resourceId ID of the specific resource
      * @return bool True on success, false on failure
@@ -205,11 +205,11 @@ class ResourceOwnerModel extends Model
             if (!$currentUser->inGroup('superadmin')) {
                 return false;
             }
-            
+
             $result = $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
                 ->delete();
-            
+
             // Log the removal
             if ($result) {
                 $auditLogger = service('auditLogger');
@@ -224,7 +224,7 @@ class ResourceOwnerModel extends Model
                     "Removed ownership of resource"
                 );
             }
-            
+
             return $result;
         } catch (\Exception $e) {
             log_message('error', 'Error removing resource ownership: ' . $e->getMessage());

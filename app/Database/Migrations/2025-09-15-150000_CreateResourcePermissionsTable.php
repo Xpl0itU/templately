@@ -56,7 +56,7 @@ class CreateResourcePermissionsTable extends Migration
                 'comment' => 'Optional expiration date for temporary permissions',
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey(['user_id', 'resource_type', 'resource_id']);
         $this->forge->addKey('resource_type');

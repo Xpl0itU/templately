@@ -4,7 +4,8 @@
 
 <?php echo $this->section('navigation') ?>
     <?php echo $this->include(
-        'components/navigation', [
+        'components/navigation',
+        [
         'pageTitle' => 'Create Filled File',
         'pageIcon' => 'file-plus',
         'stickyNav' => false
@@ -22,7 +23,7 @@
             
             <?php if (!empty($templates)) : ?>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <?php foreach ($templates as $template): ?>
+                    <?php foreach ($templates as $template) : ?>
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200 cursor-pointer template-card" 
                              onclick="selectTemplate(<?php echo $template['id'] ?>, '<?php echo esc($template['name']) ?>')">
                             <div class="flex items-center mb-3">
@@ -42,9 +43,9 @@
                                         <?php echo count($template['templateFields']) ?> field<?php echo count($template['templateFields']) !== 1 ? 's' : '' ?>
                                     </p>
                                     <div class="flex flex-wrap gap-1">
-                                        <?php 
+                                        <?php
                                         $fieldTypes = [];
-                                        foreach ($template['templateFields'] as $field):
+                                        foreach ($template['templateFields'] as $field) :
                                             // Handle both string fields and object fields
                                             if (is_array($field)) {
                                                 $type = $field['type'] ?? 'text';
@@ -53,9 +54,9 @@
                                             }
                                             $fieldTypes[$type] = ($fieldTypes[$type] ?? 0) + 1;
                                         endforeach;
-                                        
-                                        foreach ($fieldTypes as $type => $count):
-                                            $iconClass = match($type) {
+
+                                        foreach ($fieldTypes as $type => $count) :
+                                            $iconClass = match ($type) {
                                                 'image' => 'fa-image text-purple-500',
                                                 'paragraph' => 'fa-paragraph text-green-500',
                                                 default => 'fa-font text-blue-500'
@@ -79,7 +80,7 @@
                         </div>
                     <?php endforeach; ?>
                 </div>
-            <?php else: ?>
+            <?php else : ?>
                 <div class="text-center py-12">
                     <i class="fas fa-folder-open text-gray-400 text-6xl mb-4"></i>
                     <h3 class="text-xl font-semibold text-gray-600 mb-2">No Templates Available</h3>

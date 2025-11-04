@@ -4,7 +4,8 @@
 
 <?php echo $this->section('navigation') ?>
     <?php echo $this->include(
-        'components/navigation', [
+        'components/navigation',
+        [
         'pageTitle' => 'File Explorer',
         'pageIcon' => 'folder-open',
         'stickyNav' => true,

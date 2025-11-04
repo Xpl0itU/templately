@@ -20,7 +20,7 @@ class Setup extends BaseController
     public function index()
     {
         log_message('debug', 'Setup::index() called - Method: ' . $this->request->getMethod());
-        
+
         if ($this->isSetupCompleted()) {
             return redirect()->to('/dashboard')->with('error', 'Application has already been set up.');
         }
@@ -50,7 +50,7 @@ class Setup extends BaseController
         if ($this->isSetupCompleted()) {
             $contentType = $this->request->getHeaderLine('Content-Type');
             $isJsonRequest = strpos($contentType, 'application/json') !== false;
-            
+
             if ($isJsonRequest) {
                 return $this->response->setJSON([
                     'success' => false,
@@ -62,16 +62,16 @@ class Setup extends BaseController
 
         $data = [];
         $contentType = $this->request->getHeaderLine('Content-Type');
-        $isAjax = $this->request->hasHeader('X-Requested-With') && 
+        $isAjax = $this->request->hasHeader('X-Requested-With') &&
                   $this->request->getHeaderLine('X-Requested-With') === 'XMLHttpRequest';
         $isJsonRequest = (strpos($contentType, 'application/json') !== false) || $isAjax;
-        
+
         log_message('debug', 'Request detection - Content-Type: ' . $contentType . ', isAjax: ' . ($isAjax ? 'yes' : 'no') . ', isJsonRequest: ' . ($isJsonRequest ? 'yes' : 'no'));
-        
+
         if ($isJsonRequest && $this->request->getJSON()) {
             $json = $this->request->getJSON(true);
             $data = $json;
-        } else if ($isJsonRequest) {
+        } elseif ($isJsonRequest) {
             $data = [
                 'username' => $this->request->getPost('username'),
                 'password' => $this->request->getPost('password'),
@@ -114,11 +114,11 @@ class Setup extends BaseController
 
         try {
             $users = model('CodeIgniter\Shield\Models\UserModel');
-            
+
             // Start database transaction
             $db = \Config\Database::connect();
             $db->transBegin();
-            
+
             // Create the user entity with password
             $userEntity = new User([
                 'username' => $data['username'],
@@ -130,9 +130,9 @@ class Setup extends BaseController
             // Save the user - this should create the identity properly
             $users->save($userEntity);
             $insertId = $users->getInsertID();
-            
+
             $user = $users->findById($insertId);
-            
+
             if ($user === null) {
                 throw new \Exception('Failed to create user account.');
             }
@@ -164,22 +164,21 @@ class Setup extends BaseController
             // For non-AJAX requests, redirect to success page
             return redirect()->to('/setup/success')
                 ->with('username', $user->username);
-
         } catch (\Exception $e) {
             // Rollback transaction if it was started
             if (isset($db) && $db->transStatus() !== false) {
                 $db->transRollback();
             }
-            
+
             log_message('error', 'Setup failed: ' . $e->getMessage());
-            
+
             if ($this->isJsonRequest()) {
                 return $this->response->setJSON([
                     'success' => false,
                     'message' => 'An error occurred during setup: ' . $e->getMessage()
                 ]);
             }
-            
+
             return view('setup/index', [
                 'error' => 'An error occurred during setup: ' . $e->getMessage()
             ]);
@@ -204,7 +203,7 @@ class Setup extends BaseController
             return view('setup/success', $data);
         }
 
-        // If setup is complete but user is not logged in, 
+        // If setup is complete but user is not logged in,
         // it means setup was successful but session expired
         // Show a simple success message and redirect to login
         return view('setup/success', [
@@ -221,7 +220,7 @@ class Setup extends BaseController
     private function isJsonRequest(): bool
     {
         $contentType = $this->request->getHeaderLine('Content-Type');
-        $isAjax = $this->request->hasHeader('X-Requested-With') && 
+        $isAjax = $this->request->hasHeader('X-Requested-With') &&
                   $this->request->getHeaderLine('X-Requested-With') === 'XMLHttpRequest';
         return (strpos($contentType, 'application/json') !== false) || $isAjax;
     }
@@ -237,16 +236,16 @@ class Setup extends BaseController
         try {
             $db = \Config\Database::connect();
             $tables = $db->listTables();
-            
+
             $usersModel = model('CodeIgniter\Shield\Models\UserModel');
             $usersTable = $usersModel->table;
-            
+
             if (!in_array($usersTable, $tables, true)) {
                 return false;
             }
-            
+
             $userCount = $usersModel->countAll();
-            
+
             return $userCount > 0;
         } catch (\Exception $e) {
             log_message('debug', 'Setup not completed due to exception: ' . $e->getMessage());
@@ -319,7 +318,7 @@ class Setup extends BaseController
         try {
             $db = \Config\Database::connect();
             $db->query('SELECT 1');
-            
+
             return [
                 'status' => true,
                 'message' => 'Database connection successful',
@@ -343,7 +342,7 @@ class Setup extends BaseController
     private function checkUploadsDirectory(): bool
     {
         $uploadsDir = WRITEPATH . 'uploads/';
-        
+
         if (!is_dir($uploadsDir)) {
             if (!mkdir($uploadsDir, 0755, true)) {
                 return false;

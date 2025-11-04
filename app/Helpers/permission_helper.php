@@ -5,7 +5,7 @@ use App\Libraries\PermissionManager;
 if (!function_exists('has_permission')) {
     /**
      * Check if the current user has a specific permission
-     * 
+     *
      * @param string $permission The permission to check
      * @param string|null $resourceType Type of resource (optional)
      * @param int|null $resourceId ID of the specific resource (optional)
@@ -13,20 +13,20 @@ if (!function_exists('has_permission')) {
      * @return bool True if user has permission, false otherwise
      */
     function has_permission(
-        string $permission, 
-        ?string $resourceType = null, 
-        ?int $resourceId = null, 
+        string $permission,
+        ?string $resourceType = null,
+        ?int $resourceId = null,
         array $context = []
     ): bool {
         $user = auth()->user();
-        
+
         if (!$user) {
             return false;
         }
-        
+
         // Get the PermissionManager service
         $permissionManager = service('permissions');
-        
+
         return $permissionManager->can($user, $permission, $resourceType, $resourceId, $context);
     }
 }
@@ -34,7 +34,7 @@ if (!function_exists('has_permission')) {
 if (!function_exists('require_permission')) {
     /**
      * Require a specific permission, redirecting if not available
-     * 
+     *
      * @param string $permission The permission required
      * @param string|null $resourceType Type of resource (optional)
      * @param int|null $resourceId ID of the specific resource (optional)
@@ -44,9 +44,9 @@ if (!function_exists('require_permission')) {
      * @return void
      */
     function require_permission(
-        string $permission, 
-        ?string $resourceType = null, 
-        ?int $resourceId = null, 
+        string $permission,
+        ?string $resourceType = null,
+        ?int $resourceId = null,
         array $context = [],
         string $redirectUrl = '/',
         string $errorMessage = 'You do not have permission to access this resource.'
@@ -57,7 +57,7 @@ if (!function_exists('require_permission')) {
             $user = auth()->user();
             $userId = $user ? $user->id : null;
             $auditLogger->log($userId, 'access_denied', $permission, $resourceType, $resourceId, 'denied', $errorMessage);
-            
+
             // Redirect with error message
             exit(redirect()->to($redirectUrl)->with('error', $errorMessage)->send());
         }
@@ -67,7 +67,7 @@ if (!function_exists('require_permission')) {
 if (!function_exists('grant_resource_permission')) {
     /**
      * Grant a resource-specific permission to a user
-     * 
+     *
      * @param int $userId The user ID
      * @param string $permission The permission to grant
      * @param string $resourceType Type of resource
@@ -77,11 +77,11 @@ if (!function_exists('grant_resource_permission')) {
      * @return bool True on success, false on failure
      */
     function grant_resource_permission(
-        int $userId, 
-        string $permission, 
-        string $resourceType, 
-        int $resourceId, 
-        ?string $scope = null, 
+        int $userId,
+        string $permission,
+        string $resourceType,
+        int $resourceId,
+        ?string $scope = null,
         ?string $expiresAt = null
     ): bool {
         $permissionManager = service('permissions');
@@ -92,7 +92,7 @@ if (!function_exists('grant_resource_permission')) {
 if (!function_exists('revoke_resource_permission')) {
     /**
      * Revoke a resource-specific permission from a user
-     * 
+     *
      * @param int $userId The user ID
      * @param string $permission The permission to revoke
      * @param string $resourceType Type of resource
@@ -100,9 +100,9 @@ if (!function_exists('revoke_resource_permission')) {
      * @return bool True on success, false on failure
      */
     function revoke_resource_permission(
-        int $userId, 
-        string $permission, 
-        string $resourceType, 
+        int $userId,
+        string $permission,
+        string $resourceType,
         int $resourceId
     ): bool {
         $permissionManager = service('permissions');

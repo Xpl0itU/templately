@@ -2,7 +2,7 @@
 
 /**
  * Component Helper
- * 
+ *
  * Provides reusable UI component functions for consistent styling across the application.
  * All functions return class strings that can be easily customized or extended.
  */
@@ -10,7 +10,7 @@
 if (!function_exists('ui_input')) {
     /**
      * Get classes for standard form inputs
-     * 
+     *
      * @param string $variant 'default', 'auth', 'search'
      * @param array $custom Additional custom classes
      * @return string
@@ -24,11 +24,11 @@ if (!function_exists('ui_input')) {
         ];
 
         $base = $classes[$variant] ?? $classes['default'];
-        
+
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-        
+
         return $base;
     }
 }
@@ -36,18 +36,18 @@ if (!function_exists('ui_input')) {
 if (!function_exists('ui_select')) {
     /**
      * Get classes for select/dropdown elements
-     * 
+     *
      * @param array $custom Additional custom classes
      * @return string
      */
     function ui_select(array $custom = []): string
     {
         $base = 'w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm';
-        
+
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-        
+
         return $base;
     }
 }
@@ -55,7 +55,7 @@ if (!function_exists('ui_select')) {
 if (!function_exists('ui_button')) {
     /**
      * Get classes for buttons
-     * 
+     *
      * @param string $variant 'primary', 'secondary', 'success', 'danger', 'warning', 'ghost'
      * @param string $size 'sm', 'md', 'lg'
      * @param array $custom Additional custom classes
@@ -81,11 +81,11 @@ if (!function_exists('ui_button')) {
         $common = 'inline-flex items-center font-medium rounded-lg shadow-sm transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2';
 
         $classes = $common . ' ' . ($bases[$variant] ?? $bases['primary']) . ' ' . ($sizes[$size] ?? $sizes['md']);
-        
+
         if (!empty($custom)) {
             $classes .= ' ' . implode(' ', $custom);
         }
-        
+
         return $classes;
     }
 }
@@ -93,7 +93,7 @@ if (!function_exists('ui_button')) {
 if (!function_exists('ui_card')) {
     /**
      * Get classes for card containers
-     * 
+     *
      * @param string $variant 'default', 'elevated', 'bordered', 'flat'
      * @param array $custom Additional custom classes
      * @return string
@@ -108,11 +108,11 @@ if (!function_exists('ui_card')) {
         ];
 
         $base = $classes[$variant] ?? $classes['default'];
-        
+
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-        
+
         return $base;
     }
 }
@@ -120,7 +120,7 @@ if (!function_exists('ui_card')) {
 if (!function_exists('ui_badge')) {
     /**
      * Get classes for badges/pills
-     * 
+     *
      * @param string $variant 'primary', 'secondary', 'success', 'danger', 'warning', 'info'
      * @param string $size 'sm', 'md', 'lg'
      * @param array $custom Additional custom classes
@@ -146,11 +146,11 @@ if (!function_exists('ui_badge')) {
         $common = 'inline-flex items-center font-medium rounded-full';
 
         $classes = $common . ' ' . ($variants[$variant] ?? $variants['primary']) . ' ' . ($sizes[$size] ?? $sizes['md']);
-        
+
         if (!empty($custom)) {
             $classes .= ' ' . implode(' ', $custom);
         }
-        
+
         return $classes;
     }
 }
@@ -158,7 +158,7 @@ if (!function_exists('ui_badge')) {
 if (!function_exists('ui_alert')) {
     /**
      * Get classes for alert/notification boxes
-     * 
+     *
      * @param string $variant 'success', 'error', 'warning', 'info'
      * @param array $custom Additional custom classes
      * @return string
@@ -174,11 +174,11 @@ if (!function_exists('ui_alert')) {
 
         $common = 'border rounded-lg p-4';
         $base = $common . ' ' . ($classes[$variant] ?? $classes['info']);
-        
+
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-        
+
         return $base;
     }
 }
@@ -186,7 +186,7 @@ if (!function_exists('ui_alert')) {
 if (!function_exists('ui_icon_box')) {
     /**
      * Get classes for icon container boxes
-     * 
+     *
      * @param string $color 'blue', 'green', 'red', 'yellow', 'indigo', 'purple', 'gray'
      * @param string $size 'sm', 'md', 'lg'
      * @param array $custom Additional custom classes
@@ -212,11 +212,11 @@ if (!function_exists('ui_icon_box')) {
 
         $common = 'rounded-lg flex items-center justify-center';
         $classes = $common . ' ' . ($colors[$color] ?? $colors['indigo']) . ' ' . ($sizes[$size] ?? $sizes['md']);
-        
+
         if (!empty($custom)) {
             $classes .= ' ' . implode(' ', $custom);
         }
-        
+
         return $classes;
     }
 }
@@ -224,7 +224,7 @@ if (!function_exists('ui_icon_box')) {
 if (!function_exists('ui_icon_color')) {
     /**
      * Get color class for icons
-     * 
+     *
      * @param string $color 'blue', 'green', 'red', 'yellow', 'indigo', 'purple', 'gray'
      * @param string $shade '500', '600', '700'
      * @return string
@@ -238,18 +238,18 @@ if (!function_exists('ui_icon_color')) {
 if (!function_exists('ui_label')) {
     /**
      * Get classes for form labels
-     * 
+     *
      * @param array $custom Additional custom classes
      * @return string
      */
     function ui_label(array $custom = []): string
     {
         $base = 'block text-sm font-medium text-gray-700 mb-1';
-        
+
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-        
+
         return $base;
     }
 }
@@ -257,7 +257,7 @@ if (!function_exists('ui_label')) {
 if (!function_exists('ui_modal_overlay')) {
     /**
      * Get classes for modal overlay
-     * 
+     *
      * @return string
      */
     function ui_modal_overlay(): string
@@ -269,7 +269,7 @@ if (!function_exists('ui_modal_overlay')) {
 if (!function_exists('ui_modal_content')) {
     /**
      * Get classes for modal content box
-     * 
+     *
      * @param string $size 'sm', 'md', 'lg', 'xl'
      * @param array $custom Additional custom classes
      * @return string
@@ -286,11 +286,11 @@ if (!function_exists('ui_modal_content')) {
 
         $common = 'bg-white rounded-lg shadow-xl w-full transform transition-all duration-300';
         $classes = $common . ' ' . ($sizes[$size] ?? $sizes['md']);
-        
+
         if (!empty($custom)) {
             $classes .= ' ' . implode(' ', $custom);
         }
-        
+
         return $classes;
     }
 }
@@ -298,7 +298,7 @@ if (!function_exists('ui_modal_content')) {
 if (!function_exists('ui_table')) {
     /**
      * Get classes for tables
-     * 
+     *
      * @param string $part 'wrapper', 'table', 'thead', 'tbody', 'th', 'td'
      * @param array $custom Additional custom classes
      * @return string
@@ -315,11 +315,11 @@ if (!function_exists('ui_table')) {
         ];
 
         $base = $classes[$part] ?? '';
-        
+
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-        
+
         return $base;
     }
 }
@@ -327,7 +327,7 @@ if (!function_exists('ui_table')) {
 if (!function_exists('ui_link')) {
     /**
      * Get classes for links
-     * 
+     *
      * @param string $variant 'primary', 'secondary', 'danger'
      * @param array $custom Additional custom classes
      * @return string
@@ -342,11 +342,11 @@ if (!function_exists('ui_link')) {
 
         $common = 'font-medium transition duration-200';
         $classes = $common . ' ' . ($variants[$variant] ?? $variants['primary']);
-        
+
         if (!empty($custom)) {
             $classes .= ' ' . implode(' ', $custom);
         }
-        
+
         return $classes;
     }
 }
@@ -354,7 +354,7 @@ if (!function_exists('ui_link')) {
 if (!function_exists('ui_stat_card')) {
     /**
      * Generate a complete stat card component
-     * 
+     *
      * @param string $label The stat label
      * @param string $value The stat value
      * @param string $icon Font Awesome icon class (e.g., 'users', 'file-alt')
@@ -388,7 +388,7 @@ if (!function_exists('ui_stat_card')) {
 if (!function_exists('ui_form_group')) {
     /**
      * Generate a complete form group with label and input
-     * 
+     *
      * @param array $config Configuration array
      * @return string HTML markup
      */
@@ -403,14 +403,14 @@ if (!function_exists('ui_form_group')) {
         $icon = $config['icon'] ?? null;
         $variant = $config['variant'] ?? 'default';
         $value = $config['value'] ?? '';
-        
+
         $labelClass = ui_label();
         $inputClass = ui_input($variant);
         $requiredAttr = $required ? 'required' : '';
         $valueAttr = $value ? "value=\"{$value}\"" : '';
-        
+
         $iconHtml = $icon ? "<i class=\"fas fa-{$icon} mr-1\"></i>" : '';
-        
+
         if ($type === 'select') {
             $options = $config['options'] ?? [];
             $optionsHtml = '';
@@ -418,9 +418,9 @@ if (!function_exists('ui_form_group')) {
                 $selected = ($value == $optValue) ? 'selected' : '';
                 $optionsHtml .= "<option value=\"{$optValue}\" {$selected}>{$optLabel}</option>";
             }
-            
+
             $inputClass = ui_select();
-            
+
             return <<<HTML
             <div>
                 <label for="{$id}" class="{$labelClass}">
@@ -432,7 +432,7 @@ if (!function_exists('ui_form_group')) {
             </div>
             HTML;
         }
-        
+
         return <<<HTML
         <div>
             <label for="{$id}" class="{$labelClass}">

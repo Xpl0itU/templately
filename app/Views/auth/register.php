@@ -2,7 +2,7 @@
 
 <?php echo $this->section('title') ?>Register<?php echo $this->endSection() ?>
 
-<?php 
+<?php
 // If user is already logged in, redirect to dashboard
 if (auth()->loggedIn()) {
     return redirect()->to(config(\Config\Auth::class)->loginRedirect());

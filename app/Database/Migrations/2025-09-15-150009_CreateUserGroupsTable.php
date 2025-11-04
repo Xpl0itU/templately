@@ -34,11 +34,11 @@ class CreateUserGroupsTable extends Migration
                 'null' => true,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey('name');
         $this->forge->createTable('user_groups', true);
-        
+
         // Create user group members table (many-to-many relationship)
         $this->forge->addField([
             'id' => [
@@ -70,7 +70,7 @@ class CreateUserGroupsTable extends Migration
                 'null' => false,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey(['user_id', 'group_id']);
         $this->forge->addKey('group_id');

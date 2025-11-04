@@ -16,10 +16,10 @@ class AclSettingsModel extends Model
         'updated_at'
     ];
     protected $useTimestamps = false;
-    
+
     /**
      * Get a setting value
-     * 
+     *
      * @param string $key Setting key
      * @param mixed $default Default value if setting not found
      * @return mixed Setting value or default
@@ -29,11 +29,11 @@ class AclSettingsModel extends Model
         try {
             $query = $this->where('setting_key', $key)->get();
             $result = $query->getRow();
-            
+
             if ($result) {
                 // Try to decode as JSON first, then as boolean, then return as string
                 $value = $result->setting_value;
-                
+
                 // Check if it's a boolean value
                 if ($value === '1' || $value === 'true') {
                     return true;
@@ -41,26 +41,26 @@ class AclSettingsModel extends Model
                 if ($value === '0' || $value === 'false') {
                     return false;
                 }
-                
+
                 // Try to decode as JSON
                 $decoded = json_decode($value, true);
                 if (json_last_error() === JSON_ERROR_NONE) {
                     return $decoded;
                 }
-                
+
                 return $value;
             }
-            
+
             return $default;
         } catch (\Exception $e) {
             log_message('error', 'Error getting ACL setting: ' . $e->getMessage());
             return $default;
         }
     }
-    
+
     /**
      * Set a setting value
-     * 
+     *
      * @param string $key Setting key
      * @param mixed $value Setting value
      * @return bool True on success, false on failure
@@ -76,20 +76,20 @@ class AclSettingsModel extends Model
             } else {
                 $valueStr = (string) $value;
             }
-            
+
             // Check if setting already exists
             $existing = $this->where('setting_key', $key)->first();
-            
+
             if ($existing) {
                 // Update existing setting
                 $data = [
                     'setting_value' => $valueStr,
                     'updated_at' => date('Y-m-d H:i:s'),
                 ];
-                
+
                 return $this->update($existing['id'], $data);
             }
-            
+
             // Insert new setting
             $data = [
                 'setting_key' => $key,
@@ -98,17 +98,17 @@ class AclSettingsModel extends Model
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
-            
+
             return $this->insert($data) !== false;
         } catch (\Exception $e) {
             log_message('error', 'Error setting ACL setting: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Get all settings
-     * 
+     *
      * @return array Array of all settings
      */
     public function getAllSettings(): array
@@ -116,22 +116,22 @@ class AclSettingsModel extends Model
         try {
             $query = $this->get();
             $results = $query->getResultArray();
-            
+
             $settings = [];
             foreach ($results as $result) {
                 $settings[$result['setting_key']] = $this->getSetting($result['setting_key']);
             }
-            
+
             return $settings;
         } catch (\Exception $e) {
             log_message('error', 'Error getting all ACL settings: ' . $e->getMessage());
             return [];
         }
     }
-    
+
     /**
      * Get settings with descriptions
-     * 
+     *
      * @return array Array of settings with descriptions
      */
     public function getSettingsWithDescriptions(): array
@@ -139,7 +139,7 @@ class AclSettingsModel extends Model
         try {
             $query = $this->get();
             $results = $query->getResultArray();
-            
+
             $settings = [];
             foreach ($results as $result) {
                 $settings[$result['setting_key']] = [
@@ -147,17 +147,17 @@ class AclSettingsModel extends Model
                     'description' => $result['description'] ?? '',
                 ];
             }
-            
+
             return $settings;
         } catch (\Exception $e) {
             log_message('error', 'Error getting ACL settings with descriptions: ' . $e->getMessage());
             return [];
         }
     }
-    
+
     /**
      * Reset a setting to its default value
-     * 
+     *
      * @param string $key Setting key
      * @return bool True on success, false on failure
      */
@@ -169,7 +169,7 @@ class AclSettingsModel extends Model
             if (!$currentUser->inGroup('superadmin')) {
                 return false;
             }
-            
+
             // Define default values
             $defaults = [
                 'inheritance_enabled' => true,
@@ -181,28 +181,28 @@ class AclSettingsModel extends Model
                 'permission_override_allowed' => true,
                 'audit_log_enabled' => true,
             ];
-            
+
             if (isset($defaults[$key])) {
                 return $this->setSetting($key, $defaults[$key]);
             }
-            
+
             // If no default, delete the setting
             $existing = $this->where('setting_key', $key)->first();
-            
+
             if ($existing) {
                 return $this->delete($existing['id']);
             }
-            
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Error resetting ACL setting: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Reset all settings to their default values
-     * 
+     *
      * @return bool True on success, false on failure
      */
     public function resetAllSettings(): bool
@@ -213,7 +213,7 @@ class AclSettingsModel extends Model
             if (!$currentUser->inGroup('superadmin')) {
                 return false;
             }
-            
+
             // Define default values
             $defaults = [
                 'inheritance_enabled' => true,
@@ -225,22 +225,22 @@ class AclSettingsModel extends Model
                 'permission_override_allowed' => true,
                 'audit_log_enabled' => true,
             ];
-            
+
             // Update each setting to its default value
             foreach ($defaults as $key => $value) {
                 $this->setSetting($key, $value);
             }
-            
+
             return true;
         } catch (\Exception $e) {
             log_message('error', 'Error resetting all ACL settings: ' . $e->getMessage());
             return false;
         }
     }
-    
+
     /**
      * Validate a setting value
-     * 
+     *
      * @param string $key Setting key
      * @param mixed $value Setting value
      * @return bool True if valid, false if invalid
@@ -257,13 +257,13 @@ class AclSettingsModel extends Model
             case 'audit_log_enabled':
                 // Boolean values
                 return is_bool($value) || $value === '1' || $value === '0' || $value === 'true' || $value === 'false';
-                
+
             case 'default_template_permissions':
             case 'default_filled_file_permissions':
                 // String values representing permission levels
                 $validPermissions = ['full_control', 'modify', 'read_execute', 'read', 'write'];
                 return in_array($value, $validPermissions);
-                
+
             default:
                 // Unknown setting, assume valid
                 return true;

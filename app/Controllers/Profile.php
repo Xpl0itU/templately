@@ -21,7 +21,7 @@ class Profile extends BaseController
     public function index()
     {
         $user = auth()->user();
-        
+
         if (!$user) {
             return redirect()->to('/login')->with('error', 'You must be logged in to view your profile.');
         }
@@ -54,7 +54,7 @@ class Profile extends BaseController
         }
 
         $user = auth()->user();
-        
+
         if (!$user) {
             return $this->response->setJSON([
                 'success' => false,
@@ -93,7 +93,7 @@ class Profile extends BaseController
 
         try {
             $identityModel = model('UserIdentityModel');
-            
+
             $existingIdentity = $identityModel
                 ->where('type', 'email_password')
                 ->where('secret', $email)
@@ -153,7 +153,7 @@ class Profile extends BaseController
         }
 
         $user = auth()->user();
-        
+
         if (!$user) {
             return $this->response->setJSON([
                 'success' => false,
@@ -199,7 +199,7 @@ class Profile extends BaseController
 
         try {
             $user->password = $newPassword;
-            
+
             $userModel = model('CodeIgniter\Shield\Models\UserModel');
             $userModel->save($user);
 

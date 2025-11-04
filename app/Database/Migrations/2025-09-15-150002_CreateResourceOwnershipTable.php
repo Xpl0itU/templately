@@ -51,7 +51,7 @@ class CreateResourceOwnershipTable extends Migration
                 'null' => true,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey(['user_id', 'resource_type', 'resource_id'], false, true);
         $this->forge->addKey(['resource_type', 'resource_id']);

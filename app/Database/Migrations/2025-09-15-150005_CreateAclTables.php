@@ -33,12 +33,12 @@ class CreateAclTables extends Migration
                 'comment' => 'Bit value for permission',
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey('name');
         $this->forge->addKey('bit_value');
         $this->forge->createTable('acl_permissions', true);
-        
+
         // Check if default permissions already exist before inserting
         $existingCount = $this->db->table('acl_permissions')->countAllResults();
         if ($existingCount == 0) {
@@ -50,7 +50,7 @@ class CreateAclTables extends Migration
                 ['name' => 'read', 'description' => 'Read the resource', 'bit_value' => 1179926], // 0x120096
                 ['name' => 'write', 'description' => 'Write to the resource', 'bit_value' => 1180038], // 0x120086
             ];
-            
+
             $this->db->table('acl_permissions')->insertBatch($permissions);
         }
 
@@ -136,7 +136,7 @@ class CreateAclTables extends Migration
                 'comment' => 'Optional expiration date for temporary permissions',
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey(['resource_type', 'resource_id']);
         $this->forge->addKey(['principal_type', 'principal_id']);
@@ -184,7 +184,7 @@ class CreateAclTables extends Migration
                 'null' => true,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey(['resource_type', 'resource_id']);
         $this->forge->addKey('owner_id');
@@ -221,11 +221,11 @@ class CreateAclTables extends Migration
                 'null' => true,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey('setting_key');
         $this->forge->createTable('acl_settings', true);
-        
+
         // Insert default settings
         $now = date('Y-m-d H:i:s');
         $settings = [
@@ -245,7 +245,7 @@ class CreateAclTables extends Migration
 
             return $setting;
         }, $settings);
-        
+
         $this->db->table('acl_settings')->insertBatch($settings);
     }
 

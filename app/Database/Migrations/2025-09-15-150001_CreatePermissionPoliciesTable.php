@@ -73,7 +73,7 @@ class CreatePermissionPoliciesTable extends Migration
                 'null' => true,
             ],
         ]);
-        
+
         $this->forge->addKey('id', true);
         $this->forge->addKey('name');
         $this->forge->addKey('resource_type');
