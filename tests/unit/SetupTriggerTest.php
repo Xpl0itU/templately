@@ -34,11 +34,11 @@ final class SetupTriggerTest extends CIUnitTestCase
         $db = db_connect();
         $this->assertTrue($db->tableExists('users'), 'Users table should exist');
         
-        // Clear any existing users
-        $db->table('users')->truncate();
+        // Clear any existing users (use DELETE instead of TRUNCATE to avoid FK constraint issues)
+        $db->table('users')->emptyTable();
 
-    // Ensure setup completion cache is cleared
-    cache()->delete('app_setup_completed');
+        // Ensure setup completion cache is cleared
+        cache()->delete('app_setup_completed');
         
         // Count users to confirm table is empty
         $userCount = $db->table('users')->countAllResults();
