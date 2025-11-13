@@ -57,10 +57,6 @@ class AuthGroups extends ShieldAuthGroups
             'title'       => 'Contributor',
             'description' => 'Create and manage own documents.',
         ],
-        'auditor' => [
-            'title'       => 'Auditor',
-            'description' => 'Compliance monitoring and archival access.',
-        ],
         'viewer' => [
             'title'       => 'Viewer',
             'description' => 'Read-only access to documents.',
@@ -135,10 +131,6 @@ class AuthGroups extends ShieldAuthGroups
             'filled-files.edit',
             'filled-files.view',
             'filled-files.delete',
-        ],
-        'auditor' => [
-            'templates.view',
-            'filled-files.view',
         ],
         'viewer' => [
             'templates.view',

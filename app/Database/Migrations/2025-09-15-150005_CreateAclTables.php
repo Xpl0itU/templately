@@ -236,7 +236,6 @@ class CreateAclTables extends Migration
             ['setting_key' => 'default_filled_file_permissions', 'setting_value' => 'read_execute', 'description' => 'Default permission level for new filled files'],
             ['setting_key' => 'auto_inherit_on_creation', 'setting_value' => '1', 'description' => 'Automatically inherit permissions when creating filled files from templates'],
             ['setting_key' => 'permission_override_allowed', 'setting_value' => '1', 'description' => 'Allow overriding inherited permissions with explicit permissions'],
-            ['setting_key' => 'audit_log_enabled', 'setting_value' => '1', 'description' => 'Enable audit logging for ACL operations'],
         ];
 
         $settings = array_map(static function (array $setting) use ($now) {

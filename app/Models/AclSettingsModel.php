@@ -179,7 +179,6 @@ class AclSettingsModel extends Model
                 'default_filled_file_permissions' => 'read_execute',
                 'auto_inherit_on_creation' => true,
                 'permission_override_allowed' => true,
-                'audit_log_enabled' => true,
             ];
 
             if (isset($defaults[$key])) {
@@ -223,7 +222,6 @@ class AclSettingsModel extends Model
                 'default_filled_file_permissions' => 'read_execute',
                 'auto_inherit_on_creation' => true,
                 'permission_override_allowed' => true,
-                'audit_log_enabled' => true,
             ];
 
             // Update each setting to its default value
@@ -254,7 +252,6 @@ class AclSettingsModel extends Model
             case 'owner_can_manage_permissions':
             case 'auto_inherit_on_creation':
             case 'permission_override_allowed':
-            case 'audit_log_enabled':
                 // Boolean values
                 return is_bool($value) || $value === '1' || $value === '0' || $value === 'true' || $value === 'false';
 

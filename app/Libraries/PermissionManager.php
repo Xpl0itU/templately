@@ -13,7 +13,6 @@ class PermissionManager
 {
     protected $db;
     protected $cache;
-    protected $auditLogger;
     protected $aclEntryModel;
     protected $resourceOwnerModel;
     protected $aclSettingModel;
@@ -24,43 +23,11 @@ class PermissionManager
     {
         $this->db = \Config\Database::connect();
         $this->cache = \Config\Services::cache();
-        $this->auditLogger = service('auditLogger');
         $this->aclEntryModel = model('App\Models\AclEntryModel');
         $this->resourceOwnerModel = model('App\Models\ResourceOwnerModel');
         $this->aclSettingModel = model('App\Models\AclSettingsModel');
         $this->aclPermissionModel = model('App\Models\AclPermissionsModel');
         $this->resourcePermissionModel = model('App\Models\ResourcePermissionModel');
-    }
-
-    /**
-     * Log a resource access event using the audit logger when available.
-     */
-    public function logResourceAccess(
-        ?int $userId,
-        string $resourceType,
-        int $resourceId,
-        string $action,
-        string $result = 'denied',
-        ?string $reason = null
-    ): bool {
-        if (! $this->auditLogger || ! method_exists($this->auditLogger, 'logResourceAccess')) {
-            log_message('warning', 'Audit logger missing logResourceAccess implementation.');
-            return false;
-        }
-
-        try {
-            return (bool) $this->auditLogger->logResourceAccess(
-                $userId,
-                $resourceType,
-                $resourceId,
-                $action,
-                $result,
-                $reason
-            );
-        } catch (\Throwable $exception) {
-            log_message('error', 'Failed to log resource access: ' . $exception->getMessage());
-            return false;
-        }
     }
 
     protected function buildCacheKey(string $principalType, int $principalId, string $permission, ?string $resourceType, ?int $resourceId, array $context = []): string
@@ -98,16 +65,6 @@ class PermissionManager
 
                 $cachedResult = $cachedRaw === 'allow';
 
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $this->auditLogger->logPermissionCheck(
-                        $principalId,
-                        $permission,
-                        $resourceType,
-                        $resourceId,
-                        $cachedResult ? 'allowed' : 'denied',
-                        'Cached result'
-                    );
-                }
 
                 return $cachedResult;
             }
@@ -121,9 +78,6 @@ class PermissionManager
         // 1. Check if user is owner of the resource (owners have full control)
         if ($resourceType !== null && $resourceId !== null && $principalType === 'user') {
             if ($this->resourceOwnerModel->isOwner($principalId, $resourceType, $resourceId)) {
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $this->auditLogger->logPermissionCheck($principalId, $permission, $resourceType, $resourceId, 'allowed', 'Resource owner has full control');
-                }
                 $this->cache->save($cacheKey, 'allow', 300); // Cache for 5 minutes
                 return true;
             }
@@ -139,16 +93,6 @@ class PermissionManager
             );
 
             if ($resourcePermission) {
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $this->auditLogger->logPermissionCheck(
-                        $principalId,
-                        $permission,
-                        $resourceType,
-                        $resourceId,
-                        'allowed',
-                        'Resource-specific permission'
-                    );
-                }
 
                 $this->cache->save($cacheKey, 'allow', 300);
                 return true;
@@ -159,9 +103,6 @@ class PermissionManager
         if ($resourceType !== null && $resourceId !== null) {
             $principalHasPermission = $this->aclEntryModel->principalHasPermission($principalId, $principalType, $resourceType, $resourceId, $permission);
             if ($principalHasPermission) {
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $this->auditLogger->logPermissionCheck($principalId, $permission, $resourceType, $resourceId, 'allowed', 'Explicit principal permission');
-                }
                 $this->cache->save($cacheKey, 'allow', 300); // Cache for 5 minutes
                 return true;
             }
@@ -171,9 +112,6 @@ class PermissionManager
         if ($principalType === 'user' && $resourceType !== null && $resourceId !== null) {
             $userGroupPermissions = $this->checkUserGroupPermissions($principalId, $permission, $resourceType, $resourceId);
             if ($userGroupPermissions) {
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $this->auditLogger->logPermissionCheck($principalId, $permission, $resourceType, $resourceId, 'allowed', 'Group permission');
-                }
                 $this->cache->save($cacheKey, 'allow', 300); // Cache for 5 minutes
                 return true;
             }
@@ -186,17 +124,6 @@ class PermissionManager
         ) {
             $inheritedPermission = $this->checkInheritedPermissions($principalId, $principalType, $permission, $resourceType, $resourceId, $context);
             if ($inheritedPermission !== null) {
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $resultText = $inheritedPermission ? 'allowed' : 'denied';
-                    $this->auditLogger->logPermissionCheck(
-                        $principalId,
-                        $permission,
-                        $resourceType,
-                        $resourceId,
-                        $resultText,
-                        'Inherited permission'
-                    );
-                }
                 $this->cache->save($cacheKey, $inheritedPermission ? 'allow' : 'deny', 300); // Cache for 5 minutes
                 return $inheritedPermission;
             }
@@ -206,26 +133,12 @@ class PermissionManager
         if ($resourceType !== null && $resourceId !== null) {
             $policyResult = $this->evaluatePolicies($principalId, $principalType, $permission, $resourceType, $resourceId, $context);
             if ($policyResult !== null) {
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-                    $resultText = $policyResult ? 'allowed' : 'denied';
-                    $this->auditLogger->logPermissionCheck(
-                        $principalId,
-                        $permission,
-                        $resourceType,
-                        $resourceId,
-                        $resultText,
-                        'ABAC policy evaluation'
-                    );
-                }
                 $this->cache->save($cacheKey, $policyResult ? 'allow' : 'deny', 300); // Cache for 5 minutes
                 return $policyResult;
             }
         }
 
         // 7. Default deny
-        if ($this->aclSettingModel->getSetting('audit_log_enabled', true)) {
-            $this->auditLogger->logPermissionCheck($principalId, $permission, $resourceType, $resourceId, 'denied', 'Default deny');
-        }
         $this->cache->save($cacheKey, 'deny', 300); // Cache for 5 minutes
         return false;
     }
@@ -471,18 +384,6 @@ class PermissionManager
                     log_message('debug', 'Failed to delete permission cache key: ' . $cacheKey);
                 }
 
-                // Log the action if audit logging is enabled
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true) && $actingUserId !== null) {
-                    $this->auditLogger->logPermissionGrant(
-                        $principalId,
-                        $principalType,
-                        $resourceType,
-                        $resourceId,
-                        $permission,
-                        $result ? 'allowed' : 'denied',
-                        $result ? "Granted {$permission} to {$principalType} {$principalId}" : "Failed to grant {$permission} to {$principalType} {$principalId}"
-                    );
-                }
             }
 
             return $result;
@@ -549,18 +450,6 @@ class PermissionManager
                     log_message('debug', 'Failed to delete permission cache key: ' . $cacheKey);
                 }
 
-                // Log the action if audit logging is enabled
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true) && $actingUserId !== null) {
-                    $this->auditLogger->logPermissionRevoke(
-                        $principalId,
-                        $principalType,
-                        $resourceType,
-                        $resourceId,
-                        $permission,
-                        $result ? 'allowed' : 'denied',
-                        $result ? "Revoked {$permission} from {$principalType} {$principalId}" : "Failed to revoke {$permission} from {$principalType} {$principalId}"
-                    );
-                }
             }
 
             return $result;
@@ -671,42 +560,16 @@ class PermissionManager
     public function can(User $user, string $permission, ?string $resourceType = null, ?int $resourceId = null, array $context = []): bool
     {
         $cacheKey = $this->buildCacheKey('user', $user->id, $permission, $resourceType, $resourceId, $context);
-        $auditEnabled = $this->aclSettingModel && $this->aclSettingModel->getSetting('audit_log_enabled', true);
 
         if (method_exists($user, 'inGroup') && $user->inGroup('superadmin')) {
-            if ($auditEnabled) {
-                $this->auditLogger->logPermissionCheck(
-                    $user->id,
-                    $permission,
-                    $resourceType,
-                    $resourceId,
-                    'allowed',
-                    'Superadmin override'
-                );
-            }
-
             $this->cache->save($cacheKey, 'allow', 300);
-
             return true;
         }
 
         $hasGlobalPermission = method_exists($user, 'can') && $user->can($permission);
 
         if ($hasGlobalPermission && ($resourceType === null || in_array($permission, ['acl.manage'], true))) {
-            if ($auditEnabled) {
-                $reason = $resourceType === null ? 'Global permission grant' : 'Global permission override';
-                $this->auditLogger->logPermissionCheck(
-                    $user->id,
-                    $permission,
-                    $resourceType,
-                    $resourceId,
-                    'allowed',
-                    $reason
-                );
-            }
-
             $this->cache->save($cacheKey, 'allow', 300);
-
             return true;
         }
 
@@ -834,18 +697,6 @@ class PermissionManager
                 $cacheKey = $this->buildCacheKey($principalType, $principalId, $permission, $resourceType, $resourceId);
                 $this->cache->delete($cacheKey);
 
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true) && $actingUserId !== null) {
-                    $this->auditLogger->logUserAction(
-                        $actingUserId,
-                        $principalId,
-                        'grant',
-                        $permission,
-                        $resourceType,
-                        $resourceId,
-                        'allowed',
-                        "Granted {$permission} to {$principalType} {$principalId}"
-                    );
-                }
             }
 
             return $result;
@@ -921,18 +772,6 @@ class PermissionManager
                 $cacheKey = $this->buildCacheKey($principalType, $principalId, $permission, $resourceType, $resourceId);
                 $this->cache->delete($cacheKey);
 
-                if ($this->aclSettingModel->getSetting('audit_log_enabled', true) && $currentUser !== null) {
-                    $this->auditLogger->logUserAction(
-                        $currentUser->id,
-                        $principalId,
-                        'revoke',
-                        $permission,
-                        $resourceType,
-                        $resourceId,
-                        'allowed',
-                        "Revoked {$permission} from {$principalType} {$principalId}"
-                    );
-                }
             }
 
             return $result;

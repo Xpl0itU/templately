@@ -168,21 +168,6 @@ class ResourceOwnerModel extends Model
                 ->where('resource_id', $resourceId)
                 ->update($data);
 
-            // Log the transfer
-            if ($result) {
-                $auditLogger = service('auditLogger');
-                $auditLogger->logUserAction(
-                    $transferredBy ?? $currentUser->id,
-                    $newOwnerId,
-                    'transfer',
-                    'ownership',
-                    $resourceType,
-                    $resourceId,
-                    'allowed',
-                    "Transferred ownership from user {$currentOwnerId} to user {$newOwnerId}"
-                );
-            }
-
             return $result;
         } catch (\Exception $e) {
             log_message('error', 'Error transferring resource ownership: ' . $e->getMessage());
@@ -209,21 +194,6 @@ class ResourceOwnerModel extends Model
             $result = $this->where('resource_type', $resourceType)
                 ->where('resource_id', $resourceId)
                 ->delete();
-
-            // Log the removal
-            if ($result) {
-                $auditLogger = service('auditLogger');
-                $auditLogger->logUserAction(
-                    $currentUser->id,
-                    null,
-                    'remove',
-                    'ownership',
-                    $resourceType,
-                    $resourceId,
-                    'allowed',
-                    "Removed ownership of resource"
-                );
-            }
 
             return $result;
         } catch (\Exception $e) {

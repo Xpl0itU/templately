@@ -19,13 +19,4 @@ class Services extends BaseService
     {
         return static::permissions($getShared);
     }
-
-    public static function auditLogger(bool $getShared = true)
-    {
-        if ($getShared) {
-            return static::getSharedInstance('auditLogger');
-        }
-
-        return new \App\Libraries\AuditLogger();
-    }
 }

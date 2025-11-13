@@ -52,12 +52,6 @@ if (!function_exists('require_permission')) {
         string $errorMessage = 'You do not have permission to access this resource.'
     ): void {
         if (!has_permission($permission, $resourceType, $resourceId, $context)) {
-            // Log the denied access attempt
-            $auditLogger = service('auditLogger');
-            $user = auth()->user();
-            $userId = $user ? $user->id : null;
-            $auditLogger->log($userId, 'access_denied', $permission, $resourceType, $resourceId, 'denied', $errorMessage);
-
             // Redirect with error message
             exit(redirect()->to($redirectUrl)->with('error', $errorMessage)->send());
         }

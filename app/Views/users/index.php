@@ -63,11 +63,6 @@
             'label' => 'Viewer',
             'color' => 'gray',
             'icon' => 'eye'
-        ],
-        'auditor' => [
-            'label' => 'Auditor',
-            'color' => 'purple',
-            'icon' => 'clipboard-check'
         ]
     ];
 
@@ -136,7 +131,6 @@
                         <option value="editor">Editor</option>
                         <option value="contributor">Contributor</option>
                         <option value="viewer">Viewer</option>
-                        <option value="auditor">Auditor</option>
                     </select>
                 </div>
             </div>
@@ -187,7 +181,6 @@
                                 'manager' => ['color' => 'indigo', 'icon' => 'briefcase', 'label' => 'Manager'],
                                 'editor' => ['color' => 'blue', 'icon' => 'pen-to-square', 'label' => 'Editor'],
                                 'contributor' => ['color' => 'green', 'icon' => 'file-pen', 'label' => 'Contributor'],
-                                'auditor' => ['color' => 'purple', 'icon' => 'clipboard-check', 'label' => 'Auditor'],
                                 'viewer' => ['color' => 'gray', 'icon' => 'eye', 'label' => 'Viewer']
                             ];
                             $userRole = $user['role'] ?? 'viewer';
@@ -303,19 +296,6 @@
                     <li>• Cannot create or edit</li>
                 </ul>
             </div>
-            
-            <div class="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                <div class="flex items-center mb-2">
-                    <i class="fas fa-clipboard-check text-purple-600 mr-2"></i>
-                    <h4 class="font-semibold text-purple-900">Auditor</h4>
-                </div>
-                <ul class="text-sm text-purple-800 space-y-1">
-                    <li>• View all documents</li>
-                    <li>• Access audit logs</li>
-                    <li>• Review file history</li>
-                    <li>• Read-only access</li>
-                </ul>
-            </div>
         </div>
     </div>
 </div>
@@ -381,7 +361,6 @@
                     <option value="contributor">Contributor - Create own documents</option>
                     <option value="editor">Editor - Edit all documents</option>
                     <option value="manager">Manager - Oversee & approve</option>
-                    <option value="auditor">Auditor - Compliance & archival</option>
                     <?php if ($currentUser->inGroup('superadmin')) : ?>
                     <option value="superadmin">System Administrator - Full control</option>
                     <?php endif; ?>
@@ -454,7 +433,6 @@
                     <option value="contributor">Contributor - Create own documents</option>
                     <option value="editor">Editor - Edit all documents</option>
                     <option value="manager">Manager - Oversee & approve</option>
-                    <option value="auditor">Auditor - Compliance & archival</option>
                     <?php if ($currentUser->inGroup('superadmin')) : ?>
                     <option value="superadmin">System Administrator - Full control</option>
                     <?php endif; ?>
