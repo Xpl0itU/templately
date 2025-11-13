@@ -425,15 +425,15 @@
                 <h3 class="text-lg font-semibold text-gray-800 mb-3">Step 1: Upload File</h3>
                 <form id="wizardFileUploadForm">
                     <p class="mb-4 text-gray-600">Select a template file (.docx) containing placeholders in the format <code class="bg-gray-100 px-1 rounded">${placeholder_name}</code> that will be filled by users.</p>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                    <div id="fileDropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
                         <input type="file" name="templateFileWizard" id="templateFileWizard" accept=".docx"
-                            required class="hidden" onchange="updateFileLabel()">
-                        <label for="templateFileWizard" class="cursor-pointer block">
+                            required class="hidden">
+                        <div>
                             <div class="mb-3">
                                 <i class="fas fa-cloud-upload-alt text-gray-400 text-4xl"></i>
                             </div>
                             <span id="fileLabel" class="text-gray-500">Click to browse or drop files here</span>
-                        </label>
+                        </div>
                     </div>
                     <div id="filePreview" class="mt-3 hidden">
                         <div class="bg-blue-50 p-3 rounded-lg flex items-center">
@@ -760,6 +760,12 @@
         document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
         document.getElementById('errorModalClose').addEventListener('click', () => hideModal('error'));
 
+        // Add change event listener for file input
+        const templateFileInput = document.getElementById('templateFileWizard');
+        if (templateFileInput) {
+            templateFileInput.addEventListener('change', updateFileLabel);
+        }
+
         function updateFileLabel() {
             const input = document.getElementById('templateFileWizard');
             const fileLabel = document.getElementById('fileLabel');
@@ -1023,51 +1029,6 @@
                     resetWizard();
                 }
             });
-
-            const dropZone = document.querySelector('.border-dashed');
-            
-            if (dropZone) {
-                // Add click event to trigger file input
-                dropZone.addEventListener('click', () => {
-                    document.getElementById('templateFileWizard').click();
-                });
-                
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, preventDefaults, false);
-                });
-                
-                function preventDefaults(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, highlight, false);
-                });
-                
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, unhighlight, false);
-                });
-                
-                function highlight() {
-                    dropZone.classList.add('border-blue-500', 'bg-blue-50');
-                }
-                
-                function unhighlight() {
-                    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-                }
-                
-                dropZone.addEventListener('drop', handleDrop, false);
-                
-                function handleDrop(e) {
-                    const dt = e.dataTransfer;
-                    const files = dt.files;
-                    if (files.length) {
-                        document.getElementById('templateFileWizard').files = files;
-                        updateFileLabel();
-                    }
-                }
-            }
 
             wizardFileUploadForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -2750,6 +2711,17 @@
             setTimeout(handleUrlFragment, 200);
             
             window.addEventListener('hashchange', handleUrlFragment);
+
+            // Check for action=upload query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'upload') {
+                setTimeout(() => {
+                    const openUploadWizardButton = document.getElementById('openUploadWizardButton');
+                    if (openUploadWizardButton) {
+                        openUploadWizardButton.click();
+                    }
+                }, 300);
+            }
 
             window.addEventListener('load', () => {
                 setTimeout(initializeChevrons, 50);

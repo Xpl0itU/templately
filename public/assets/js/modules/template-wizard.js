@@ -64,6 +64,16 @@ Templately.TemplateWizard = (function() {
         const dropZone = document.getElementById('fileDropZone');
         if (!dropZone) return;
         
+        // Add click handler to open file picker
+        dropZone.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const fileInput = document.getElementById('templateFileWizard');
+            if (fileInput) {
+                fileInput.click();
+            }
+        });
+        
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.classList.add('border-blue-500', 'bg-blue-50');

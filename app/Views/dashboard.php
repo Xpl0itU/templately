@@ -71,7 +71,7 @@
             </h3>
         </div>
         <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <?php if ($userPermissions['canViewTemplates']) : ?>
                 <a href="/file-explorer" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-200 border-2 border-transparent transition-all duration-200">
                     <div class="w-14 h-14 bg-white rounded-lg flex items-center justify-center mb-3 shadow-sm group-hover:shadow-md transition-shadow">
@@ -83,7 +83,7 @@
                 <?php endif; ?>
                 
                 <?php if ($userPermissions['canCreateTemplates']) : ?>
-                <a href="/file-explorer/upload-template" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-200 border-2 border-transparent transition-all duration-200">
+                <a href="/file-explorer?action=upload" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-200 border-2 border-transparent transition-all duration-200">
                     <div class="w-14 h-14 bg-white rounded-lg flex items-center justify-center mb-3 shadow-sm group-hover:shadow-md transition-shadow">
                         <i class="fas fa-upload text-gray-600 text-2xl group-hover:text-blue-600 transition-colors"></i>
                     </div>
@@ -92,17 +92,7 @@
                 </a>
                 <?php endif; ?>
                 
-                <?php if ($userPermissions['canCreateFilledFiles']) : ?>
-                <a href="/file-explorer/create-filled-file" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-green-50 hover:border-green-200 border-2 border-transparent transition-all duration-200">
-                    <div class="w-14 h-14 bg-white rounded-lg flex items-center justify-center mb-3 shadow-sm group-hover:shadow-md transition-shadow">
-                        <i class="fas fa-edit text-gray-600 text-2xl group-hover:text-green-600 transition-colors"></i>
-                    </div>
-                    <div class="font-medium text-gray-900 group-hover:text-green-700 transition-colors">Create Filled File</div>
-                    <div class="text-sm text-gray-600 text-center mt-1">Fill out a template</div>
-                </a>
-                <?php endif; ?>
-                
-                <?php if ($user->inGroup('superadmin', 'admin')) : ?>
+                <?php if ($user->inGroup('superadmin', 'manager')) : ?>
                 <a href="/users" class="group flex flex-col items-center p-6 bg-gray-50 rounded-lg hover:bg-indigo-50 hover:border-indigo-200 border-2 border-transparent transition-all duration-200">
                     <div class="w-14 h-14 bg-white rounded-lg flex items-center justify-center mb-3 shadow-sm group-hover:shadow-md transition-shadow">
                         <i class="fas fa-users-cog text-gray-600 text-2xl group-hover:text-indigo-600 transition-colors"></i>
@@ -156,7 +146,7 @@
                         </div>
                         <p class="text-gray-500 font-medium">No templates available</p>
                         <?php if ($userPermissions['canCreateTemplates']) : ?>
-                            <a href="/file-explorer/upload-template" class="inline-block mt-3 text-blue-600 hover:text-blue-700 font-medium">
+                            <a href="/file-explorer?action=upload" class="inline-block mt-3 text-blue-600 hover:text-blue-700 font-medium">
                                 Upload your first template →
                             </a>
                         <?php endif; ?>
@@ -206,11 +196,7 @@
                             <i class="fas fa-edit text-gray-400 text-2xl"></i>
                         </div>
                         <p class="text-gray-500 font-medium">No filled files available</p>
-                        <?php if ($userPermissions['canCreateFilledFiles']) : ?>
-                            <a href="/file-explorer/create-filled-file" class="inline-block mt-3 text-green-600 hover:text-green-700 font-medium">
-                                Create your first filled file →
-                            </a>
-                        <?php endif; ?>
+                        <p class="text-sm text-gray-400 mt-2">Select a template in the file explorer to create a filled file</p>
                     </div>
                 <?php endif; ?>
             </div>

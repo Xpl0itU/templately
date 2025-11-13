@@ -919,34 +919,6 @@ class FileExplorer extends BaseController
      *
      * @return ResponseInterface JSON response with detected fields and temp file path
      */
-    public function uploadTemplateWizard()
-    {
-        if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
-            return $this->redirectWithError('/dashboard', 'You do not have permission to create templates.');
-        }
-
-        return view('upload_template_wizard', [
-            'title' => 'Upload Template',
-            'userPermissions' => $this->getUserPermissions()
-        ]);
-    }
-
-    public function createFilledFileWizard()
-    {
-        if (!$this->permissionManager->can(auth()->user(), 'filled_files.create')) {
-            return $this->redirectWithError('/dashboard', 'You do not have permission to create filled files.');
-        }
-
-        // Get all available templates for the user to select
-        $templates = $this->templateModel->findAll();
-
-        return view('create_filled_file_wizard', [
-            'title' => 'Create Filled File',
-            'templates' => $templates,
-            'userPermissions' => $this->getUserPermissions()
-        ]);
-    }
-
     public function analyzeTemplate()
     {
         if (!$this->permissionManager->can(auth()->user(), 'templates.create')) {
