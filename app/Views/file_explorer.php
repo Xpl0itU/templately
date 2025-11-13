@@ -1125,7 +1125,7 @@
                     templateSpan.appendChild(chevronIcon);
                     
                     const folderIcon = document.createElement('i');
-                    folderIcon.className = 'fas fa-folder-open text-yellow-500 mr-2';
+                    folderIcon.className = 'fas fa-folder-open text-blue-500 mr-2';
                     templateSpan.appendChild(folderIcon);
                     
                     const templateText = document.createTextNode(template.name);
