@@ -442,7 +442,7 @@
                                 <div id="fileName" class="font-medium text-blue-700"></div>
                                 <div id="fileSize" class="text-sm text-gray-500"></div>
                             </div>
-                            <button type="button" onclick="clearFileSelection()" class="text-gray-500 hover:text-red-500">
+                            <button type="button" onclick="Templately.FileExplorer.clearFileSelection()" class="text-gray-500 hover:text-red-500">
                                 <i class="fas fa-times-circle"></i>
                             </button>
                         </div>
@@ -760,39 +760,22 @@
         document.getElementById('successModalClose').addEventListener('click', () => hideModal('success'));
         document.getElementById('errorModalClose').addEventListener('click', () => hideModal('error'));
 
-        // Add change event listener for file input
-        const templateFileInput = document.getElementById('templateFileWizard');
-        if (templateFileInput) {
-            templateFileInput.addEventListener('change', updateFileLabel);
+        // Ensure file input change event updates the UI
+        const templateFileInputGlobal = document.getElementById('templateFileWizard');
+        if (templateFileInputGlobal) {
+            templateFileInputGlobal.addEventListener('change', function() {
+                if (typeof Templately !== 'undefined' && Templately.FileExplorer && Templately.FileExplorer.updateFileLabel) {
+                    Templately.FileExplorer.updateFileLabel();
+                }
+            });
         }
 
-        function updateFileLabel() {
-            const input = document.getElementById('templateFileWizard');
-            const fileLabel = document.getElementById('fileLabel');
-            const filePreview = document.getElementById('filePreview');
-            const fileName = document.getElementById('fileName');
-            const fileSize = document.getElementById('fileSize');
-            
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                fileLabel.parentElement.parentElement.classList.add('border-blue-500', 'bg-blue-50');
-                filePreview.classList.remove('hidden');
-                fileName.textContent = file.name;
-                fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
-            } else {
-                clearFileSelection();
-            }
-        }
-        
-        function clearFileSelection() {
-            const input = document.getElementById('templateFileWizard');
-            const fileLabel = document.getElementById('fileLabel');
-            const filePreview = document.getElementById('filePreview');
-            
-            input.value = '';
-            fileLabel.textContent = 'Click to browse or drop files here';
-            filePreview.classList.add('hidden');
-            fileLabel.parentElement.parentElement.classList.remove('border-blue-500', 'bg-blue-50');
+        // Ensure dropZone click opens file picker
+        const fileDropZoneGlobal = document.getElementById('fileDropZone');
+        if (fileDropZoneGlobal && templateFileInputGlobal) {
+            fileDropZoneGlobal.addEventListener('click', function(e) {
+                templateFileInputGlobal.click();
+            });
         }
 
         function updateWizardSteps(currentStep) {
@@ -989,7 +972,7 @@
                 finalizingStatusDiv.textContent = 'Saving template...';
                 uploadWizardModal.classList.add('hidden');
                 showWizardStep('stepUploadFile');
-                clearFileSelection();
+                Templately.FileExplorer.clearFileSelection();
             }
 
             openUploadWizardButton.addEventListener('click', () => {
