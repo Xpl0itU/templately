@@ -667,7 +667,7 @@ class FileExplorer extends BaseController
         }
 
         // Prevent deletion if template has associated filled files
-        $filledFiles = $this->filledFileModel->where('templateId', $templateId)->findAll();
+        $filledFiles = $this->filledFileModel->where('templateFileId', $templateId)->findAll();
         if (!empty($filledFiles)) {
             return [
                 'success' => false,
