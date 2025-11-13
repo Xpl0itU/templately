@@ -184,12 +184,14 @@
                             <?php
                             $roleConfig = [
                                 'superadmin' => ['color' => 'red', 'icon' => 'crown', 'label' => 'Superadmin'],
-                                'admin' => ['color' => 'orange', 'icon' => 'user-shield', 'label' => 'Admin'],
-                                'developer' => ['color' => 'purple', 'icon' => 'code', 'label' => 'Developer'],
-                                'user' => ['color' => 'blue', 'icon' => 'user', 'label' => 'User']
+                                'manager' => ['color' => 'indigo', 'icon' => 'briefcase', 'label' => 'Manager'],
+                                'editor' => ['color' => 'blue', 'icon' => 'pen-to-square', 'label' => 'Editor'],
+                                'contributor' => ['color' => 'green', 'icon' => 'file-pen', 'label' => 'Contributor'],
+                                'auditor' => ['color' => 'purple', 'icon' => 'clipboard-check', 'label' => 'Auditor'],
+                                'viewer' => ['color' => 'gray', 'icon' => 'eye', 'label' => 'Viewer']
                             ];
-                            $userRole = $user['role'] ?? 'user';
-                            $config = $roleConfig[$userRole] ?? $roleConfig['user'];
+                            $userRole = $user['role'] ?? 'viewer';
+                            $config = $roleConfig[$userRole] ?? $roleConfig['viewer'];
                             ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-<?php echo $config['color'] ?>-100 text-<?php echo $config['color'] ?>-800">
                                 <i class="fas fa-<?php echo $config['icon'] ?> mr-1.5"></i>

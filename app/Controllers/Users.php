@@ -19,7 +19,7 @@ class Users extends BaseController
      */
     public function index()
     {
-        if (!auth()->user()->inGroup('superadmin', 'admin')) {
+        if (!auth()->user()->inGroup('superadmin', 'manager')) {
             return redirect()->to('/dashboard')->with('error', 'You do not have permission to access user management.');
         }
 
@@ -29,7 +29,7 @@ class Users extends BaseController
         $users = [];
         foreach ($allUsers as $user) {
             $userGroups = $user->getGroups();
-            $role = !empty($userGroups) ? $userGroups[0] : 'user';
+            $role = !empty($userGroups) ? $userGroups[0] : 'viewer';
 
             $users[] = [
                 'id' => $user->id,
@@ -55,7 +55,7 @@ class Users extends BaseController
      */
     public function create()
     {
-        if (!auth()->user()->inGroup('superadmin', 'admin')) {
+        if (!auth()->user()->inGroup('superadmin', 'manager')) {
             return $this->response->setStatusCode(403)->setJSON([
                 'success' => false,
                 'message' => 'You do not have permission to create users.'
@@ -141,7 +141,7 @@ class Users extends BaseController
      */
     public function getUser($id = null)
     {
-        if (!auth()->user()->inGroup('superadmin', 'admin')) {
+        if (!auth()->user()->inGroup('superadmin', 'manager')) {
             return $this->response->setStatusCode(403)->setJSON([
                 'success' => false,
                 'message' => 'You do not have permission to view users.'
@@ -195,7 +195,7 @@ class Users extends BaseController
      */
     public function update()
     {
-        if (!auth()->user()->inGroup('superadmin', 'admin')) {
+        if (!auth()->user()->inGroup('superadmin', 'manager')) {
             return $this->response->setStatusCode(403)->setJSON([
                 'success' => false,
                 'message' => 'You do not have permission to update users.'
@@ -307,7 +307,21 @@ class Users extends BaseController
 
         try {
             $userModel = model('CodeIgniter\Shield\Models\UserModel');
-            $success = $userModel->delete($id);
+            $user = $userModel->find($id);
+            
+            if (!$user) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'success' => false,
+                    'message' => 'User not found.'
+                ]);
+            }
+            
+            // Delete user identities (email, etc.) before deleting the user
+            $identityModel = model('CodeIgniter\Shield\Models\UserIdentityModel');
+            $identityModel->where('user_id', $id)->delete();
+            
+            // Force permanent deletion (bypass soft deletes if enabled)
+            $success = $userModel->delete($id, true);
 
             if ($success) {
                 return $this->response->setJSON([
