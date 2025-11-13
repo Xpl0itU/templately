@@ -23,7 +23,7 @@ class AuthGroups extends ShieldAuthGroups
      * --------------------------------------------------------------------
      * The group that a newly registered user is added to.
      */
-    public string $defaultGroup = 'user';
+    public string $defaultGroup = 'contributor';
 
     /**
      * --------------------------------------------------------------------
@@ -45,21 +45,25 @@ class AuthGroups extends ShieldAuthGroups
             'title'       => 'Super Admin',
             'description' => 'Complete control of the site.',
         ],
-        'admin' => [
-            'title'       => 'Admin',
-            'description' => 'Day to day administrators of the site.',
+        'manager' => [
+            'title'       => 'Manager',
+            'description' => 'Oversee and approve content.',
         ],
-        'developer' => [
-            'title'       => 'Developer',
-            'description' => 'Site programmers.',
+        'editor' => [
+            'title'       => 'Editor',
+            'description' => 'Edit all documents and templates.',
         ],
-        'user' => [
-            'title'       => 'User',
-            'description' => 'General users of the site. Often customers.',
+        'contributor' => [
+            'title'       => 'Contributor',
+            'description' => 'Create and manage own documents.',
         ],
-        'beta' => [
-            'title'       => 'Beta User',
-            'description' => 'Has access to beta-level features.',
+        'auditor' => [
+            'title'       => 'Auditor',
+            'description' => 'Compliance monitoring and archival access.',
+        ],
+        'viewer' => [
+            'title'       => 'Viewer',
+            'description' => 'Read-only access to documents.',
         ],
     ];
 
@@ -78,7 +82,6 @@ class AuthGroups extends ShieldAuthGroups
         'users.create'        => 'Can create new non-admin users',
         'users.edit'          => 'Can edit existing non-admin users',
         'users.delete'        => 'Can delete existing non-admin users',
-        'beta.access'         => 'Can access beta-level features',
     'templates.create'    => 'Can create new templates',
     'templates.edit'      => 'Can edit existing templates',
     'templates.delete'    => 'Can delete templates',
@@ -108,47 +111,38 @@ class AuthGroups extends ShieldAuthGroups
         'superadmin' => [
             'admin.*',
             'users.*',
-            'beta.*',
             'templates.*',
             'filled-files.*',
             'acl.manage',
             'user-groups.*',
         ],
-        'admin' => [
+        'manager' => [
             'admin.access',
-            'users.create',
-            'users.edit',
-            'users.delete',
-            'beta.access',
-            'templates.*',
-            'filled-files.*',
-            'user-groups.*',
-        ],
-        'developer' => [
-            'admin.access',
-            'admin.settings',
-            'users.create',
-            'users.edit',
-            'beta.access',
-            'templates.*',
+            'templates.view',
+            'templates.edit',
             'filled-files.*',
             'user-groups.view',
             'user-groups.view-members',
         ],
-        'user' => [
+        'editor' => [
+            'templates.*',
+            'filled-files.*',
+        ],
+        'contributor' => [
             'templates.view',
+            'templates.create',
             'filled-files.create',
             'filled-files.edit',
             'filled-files.view',
             'filled-files.delete',
         ],
-        'beta' => [
-            'beta.access',
+        'auditor' => [
             'templates.view',
-            'filled-files.create',
-            'filled-files.edit',
             'filled-files.view',
-            'filled-files.delete',
+        ],
+        'viewer' => [
+            'templates.view',
+            'filled-files.view',
         ],
     ];
 }
