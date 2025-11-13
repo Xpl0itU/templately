@@ -1,4 +1,4 @@
-.PHONY: help build up down reset restart logs clean test shell mysql-shell migrate seed
+.PHONY: help build up down reset restart logs test shell mysql-shell migrate seed
 
 # Load environment variables from .env.docker if it exists
 ifneq (,$(wildcard .env.docker))
@@ -40,9 +40,6 @@ logs-app: ## View application logs
 
 logs-mysql: ## View MySQL logs
 	docker compose logs -f mysql
-
-clean: ## Stop containers and remove volumes
-	docker compose down -v
 
 test: ## Run PHPUnit tests
 	docker exec -it templately_app vendor/bin/phpunit
