@@ -534,7 +534,7 @@ document.getElementById('createUserForm').addEventListener('submit', async funct
         
         if (result.success) {
             Templately.Alert.showAlert(result.message, 'success');
-            closeCreateModal();
+            closeCreateUserModal();
             setTimeout(() => location.reload(), 1500);
         } else {
             Templately.Alert.showAlert(result.message, 'error');
@@ -599,7 +599,7 @@ document.getElementById('editUserForm').addEventListener('submit', async functio
         
         if (result.success) {
             Templately.Alert.showAlert(result.message, 'success');
-            closeEditModal();
+            closeEditUserModal();
             setTimeout(() => location.reload(), 1500);
         } else {
             Templately.Alert.showAlert(result.message, 'error');
