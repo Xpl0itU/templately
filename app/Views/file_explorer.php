@@ -1687,23 +1687,23 @@
                 
                 if (mode === 'edit') {
                     editButton.style.display = 'none';
-                    saveButton.style.display = userPermissions.canEditFilledFiles ? 'flex' : 'none';
+                    saveButton.style.display = (currentSelectedFilledFile && currentSelectedFilledFile.canEdit) ? 'flex' : 'none';
                     cancelButton.style.display = 'flex';
                     exportButtonGroup.style.display = 'none';
                     deleteFilledFileButton.style.display = 'none';
                     deleteTemplateButton.style.display = 'none';
                 } else {
-                    editButton.style.display = userPermissions.canEditFilledFiles ? 'flex' : 'none';
+                    editButton.style.display = (currentSelectedFilledFile && currentSelectedFilledFile.canEdit) ? 'flex' : 'none';
                     saveButton.style.display = 'none';
                     cancelButton.style.display = 'none';
-                    exportButtonGroup.style.display = userPermissions.canExportFilledFiles ? 'flex' : 'none';
+                    exportButtonGroup.style.display = (currentSelectedFilledFile && currentSelectedFilledFile.canExport) ? 'flex' : 'none';
                     
                     if (currentSelectedFilledFile) {
-                        deleteFilledFileButton.style.display = userPermissions.canDeleteFilledFiles ? 'flex' : 'none';
+                        deleteFilledFileButton.style.display = (currentSelectedFilledFile.canDelete) ? 'flex' : 'none';
                         deleteTemplateButton.style.display = 'none';
                     } else if (currentSelectedTemplate) {
                         deleteFilledFileButton.style.display = 'none';
-                        deleteTemplateButton.style.display = userPermissions.canDeleteTemplates ? 'flex' : 'none';
+                        deleteTemplateButton.style.display = (currentSelectedTemplate.canDelete) ? 'block' : 'none';
                     }
                 }
             }
@@ -1721,7 +1721,7 @@
                 saveButton.style.display = 'none';
                 cancelButton.style.display = 'none';
                 deleteFilledFileButton.style.display = 'none';
-                deleteTemplateButton.style.display = userPermissions.canDeleteTemplates ? 'block' : 'none';
+                deleteTemplateButton.style.display = (currentSelectedTemplate.canDelete) ? 'block' : 'none';
                 exportButtonGroup.style.display = 'none';
 
                 const container = document.createElement('div');

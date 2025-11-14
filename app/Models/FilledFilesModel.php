@@ -19,6 +19,7 @@ class FilledFilesModel extends Model
     protected $protectFields = true;
     protected $allowedFields = [
         'templateFileId',
+        'user_id',
         'name',
         'filledData',
         'fieldTypes',

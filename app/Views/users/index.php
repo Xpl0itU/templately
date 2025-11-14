@@ -98,15 +98,16 @@
         </div>
     </div>
 
-<!-- Users Table -->
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
         <h2 class="text-xl font-semibold text-gray-900">
             <i class="fas fa-users mr-2 text-indigo-600"></i>All Users
         </h2>
+        <?php if ($currentUser->inGroup('superadmin', 'manager')) : ?>
         <button onclick="openCreateModal()" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition duration-200">
             <i class="fas fa-plus mr-2"></i>Create User
         </button>
+        <?php endif; ?>
     </div>
         <!-- Search and Filter -->
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
@@ -207,10 +208,12 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex items-center justify-end space-x-2">
+                                <?php if ($currentUser->inGroup('superadmin', 'manager')) : ?>
                                 <button onclick="openEditUserModal(<?php echo $user['id'] ?>)" 
                                         class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-md transition duration-150">
                                     <i class="fas fa-edit mr-1.5"></i>Edit
                                 </button>
+                                <?php endif; ?>
                                 <?php if ($currentUser->inGroup('superadmin') && $user['id'] !== $currentUser->id) : ?>
                                 <button onclick="deleteUser(<?php echo $user['id'] ?>, '<?php echo esc($user['username']) ?>')" 
                                         class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-900 hover:bg-red-50 rounded-md transition duration-150">
@@ -611,7 +614,17 @@ document.getElementById('editUserForm').addEventListener('submit', async functio
 
 // Delete User
 async function deleteUser(userId, username) {
-    if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+    const confirmed = await Templately.Modal.confirm(
+        `Are you sure you want to delete user "${username}"? This action cannot be undone.`,
+        {
+            title: 'Delete User',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            intent: 'danger'
+        }
+    );
+    
+    if (!confirmed) {
         return;
     }
     

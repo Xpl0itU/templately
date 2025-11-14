@@ -59,6 +59,9 @@ class FileExplorer extends BaseController
 
         foreach ($templates as &$template) {
             $template['templateFields'] = $this->parseJsonField($template['templateFields']);
+            
+            // Add permission information for templates
+            $template['canDelete'] = $this->permissionManager->can(auth()->user(), 'templates.delete', 'template', $template['id']);
 
             // Initialize empty filledData for old filled files
             if (isset($template['filledFiles']) && is_array($template['filledFiles'])) {
@@ -66,6 +69,12 @@ class FileExplorer extends BaseController
                     $filledFile['filledData'] = $this->parseJsonField($filledFile['filledData']);
                     $filledFile['fieldTypes'] = $this->parseJsonField($filledFile['fieldTypes']);
                     $filledFile['imageSizes'] = $this->parseJsonField($filledFile['imageSizes']);
+                    
+                    // Add ownership information
+                    $filledFile['isOwner'] = isset($filledFile['user_id']) && $filledFile['user_id'] == auth()->id();
+                    $filledFile['canEdit'] = $this->permissionManager->can(auth()->user(), 'filled-files.edit', 'filled_file', $filledFile['id']);
+                    $filledFile['canDelete'] = $this->permissionManager->can(auth()->user(), 'filled-files.delete', 'filled_file', $filledFile['id']);
+                    $filledFile['canExport'] = $this->permissionManager->can(auth()->user(), 'filled-files.export', 'filled_file', $filledFile['id']);
 
                     // If filledData is empty or is an empty array, initialize with template fields
                     if (empty($filledFile['filledData']) || (is_array($filledFile['filledData']) && count($filledFile['filledData']) === 0)) {
@@ -198,10 +207,11 @@ class FileExplorer extends BaseController
             ];
         }
 
-        if (!$this->permissionManager->can(auth()->user(), 'filled-files.create', 'template', $templateId)) {
+        // Check if user has global permission to create filled files
+        if (!$this->permissionManager->can(auth()->user(), 'filled-files.create')) {
             return [
                 'success' => false,
-                'message' => 'You do not have permission to create filled files from this template.'
+                'message' => 'You do not have permission to create filled files.'
             ];
         }
 
@@ -248,6 +258,7 @@ class FileExplorer extends BaseController
         $insertData = [
             'name' => $name,
             'templateFileId' => $templateId,
+            'user_id' => auth()->id(),
             'filledData' => json_encode($filledData),
             'createdAt' => date('Y-m-d H:i:s'),
             'updatedAt' => date('Y-m-d H:i:s')
@@ -892,7 +903,7 @@ class FileExplorer extends BaseController
             'canCreateFilledFiles' => $this->permissionManager->can($user, 'filled-files.create'),
             'canEditFilledFiles' => $this->permissionManager->can($user, 'filled-files.edit'),
             'canDeleteFilledFiles' => $this->permissionManager->can($user, 'filled-files.delete'),
-            'canExportFilledFiles' => $this->permissionManager->can($user, 'filled-files.view'),
+            'canExportFilledFiles' => $this->permissionManager->can($user, 'filled-files.export'),
         ];
 
         // Cache for 5 minutes
@@ -1245,7 +1256,7 @@ class FileExplorer extends BaseController
      */
     public function exportDocx(int $filledFileId)
     {
-        if (!$this->permissionManager->can(auth()->user(), 'filled-files.view', 'filled_file', $filledFileId)) {
+        if (!$this->permissionManager->can(auth()->user(), 'filled-files.export', 'filled_file', $filledFileId)) {
             return $this->response->setStatusCode(403)->setBody('Access denied');
         }
 
@@ -1341,7 +1352,7 @@ class FileExplorer extends BaseController
      */
     public function exportPdf(int $filledFileId)
     {
-        if (!$this->permissionManager->can(auth()->user(), 'filled-files.view', 'filled_file', $filledFileId)) {
+        if (!$this->permissionManager->can(auth()->user(), 'filled-files.export', 'filled_file', $filledFileId)) {
             return $this->response->setStatusCode(403)->setBody('Access denied');
         }
 

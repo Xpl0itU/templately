@@ -86,6 +86,7 @@ class AuthGroups extends ShieldAuthGroups
     'filled-files.edit'   => 'Can edit filled files',
     'filled-files.delete' => 'Can delete filled files',
     'filled-files.view'   => 'Can view filled files',
+    'filled-files.export' => 'Can export filled files to DOCX/PDF',
     'acl.manage'          => 'Can manage advanced ACL permissions',
     'user-groups.view'           => 'Can access the user groups area',
     'user-groups.create'         => 'Can create user groups',
@@ -130,6 +131,7 @@ class AuthGroups extends ShieldAuthGroups
             'filled-files.create',
             'filled-files.edit',
             'filled-files.view',
+            'filled-files.export',
             'filled-files.delete',
         ],
         'viewer' => [
