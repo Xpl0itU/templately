@@ -313,17 +313,26 @@ class FileExplorer extends BaseController
         // Update template's updatedAt timestamp
         $this->templateModel->update($templateId, ['updatedAt' => date('Y-m-d H:i:s')]);
 
+        // Add permission flags for the newly created file
+        $userId = auth()->id();
+        $newFilledFile = [
+            'id' => $filledFileId,
+            'name' => $name,
+            'templateFileId' => $templateId,
+            'filledData' => json_encode($filledDataWithImages),
+            'createdAt' => $insertData['createdAt'],
+            'updatedAt' => $insertData['updatedAt'],
+            'user_id' => $userId,
+            'isOwner' => true, // Creator is always the owner
+            'canEdit' => $this->permissionManager->can(auth()->user(), 'filled-files.edit', 'filled_file', $filledFileId),
+            'canDelete' => $this->permissionManager->can(auth()->user(), 'filled-files.delete', 'filled_file', $filledFileId),
+            'canExport' => $this->permissionManager->can(auth()->user(), 'filled-files.export', 'filled_file', $filledFileId)
+        ];
+
         return [
             'success' => true,
             'message' => 'Filled file created successfully.',
-            'newFilledFile' => [
-                'id' => $filledFileId,
-                'name' => $name,
-                'templateFileId' => $templateId,
-                'filledData' => json_encode($filledDataWithImages),
-                'createdAt' => $insertData['createdAt'],
-                'updatedAt' => $insertData['updatedAt']
-            ]
+            'newFilledFile' => $newFilledFile
         ];
     }
 
