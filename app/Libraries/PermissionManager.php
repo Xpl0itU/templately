@@ -129,16 +129,7 @@ class PermissionManager
             }
         }
 
-        // 6. Check ABAC policies
-        if ($resourceType !== null && $resourceId !== null) {
-            $policyResult = $this->evaluatePolicies($principalId, $principalType, $permission, $resourceType, $resourceId, $context);
-            if ($policyResult !== null) {
-                $this->cache->save($cacheKey, $policyResult ? 'allow' : 'deny', 300); // Cache for 5 minutes
-                return $policyResult;
-            }
-        }
-
-        // 7. Default deny
+        // 6. Default deny
         $this->cache->save($cacheKey, 'deny', 300); // Cache for 5 minutes
         return false;
     }
@@ -550,15 +541,19 @@ class PermissionManager
     /**
      * Convenience method to check if a user has a specific permission for a resource
      *
-     * @param User $user The user to check
+     * @param User|null $user The user to check (nullable)
      * @param string $permission The permission to check (e.g., 'templates.view')
      * @param string|null $resourceType Type of resource (template, filled_file, etc.)
      * @param int|null $resourceId ID of the specific resource
      * @param array $context Additional context for ABAC evaluation
      * @return bool True if user has permission, false otherwise
      */
-    public function can(User $user, string $permission, ?string $resourceType = null, ?int $resourceId = null, array $context = []): bool
+    public function can(?User $user, string $permission, ?string $resourceType = null, ?int $resourceId = null, array $context = []): bool
     {
+        if ($user === null) {
+            // No user means no permissions
+            return false;
+        }
         $cacheKey = $this->buildCacheKey('user', $user->id, $permission, $resourceType, $resourceId, $context);
 
         if (method_exists($user, 'inGroup') && $user->inGroup('superadmin')) {
@@ -576,23 +571,8 @@ class PermissionManager
         return $this->hasPermission($user->id, 'user', $permission, $resourceType, $resourceId, $context);
     }
 
-    /**
-     * Evaluate ABAC policies
-     *
-    * @param int $principalId The principal ID (must be a user)
-    * @param string $principalType Type of principal ('user' or 'group')
-     * @param string $permission The permission to check
-     * @param string $resourceType Type of resource
-     * @param int $resourceId ID of the specific resource
-     * @param array $context Additional context
-     * @return bool|null True/false if policy applies, null if no applicable policy
-     */
-    protected function evaluatePolicies(int $principalId, string $principalType, string $permission, string $resourceType, int $resourceId, array $context): ?bool
-    {
-        // For now, we'll return null to indicate no applicable policy
-        // In a real implementation, this would evaluate ABAC policies
-        return null;
-    }
+
+
 
     /**
      * Grant a resource-specific permission to a user or group

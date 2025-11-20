@@ -43,11 +43,9 @@ if (!function_exists('ui_select')) {
     function ui_select(array $custom = []): string
     {
         $base = 'w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm';
-
         if (!empty($custom)) {
             $base .= ' ' . implode(' ', $custom);
         }
-
         return $base;
     }
 }
@@ -64,11 +62,8 @@ if (!function_exists('ui_button')) {
     function ui_button(string $variant = 'primary', string $size = 'md', array $custom = []): string
     {
         $bases = [
-            'primary' => 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 text-white',
+            'primary'   => 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500 text-white',
             'secondary' => 'bg-gray-600 hover:bg-gray-700 focus:ring-gray-500 text-white',
-            'success' => 'bg-green-600 hover:bg-green-700 focus:ring-green-500 text-white',
-            'danger' => 'bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white',
-            'warning' => 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500 text-white',
             'ghost' => 'bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 focus:ring-indigo-500',
         ];
 
