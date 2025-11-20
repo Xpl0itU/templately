@@ -111,8 +111,8 @@
     </div>
         <!-- Search and Filter -->
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div class="flex items-center justify-between">
-                <div class="flex-1 max-w-lg">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex-1 w-full md:max-w-lg">
                     <div class="relative">
                         <input type="text" 
                                id="searchUsers" 
@@ -123,9 +123,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="ml-4">
+                <div class="w-full md:w-auto">
                     <select id="filterRole" 
-                            class="<?= ui_select(['px-4', 'py-2', 'bg-white', 'text-gray-900']) ?>">
+                            class="<?= ui_select(['px-4', 'py-2', 'bg-white', 'text-gray-900', 'w-full', 'md:w-auto']) ?>">
                         <option value="">All Roles</option>
                         <option value="superadmin">System Administrator</option>
                         <option value="manager">Manager</option>

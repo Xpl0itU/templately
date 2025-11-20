@@ -377,10 +377,10 @@
                             </button>
                         </div>
                     </div>
-                    <button id="deleteFilledFileButton" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center ml-auto" style="display: none;">
+                    <button id="deleteFilledFileButton" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center sm:ml-auto" style="display: none;">
                         <i class="fas fa-trash mr-2"></i><span id="deleteFilledFileText">Delete File</span>
                     </button>
-                    <button id="deleteTemplateButton" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center ml-auto" style="display: none;">
+                    <button id="deleteTemplateButton" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center sm:ml-auto" style="display: none;">
                         <i class="fas fa-trash-alt mr-2"></i><span id="deleteTemplateText">Delete Template</span>
                     </button>
                 </div>
@@ -447,11 +447,11 @@
                             </button>
                         </div>
                     </div>
-                    <div class="flex justify-end space-x-2 mt-6">
-                        <button type="button" id="cancelStep1" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                    <div class="flex flex-col sm:flex-row sm:justify-end gap-2 mt-6">
+                        <button type="button" id="cancelStep1" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </button>
-                        <button type="submit" id="nextStep1" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                        <button type="submit" id="nextStep1" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-arrow-right mr-2"></i>Next: Analyze
                         </button>
                     </div>
@@ -467,7 +467,7 @@
                     <div class="text-gray-500 text-sm mt-2">Extracting fields and placeholders</div>
                 </div>
                 <div class="flex justify-end mt-6">
-                    <button type="button" id="cancelStep2" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                    <button type="button" id="cancelStep2" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-times mr-2"></i>Cancel Upload
                     </button>
                 </div>
@@ -503,14 +503,14 @@
                             <!-- TO BE POPULATED -->
                         </div>
                     </div>
-                    <div class="flex justify-end space-x-2 mt-4">
-                        <button type="button" id="backStep3" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                    <div class="flex flex-col sm:flex-row sm:justify-end gap-2 mt-4">
+                        <button type="button" id="backStep3" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-arrow-left mr-2"></i>Back
                         </button>
-                        <button type="button" id="cancelStep3" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                        <button type="button" id="cancelStep3" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-times mr-2"></i>Cancel
                         </button>
-                        <button type="submit" id="finishWizard" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                        <button type="submit" id="finishWizard" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                             <i class="fas fa-check mr-2"></i>Finish & Save
                         </button>
                     </div>
@@ -526,7 +526,7 @@
                     <div class="text-gray-500 text-sm mt-2">Your template will be available in a moment</div>
                 </div>
                 <div class="flex justify-end mt-6">
-                    <button type="button" id="cancelStep4" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center">
+                    <button type="button" id="cancelStep4" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
                         <i class="fas fa-times mr-2"></i>Close
                     </button>
                 </div>
@@ -1706,6 +1706,11 @@
                         deleteTemplateButton.style.display = (currentSelectedTemplate.canDelete) ? 'block' : 'none';
                     }
                 }
+
+                // Scroll to details on mobile
+                if (window.innerWidth < 768) {
+                    fileDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
 
             function renderTemplateOverview(template) {
@@ -1899,6 +1904,11 @@
                 container.appendChild(filesSection);
 
                 fileDetails.appendChild(container);
+
+                // Scroll to details on mobile
+                if (window.innerWidth < 768) {
+                    fileDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             }
 
             async function handleCreateNewFilledFile(event) {
