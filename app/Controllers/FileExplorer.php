@@ -1123,30 +1123,16 @@ class FileExplorer extends BaseController
             ]);
         }
 
-        // The TemplateModel's afterInsert hook will handle creating ownership and permissions
-        // But we need to make sure it has the correct current user context
+        // The TemplateModel's afterInsert hook will handle creating ownership
+        // But we'll verify it was set correctly
         $currentUser = auth()->user();
         if ($currentUser) {
-            // Create resource ownership (this is handled by the afterInsert callback in the model)
-            // But we'll also ensure proper permissions are set
             $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
-            $aclEntryModel = model('App\Models\AclEntryModel');
-
+            
             // Verify ownership is set
             if (!$resourceOwnerModel->getOwner('template', $templateId)) {
                 $resourceOwnerModel->setOwner('template', $templateId, $currentUser->id);
             }
-
-            // Ensure the owner has full control
-            $aclEntryModel->grantPermission(
-                'template',
-                $templateId,
-                'user',
-                $currentUser->id,
-                'full_control',
-                $currentUser->id,
-                false
-            );
         }
 
         // Return the new template details

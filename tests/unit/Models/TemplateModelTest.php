@@ -153,4 +153,78 @@ final class TemplateModelTest extends CIUnitTestCase
         $count = $this->model->countAll();
         $this->assertEquals(2, $count);
     }
+
+    public function testTemplateUpdate(): void
+    {
+        $data = [
+            'name' => 'Original Name',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ];
+
+        $id = $this->model->insert($data);
+
+        $updateData = [
+            'name' => 'Updated Name',
+        ];
+
+        $this->model->update($id, $updateData);
+
+        $template = $this->model->find($id);
+        $this->assertEquals('Updated Name', $template['name']);
+    }
+
+    public function testTemplateSoftDelete(): void
+    {
+        $data = [
+            'name' => 'Delete Test',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ];
+
+        $id = $this->model->insert($data);
+        
+        // Delete
+        $this->model->delete($id);
+
+        // Should be gone
+        $template = $this->model->find($id);
+        $this->assertNull($template);
+    }
+
+    public function testFindByName(): void
+    {
+        $data = [
+            'name' => 'Unique Template Name',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ];
+
+        $this->model->insert($data);
+
+        $template = $this->model->where('name', 'Unique Template Name')->first();
+        $this->assertNotNull($template);
+        $this->assertEquals('Unique Template Name', $template['name']);
+    }
+
+    public function testGetRecentTemplates(): void
+    {
+        // Create multiple templates with slight time differences
+        for ($i = 1; $i <= 5; $i++) {
+            $this->model->insert([
+                'name' => "Template $i",
+                'path' => "/path/to/test$i.docx",
+                'size' => 1024,
+                'templateFields' => json_encode(['field1']),
+                'created_at' => date('Y-m-d H:i:s', time() + $i), // Stagger timestamps
+            ]);
+        }
+
+        $recent = $this->model->orderBy('id', 'DESC')->findAll(3);
+        $this->assertCount(3, $recent);
+        $this->assertEquals('Template 5', $recent[0]['name']);
+    }
 }

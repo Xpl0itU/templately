@@ -183,4 +183,118 @@ final class FilledFilesModelTest extends CIUnitTestCase
         $count = $this->model->countAll();
         $this->assertEquals(2, $count);
     }
+
+    public function testGetFilledFilesByTemplate(): void
+    {
+        $templateId = $this->templateModel->insert([
+            'name' => 'Test Template',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ]);
+
+        // Create multiple filled files for this template
+        $this->model->insert([
+            'templateFileId' => $templateId,
+            'name' => 'Filled File 1',
+            'filledData' => json_encode(['field1' => 'value1']),
+        ]);
+
+        $this->model->insert([
+            'templateFileId' => $templateId,
+            'name' => 'Filled File 2',
+            'filledData' => json_encode(['field1' => 'value2']),
+        ]);
+
+        $filledFiles = $this->model->where('templateFileId', $templateId)->findAll();
+        $this->assertCount(2, $filledFiles);
+    }
+
+    public function testFilledFileUpdate(): void
+    {
+        $templateId = $this->templateModel->insert([
+            'name' => 'Test Template',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ]);
+
+        $data = [
+            'templateFileId' => $templateId,
+            'name' => 'Original Name',
+            'filledData' => json_encode(['field1' => 'value1']),
+        ];
+
+        $id = $this->model->insert($data);
+
+        $updateData = [
+            'name' => 'Updated Name',
+            'filledData' => json_encode(['field1' => 'updated value']),
+        ];
+
+        $this->model->update($id, $updateData);
+
+        $filledFile = $this->model->find($id);
+        $this->assertEquals('Updated Name', $filledFile['name']);
+        $this->assertEquals('updated value', $filledFile['filledData']['field1']);
+    }
+
+    public function testFilledFileSoftDelete(): void
+    {
+        $templateId = $this->templateModel->insert([
+            'name' => 'Test Template',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ]);
+
+        $data = [
+            'templateFileId' => $templateId,
+            'name' => 'Delete Test',
+            'filledData' => json_encode(['field1' => 'value1']),
+        ];
+
+        $id = $this->model->insert($data);
+        
+        // Delete
+        $this->model->delete($id);
+
+        // Should be gone
+        $filledFile = $this->model->find($id);
+        $this->assertNull($filledFile);
+    }
+
+    public function testComplexFieldTypes(): void
+    {
+        $templateId = $this->templateModel->insert([
+            'name' => 'Test Template',
+            'path' => '/path/to/test.docx',
+            'size' => 1024,
+            'templateFields' => json_encode(['field1']),
+        ]);
+
+        $data = [
+            'templateFileId' => $templateId,
+            'name' => 'Complex Types',
+            'filledData' => json_encode([
+                'text_field' => 'Simple text',
+                'number_field' => 42,
+                'boolean_field' => true,
+            ]),
+            'fieldTypes' => json_encode([
+                'text_field' => 'text',
+                'number_field' => 'number',
+                'boolean_field' => 'checkbox',
+                'image_field' => 'image',
+            ]),
+        ];
+
+        $id = $this->model->insert($data);
+        $filledFile = $this->model->find($id);
+
+        $this->assertEquals('Simple text', $filledFile['filledData']['text_field']);
+        $this->assertEquals(42, $filledFile['filledData']['number_field']);
+        $this->assertTrue($filledFile['filledData']['boolean_field']);
+        $this->assertEquals('image', $filledFile['fieldTypes']['image_field']);
+    }
 }

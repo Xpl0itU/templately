@@ -46,11 +46,15 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
         $templateModel = new TemplateModel();
         $filledFilesModel = new \App\Models\FilledFilesModel();
         
-        // Create a template
+        // Create a temporary test file
+        $tempPath = WRITEPATH . 'uploads/test_' . time() . '.txt';
+        file_put_contents($tempPath, 'test content');
+        
+        // Create a template with real file path
         $templateData = [
             'name' => 'Test Template for Deletion',
             'originalFileName' => 'test.docx',
-            'path' => '/fake/path/test.docx',
+            'path' => $tempPath,
             'size' => 1024,
             'templateFields' => json_encode(['name', 'company']),
         ];
@@ -67,6 +71,7 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
         // Verify the template and file exist
         $template = $templateModel->find($templateId);
         $this->assertNotNull($template);
+        $this->assertTrue(file_exists($tempPath));
 
         $filledFile = $filledFilesModel->find($filledFileId);
         $this->assertNotNull($filledFile);
@@ -81,5 +86,8 @@ final class TemplateUploadWorkflowTest extends CIUnitTestCase
 
         $filledFile = $filledFilesModel->find($filledFileId);
         $this->assertNull($filledFile);
+        
+        // Verify physical file is deleted
+        $this->assertFalse(file_exists($tempPath));
     }
 }

@@ -121,11 +121,21 @@ class UserGroupModel extends Model
      * Update a user group
      *
      * @param int $groupId Group ID
-     * @param array $data Group data to update
+     * @param string|array $nameOrData Group name or data array
+     * @param string|null $description Group description (optional if $nameOrData is array)
      * @return bool True on success, false on failure
      */
-    public function updateGroup(int $groupId, array $data): bool
+    public function updateGroup(int $groupId, $nameOrData, ?string $description = null): bool
     {
+        if (is_array($nameOrData)) {
+            $data = $nameOrData;
+        } else {
+            $data = ['name' => $nameOrData];
+            if ($description !== null) {
+                $data['description'] = $description;
+            }
+        }
+        
         $data['updated_at'] = date('Y-m-d H:i:s');
         return $this->update($groupId, $data);
     }
@@ -138,6 +148,15 @@ class UserGroupModel extends Model
      */
     public function deleteGroup(int $groupId): bool
     {
+        $group = $this->find($groupId);
+        if (!$group) {
+            return false;
+        }
+        
+        // Delete group members first
+        $userGroupMemberModel = model('App\Models\UserGroupMemberModel');
+        $userGroupMemberModel->where('group_id', $groupId)->delete();
+        
         return $this->delete($groupId);
     }
 
@@ -160,9 +179,9 @@ class UserGroupModel extends Model
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @param int|null $addedBy User ID of the person adding the user (optional)
-     * @return int|false Member ID on success, false on failure
+     * @return bool True on success, false on failure
      */
-    public function addUserToGroup(int $userId, int $groupId, ?int $addedBy = null)
+    public function addUserToGroup(int $userId, int $groupId, ?int $addedBy = null): bool
     {
         $userGroupMemberModel = model('App\Models\UserGroupMemberModel');
 
@@ -221,5 +240,26 @@ class UserGroupModel extends Model
         $userGroupMemberModel = model('App\Models\UserGroupMemberModel');
 
         return $userGroupMemberModel->getGroupMemberCount($groupId);
+    }
+
+    /**
+     * Get user's groups
+     *
+     * @param int $userId User ID
+     * @return array Array of groups the user belongs to
+     */
+    public function getUserGroups(int $userId): array
+    {
+        return $this->getGroupsForUser($userId);
+    }
+
+    /**
+     * Get total count of groups
+     *
+     * @return int Total number of groups
+     */
+    public function getGroupCount(): int
+    {
+        return $this->countAllResults();
     }
 }

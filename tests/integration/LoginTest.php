@@ -65,14 +65,28 @@ final class LoginTest extends CIUnitTestCase
     {
         $users = model('UserModel');
         
-        $user = new \CodeIgniter\Shield\Entities\User([
+        // Use direct database insertion bypassing Shield's UserModel
+        $db = \Config\Database::connect();
+        $userId = $db->table('users')->insert([
             'username' => $username,
-            'password' => $password,
-            'email'    => $username . '@example.com', // Dummy email for identity
+            'email'    => $username . '@example.com',
+            'password' => password_hash($password, PASSWORD_DEFAULT),
+            'active'   => 1,
         ]);
         
-        $users->save($user);
-        $user = $users->findById($users->getInsertID());
-        $users->addToDefaultGroup($user);
+        $userId = $db->insertID();
+        
+        // Get user entity and create identity
+        $user = $users->findById($userId);
+        
+        if ($user) {
+            // Create email/password identity for authentication
+            $user->createEmailIdentity([
+                'email' => $username . '@example.com',
+                'password' => $password,
+            ]);
+            
+            $users->addToDefaultGroup($user);
+        }
     }
 }

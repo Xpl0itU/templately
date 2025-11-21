@@ -19,7 +19,6 @@ class FilledFilesModel extends Model
     protected $protectFields = true;
     protected $allowedFields = [
         'templateFileId',
-        'user_id',
         'name',
         'filledData',
         'fieldTypes',
@@ -32,6 +31,7 @@ class FilledFilesModel extends Model
     protected $dateFormat = 'datetime';
     protected $createdField = 'createdAt';
     protected $updatedField = 'updatedAt';
+    protected $deletedField = 'deleted_at';
 
     protected $validationRules = [
         'templateFileId' => 'required|is_natural_no_zero',
@@ -146,8 +146,8 @@ class FilledFilesModel extends Model
     }
 
     /**
-     * Assign ownership and inherit permissions from template after filled file creation
-     * Sets owner, grants full control to creator, and inherits permissions from parent template
+     * Assign ownership after filled file creation
+     * Sets owner and optionally shares with template owner
      *
      * @param array $data Insert data with filled file ID
      * @return array Unmodified data
@@ -157,64 +157,37 @@ class FilledFilesModel extends Model
         if (isset($data['id']) && $data['id']) {
             $currentUserId = null;
 
-            $auth = service('auth');
-            if ($auth && $auth->user()) {
-                $currentUserId = $auth->user()->id;
+            // Check if user_id was provided in the insert data
+            if (isset($data['data']['user_id']) && $data['data']['user_id']) {
+                $currentUserId = $data['data']['user_id'];
+            } else {
+                // Fall back to authenticated user
+                $auth = service('auth');
+                if ($auth && $auth->user()) {
+                    $currentUserId = $auth->user()->id;
+                }
             }
 
             if ($currentUserId) {
+                // Set owner
                 $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
                 $resourceOwnerModel->setOwner('filled_file', $data['id'], $currentUserId);
 
-                $aclEntryModel = model('App\Models\AclEntryModel');
-                $aclEntryModel->grantPermission(
-                    'filled_file',
-                    $data['id'],
-                    'user',
-                    $currentUserId,
-                    'full_control',
-                    $currentUserId,
-                    false
-                );
-
-                $aclSettingModel = model('App\Models\AclSettingsModel');
-                if ($aclSettingModel && $aclSettingModel->getSetting('inheritance_enabled', true)) {
-                    $templateId = $data['data']['templateFileId'] ?? $data['templateFileId'] ?? null;
-
-                    if ($templateId) {
-                        // Inherit permissions from parent template
-                        $templateAclEntries = $aclEntryModel->getResourceAclEntries('template', $templateId);
-
-                        foreach ($templateAclEntries as $entry) {
-                            $aclEntryModel->grantPermission(
-                                'filled_file',
-                                $data['id'],
-                                $entry['principal_type'],
-                                $entry['principal_id'],
-                                $entry['permission_name'],
-                                $entry['granted_by'],
-                                true,
-                                'template',
-                                $templateId
-                            );
-                        }
-
-                        $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
-                        $templateOwner = $resourceOwnerModel->getOwner('template', $templateId);
-
-                        if ($templateOwner && $templateOwner !== $currentUserId) {
-                            $aclEntryModel->grantPermission(
-                                'filled_file',
-                                $data['id'],
-                                'user',
-                                $templateOwner,
-                                'read_execute',
-                                $templateOwner,
-                                true,
-                                'template',
-                                $templateId
-                            );
-                        }
+                // Optionally share with template owner (give them read permission)
+                $templateId = $data['data']['templateFileId'] ?? $data['templateFileId'] ?? null;
+                if ($templateId) {
+                    $templateOwner = $resourceOwnerModel->getOwner('template', $templateId);
+                    
+                    // Only share if template owner is different from current user
+                    if ($templateOwner && $templateOwner !== $currentUserId) {
+                        $resourceShareModel = model('App\Models\ResourceShareModel');
+                        $resourceShareModel->shareResource(
+                            'filled_file',
+                            $data['id'],
+                            'user',
+                            $templateOwner,
+                            'read'
+                        );
                     }
                 }
             }

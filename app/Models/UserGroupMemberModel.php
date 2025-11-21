@@ -89,9 +89,9 @@ class UserGroupMemberModel extends Model
      * @param int $userId User ID
      * @param int $groupId Group ID
      * @param int|null $addedBy User ID of the person adding the user (optional)
-     * @return int|false Member ID on success, false on failure
+     * @return bool True on success, false on failure
      */
-    public function addUserToGroup(int $userId, int $groupId, ?int $addedBy = null)
+    public function addUserToGroup(int $userId, int $groupId, ?int $addedBy = null): bool
     {
         // Check if user is already in the group
         $existing = $this->where('user_id', $userId)
@@ -99,7 +99,7 @@ class UserGroupMemberModel extends Model
             ->first();
 
         if ($existing) {
-            return $existing['id']; // Return existing membership ID
+            return true; // Already in group
         }
 
         $data = [
@@ -109,7 +109,7 @@ class UserGroupMemberModel extends Model
             'created_at' => date('Y-m-d H:i:s'),
         ];
 
-        return $this->insert($data);
+        return (bool) $this->insert($data);
     }
 
     /**

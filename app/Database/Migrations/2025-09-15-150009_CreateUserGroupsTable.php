@@ -75,9 +75,14 @@ class CreateUserGroupsTable extends Migration
         $this->forge->addKey(['user_id', 'group_id']);
         $this->forge->addKey('group_id');
         $this->forge->addKey('added_by');
-        $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->addForeignKey('group_id', 'user_groups', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->addForeignKey('added_by', 'users', 'id', 'SET NULL', 'CASCADE');
+        
+        // Only add foreign keys for MySQL/PostgreSQL, not SQLite
+        if ($this->db->DBDriver !== 'SQLite3') {
+            $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+            $this->forge->addForeignKey('group_id', 'user_groups', 'id', 'CASCADE', 'CASCADE');
+            $this->forge->addForeignKey('added_by', 'users', 'id', 'SET NULL', 'CASCADE');
+        }
+        
         $this->forge->createTable('user_group_members', true);
     }
 

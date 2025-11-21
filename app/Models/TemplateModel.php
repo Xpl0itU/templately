@@ -32,6 +32,7 @@ class TemplateModel extends Model
     protected $dateFormat = 'datetime';
     protected $createdField = 'createdAt';
     protected $updatedField = 'updatedAt';
+    protected $deletedField = 'deleted_at';
 
     protected $validationRules = [
         'name' => 'required|min_length[3]|max_length[255]',
@@ -134,25 +135,20 @@ class TemplateModel extends Model
         if (isset($data['id']) && $data['id']) {
             $currentUserId = null;
 
-            $auth = service('auth');
-            if ($auth && $auth->user()) {
-                $currentUserId = $auth->user()->id;
+            // Check if user_id was provided in the insert data
+            if (isset($data['data']['user_id']) && $data['data']['user_id']) {
+                $currentUserId = $data['data']['user_id'];
+            } else {
+                // Fall back to authenticated user
+                $auth = service('auth');
+                if ($auth && $auth->user()) {
+                    $currentUserId = $auth->user()->id;
+                }
             }
 
             if ($currentUserId) {
                 $resourceOwnerModel = model('App\Models\ResourceOwnerModel');
                 $resourceOwnerModel->setOwner('template', $data['id'], $currentUserId);
-
-                $aclEntryModel = model('App\Models\AclEntryModel');
-                $aclEntryModel->grantPermission(
-                    'template',
-                    $data['id'],
-                    'user',
-                    $currentUserId,
-                    'full_control',
-                    $currentUserId,
-                    false
-                );
             }
         }
 
