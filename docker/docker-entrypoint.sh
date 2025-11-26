@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DB_HOST="${database_default_hostname:-mysql}"
-DB_NAME="${database_default_database:-templately}"
+DB_NAME="${database_default_database:-proxectodb}"
 DB_USER="${database_default_username:-admin}"
 DB_PASS="${database_default_password:-}"
 DB_DRIVER="${database_default_DBDriver:-MySQLi}"

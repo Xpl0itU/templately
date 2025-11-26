@@ -12,7 +12,7 @@ services:
     environment:
       - CI_ENVIRONMENT=development
       - database_default_hostname=mysql
-      - database_default_database=${DB_NAME:-templately}
+      - database_default_database=${DB_NAME:-proxectodb}
       - database_default_username=${DB_USER:-admin}
       - database_default_password=${DB_PASSWORD:-secret}
       - database_default_DBDriver=MySQLi
@@ -28,11 +28,11 @@ services:
     image: mysql:8.0
     container_name: templately_mysql
     ports:
-      - "3306:3306"
+      - "33006:3306"
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secret}
-      MYSQL_DATABASE: ${DB_NAME:-templately}
+      MYSQL_DATABASE: ${DB_NAME:-proxectodb}
       MYSQL_USER: ${DB_USER:-admin}
       MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
