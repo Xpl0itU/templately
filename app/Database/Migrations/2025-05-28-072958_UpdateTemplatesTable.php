@@ -8,9 +8,7 @@ class UpdateTemplatesTable extends Migration
 {
     public function up()
     {
-        $db = \Config\Database::connect();
-
-        if (!$db->fieldExists('originalFileName', 'templateFiles')) {
+        if (!$this->db->fieldExists('originalFileName', 'templateFiles')) {
             $this->forge->addColumn('templateFiles', [
                 'originalFileName' => [
                     'type' => 'VARCHAR',
@@ -24,9 +22,7 @@ class UpdateTemplatesTable extends Migration
 
     public function down()
     {
-        $db = \Config\Database::connect();
-
-        if ($db->fieldExists('originalFileName', 'templateFiles')) {
+        if ($this->db->fieldExists('originalFileName', 'templateFiles')) {
             $this->forge->dropColumn('templateFiles', 'originalFileName');
         }
     }
