@@ -5,6 +5,8 @@ use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
 use App\Models\TemplateModel;
 use App\Models\FilledFilesModel;
+use App\Models\UserModel;
+use CodeIgniter\Shield\Entities\User;
 
 /**
  * @internal
@@ -18,6 +20,20 @@ final class FilledFileWorkflowTest extends CIUnitTestCase
 
     public function testFilledFileCreationWorkflow(): void
     {
+        // Create a user to own the template
+        $userModel = new UserModel();
+        $user = new User([
+            'username' => 'testuser',
+            'email'    => 'test@example.com',
+            'password' => 'password123',
+        ]);
+        $userModel->save($user);
+        $user = $userModel->findById($userModel->getInsertID());
+
+        // Mock auth service to return this user
+        $auth = service('auth');
+        $auth->login($user);
+
         // Create a template first
         $templateModel = new TemplateModel();
         $templateData = [
@@ -66,6 +82,20 @@ final class FilledFileWorkflowTest extends CIUnitTestCase
 
     public function testDuplicateFilledFileNamePrevention(): void
     {
+        // Create a user to own the template
+        $userModel = new UserModel();
+        $user = new User([
+            'username' => 'testuser2',
+            'email'    => 'test2@example.com',
+            'password' => 'password123',
+        ]);
+        $userModel->save($user);
+        $user = $userModel->findById($userModel->getInsertID());
+
+        // Mock auth service to return this user
+        $auth = service('auth');
+        $auth->login($user);
+
         // Create a template first
         $templateModel = new TemplateModel();
         $templateData = [
