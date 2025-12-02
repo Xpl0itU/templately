@@ -90,7 +90,7 @@ jobs:
         done
 
     - name: Run database migrations
-      run: php spark migrate:refresh --all --force
+      run: php spark migrate --all
       env:
         CI: true
 
