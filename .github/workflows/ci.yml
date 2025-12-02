@@ -61,6 +61,7 @@ jobs:
         database.default.username = root
         database.default.password = root
         database.default.DBDriver = MySQLi
+        database.default.DBPrefix = db_
         database.default.port = 3306
         
         database.tests.hostname = 127.0.0.1
@@ -68,6 +69,7 @@ jobs:
         database.tests.username = root
         database.tests.password = root
         database.tests.DBDriver = MySQLi
+        database.tests.DBPrefix = db_
         database.tests.port = 3306
         EOF
 

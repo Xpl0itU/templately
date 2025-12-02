@@ -22,6 +22,10 @@ class UpdateTemplatesTable extends Migration
 
     public function down()
     {
+        if ($this->db->DBDriver === 'SQLite3') {
+            return;
+        }
+
         if ($this->db->fieldExists('originalFileName', 'templateFiles')) {
             $this->forge->dropColumn('templateFiles', 'originalFileName');
         }

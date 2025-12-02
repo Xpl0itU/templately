@@ -21,6 +21,10 @@ class AddFieldTypesToFilledFiles extends Migration
 
     public function down()
     {
+        if ($this->db->DBDriver === 'SQLite3') {
+            return;
+        }
+
         if ($this->db->fieldExists('fieldTypes', 'filledFiles')) {
             $this->forge->dropColumn('filledFiles', 'fieldTypes');
         }
