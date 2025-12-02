@@ -30,6 +30,10 @@ class CreateFilledFilesTableMigration extends Migration
                 'type' => 'TEXT', // Will be JSON encoded data
                 'null' => true,
             ],
+            'fieldTypes' => [
+                'type' => 'TEXT',
+                'null' => true,
+            ],
             'createdAt' => [
                 'type' => 'DATETIME',
                 'null' => true,

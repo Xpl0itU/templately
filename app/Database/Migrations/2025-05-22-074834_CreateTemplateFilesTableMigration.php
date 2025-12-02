@@ -20,6 +20,11 @@ class CreateTemplateFilesTableMigration extends Migration
                 'constraint' => 255,
                 'null'       => false,
             ],
+            'originalFileName' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 255,
+                'null'       => true,
+            ],
             'path'        => [
                 'type'       => 'VARCHAR',
                 'constraint' => 255,
